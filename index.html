@@ -141,7 +141,11 @@
     .total-card p { color: var(--accent); }
 
     /* CONTROLS, FILTERS & DROPDOWNS */
-    .controls-panel { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; padding: 16px 24px; position: relative; z-index: 50; margin-bottom: 20px; }
+    
+    /* FIX: Added relative positioning and high z-index to parent containers */
+    .controls-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 15px; position: relative; z-index: 100; }
+    .controls-panel { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; padding: 16px 24px; position: relative; z-index: 100; margin-bottom: 20px; }
+    
     .filter-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
     .filter-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
     .filter-input, .select-btn, .filter-group input[type="text"] { background-color: var(--input-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; height: 40px; box-sizing: border-box; outline: none; font-family: inherit; transition: all 0.3s; cursor: pointer; }
@@ -151,14 +155,11 @@
     .select-btn { display: flex; justify-content: space-between; align-items: center; user-select: none; width: 100%; }
     .select-dropdown { position: absolute; top: 100%; left: 0; width: 100%; background-color: var(--dropdown-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 8px; margin-top: 6px; max-height: 250px; overflow-y: auto; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; }
     .select-dropdown.active { display: block; }
-    
-    /* Cleaned up label hover to act as a proper clickable button list */
     .select-dropdown label { display: flex; align-items: center; padding: 10px 14px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; color: var(--text-main); margin: 0; }
     .select-dropdown label:hover { background-color: var(--row-hover); }
     .select-dropdown input[type="checkbox"] { margin-right: 10px; accent-color: var(--accent); cursor: pointer; }
 
     /* Toggles & Spinners for Reports */
-    .controls-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 15px; }
     .filters-group { display: flex; gap: 15px; align-items: center; }
     .toggle-wrapper { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 500; }
     .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
@@ -284,11 +285,9 @@
       </div>
       
       <div class="header-actions">
-        <!-- Reports Button -->
         <button class="icon-btn nav-link" onclick="navigateTo('reports')" data-tooltip="View Reports">
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
         </button>
-        <!-- Agents Button -->
         <button class="icon-btn nav-link" onclick="navigateTo('agents')" data-tooltip="View Agents">
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
         </button>
@@ -315,9 +314,8 @@
       <div class="controls-container animate-in delay-1">
         <div class="filters-group">
           
-          <!-- Replaced native <select> with Custom Single-Select Glass Dropdowns -->
           <div class="custom-select" style="width: 200px;">
-            <div class="select-btn" onclick="toggleDropdown('reportsDeptDropdown')">
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsDeptDropdown')">
               <span id="reportsDeptLabel">All Departments</span> ▼
             </div>
             <div class="select-dropdown" id="reportsDeptDropdown">
@@ -336,7 +334,7 @@
           </div>
 
           <div class="custom-select" style="width: 210px;">
-            <div class="select-btn" onclick="toggleDropdown('reportsTimeDropdown')">
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsTimeDropdown')">
               <span id="reportsTimeLabel">Any Update Time</span> ▼
             </div>
             <div class="select-dropdown" id="reportsTimeDropdown">
@@ -396,14 +394,14 @@
           <div class="filter-group">
             <label>Status</label>
             <div class="custom-select">
-              <div class="select-btn" onclick="toggleDropdown('agentStatusDropdown')"><span id="agentStatusLabel">All Statuses</span> ▼</div>
+              <div class="select-btn filter-input" onclick="toggleDropdown('agentStatusDropdown')"><span id="agentStatusLabel">All Statuses</span> ▼</div>
               <div class="select-dropdown" id="agentStatusDropdown"></div>
             </div>
           </div>
           <div class="filter-group">
             <label>Priority</label>
             <div class="custom-select">
-              <div class="select-btn" onclick="toggleDropdown('agentPriorityDropdown')"><span id="agentPriorityLabel">All Priorities</span> ▼</div>
+              <div class="select-btn filter-input" onclick="toggleDropdown('agentPriorityDropdown')"><span id="agentPriorityLabel">All Priorities</span> ▼</div>
               <div class="select-dropdown" id="agentPriorityDropdown"></div>
             </div>
           </div>
@@ -428,28 +426,28 @@
         <div class="filter-group">
           <label>Client Name</label>
           <div class="custom-select">
-            <div class="select-btn" onclick="toggleDropdown('ticketsClientDropdown')"><span id="ticketsClientLabel">All Clients</span> ▼</div>
+            <div class="select-btn filter-input" onclick="toggleDropdown('ticketsClientDropdown')"><span id="ticketsClientLabel">All Clients</span> ▼</div>
             <div class="select-dropdown" id="ticketsClientDropdown"></div>
           </div>
         </div>
         <div class="filter-group">
           <label>Assignee</label>
           <div class="custom-select">
-            <div class="select-btn" onclick="toggleDropdown('ticketsAssigneeDropdown')"><span id="ticketsAssigneeLabel">All Assignees</span> ▼</div>
+            <div class="select-btn filter-input" onclick="toggleDropdown('ticketsAssigneeDropdown')"><span id="ticketsAssigneeLabel">All Assignees</span> ▼</div>
             <div class="select-dropdown" id="ticketsAssigneeDropdown"></div>
           </div>
         </div>
         <div class="filter-group">
           <label>Priority</label>
           <div class="custom-select">
-            <div class="select-btn" onclick="toggleDropdown('ticketsPriorityDropdown')"><span id="ticketsPriorityLabel">All Priorities</span> ▼</div>
+            <div class="select-btn filter-input" onclick="toggleDropdown('ticketsPriorityDropdown')"><span id="ticketsPriorityLabel">All Priorities</span> ▼</div>
             <div class="select-dropdown" id="ticketsPriorityDropdown"></div>
           </div>
         </div>
         <div class="filter-group">
           <label>Status</label>
           <div class="custom-select">
-            <div class="select-btn" onclick="toggleDropdown('ticketsStatusDropdown')"><span id="ticketsStatusLabel">All Statuses</span> ▼</div>
+            <div class="select-btn filter-input" onclick="toggleDropdown('ticketsStatusDropdown')"><span id="ticketsStatusLabel">All Statuses</span> ▼</div>
             <div class="select-dropdown" id="ticketsStatusDropdown"></div>
           </div>
         </div>
@@ -479,11 +477,9 @@
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
     
-    // Shared Memory Core
     window.allGlobalTickets = [];
     window.exactStatsData = null;
     
-    // View States (Updated for Reports Dropdown Fixes)
     const state = {
       reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All' },
       agents: { map: {}, currentId: null, currentTickets: [], filteredTickets: [] },
@@ -540,7 +536,7 @@
       localStorage.removeItem('sandbox_zoho_data_timestamp');
       localStorage.removeItem('sandbox_zoho_exact_stats');
       sessionStorage.removeItem('sandbox_current_view');
-      window.location.reload();
+      window.location.href = window.location.pathname.replace(/\/(reports|agents|tickets)$/, '');
     }
 
     function renderGoogleButton() {
@@ -576,23 +572,44 @@
     }
 
     // ==========================================
-    // CORE SPA NAVIGATION & DATA FETCHING
+    // SPA BROWSER ROUTING & NAVIGATION
     // ==========================================
+    window.addEventListener('popstate', function(e) {
+      if(e.state && e.state.view) {
+        navigateTo(e.state.view, e.state.filterType, e.state.filterValue, true);
+      } else {
+        navigateTo('dashboard', null, null, true);
+      }
+    });
+
     function loadSecureApp() {
       localStorage.setItem('sandbox_auth_expiry', Date.now() + (48 * 60 * 60 * 1000));
       document.getElementById('view-login').classList.remove('active');
       document.getElementById('view-secure-app').classList.add('active');
       
-      // Memory Persistence: Load the last view if refreshed, or default to dashboard
-      const savedView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
-      navigateTo(savedView);
+      // Determine what page the user wants based on the URL
+      const pathSegment = window.location.pathname.replace(/\/$/, '').split('/').pop();
+      let initialView = 'dashboard';
+      if (['reports', 'agents', 'tickets'].includes(pathSegment)) {
+          initialView = pathSegment;
+      } else {
+          initialView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
+      }
       
+      navigateTo(initialView, null, null, true);
       fetchGlobalData(); 
     }
 
-    function navigateTo(viewName, filterType = null, filterValue = null) {
-      // Memory Persistence: Save current view securely in browser session
+    function navigateTo(viewName, filterType = null, filterValue = null, skipHistory = false) {
       sessionStorage.setItem('sandbox_current_view', viewName);
+      
+      // Push State logic to explicitly update the browser URL
+      if (!skipHistory) {
+        let basePath = window.location.pathname.replace(/\/(reports|agents|tickets)$/, '');
+        if (!basePath.endsWith('/')) basePath += '/';
+        let newPath = viewName === 'dashboard' ? basePath : basePath + viewName;
+        window.history.pushState({ view: viewName, filterType, filterValue }, "", newPath);
+      }
       
       document.querySelectorAll('.app-subview').forEach(el => el.style.display = 'none');
       document.getElementById(`view-${viewName}`).style.display = 'block';
@@ -609,6 +626,9 @@
       if(viewName === 'tickets') { initTicketsView(filterType, filterValue); }
     }
 
+    // ==========================================
+    // DATA FETCHING ENGINE
+    // ==========================================
     async function fetchGlobalData(forceLive = false, pin = '') {
       const container = document.getElementById('dashboardContainer');
       const lastUpdatedEl = document.getElementById('lastUpdatedText');
@@ -663,7 +683,6 @@
           lastUpdatedEl.innerHTML = `⏱️ Last updated: ${formatter.format(new Date(lastUpdateMs))} ET`;
         }
         
-        // Render whatever view the user is currently on securely
         const currentView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
         if(currentView === 'dashboard') renderMainDashboard();
         if(currentView === 'reports') renderReportsView();
@@ -771,7 +790,6 @@
       renderReportsView();
     }
 
-    // Fixed single-select custom dropdown mapping
     function setReportsFilter(type, value, labelText) {
       if(type === 'department') {
         state.reports.departmentFilter = value;
