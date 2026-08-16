@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desk Portal | Master Dashboard</title>
+  
+  <link rel="icon" href="https://www.google.com/s2/favicons?domain=mindmatrix.net&sz=128" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Flatpickr (Modern Date Picker) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <!-- Google SSO -->
+  <script src="https://accounts.google.com/gsi/client?onload=renderGoogleButton" async defer></script>
+
+  <style>
+    /* =========================================
+       SPA ROUTING & VIEW TOGGLES
+       ========================================= */
+    .page-view { display: none; width: 100%; animation: fadeIn 0.3s ease; }
+    .page-view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* =========================================
+       GLOBAL VARIABLES & THEMES (From style.css)
+       ========================================= */
+    :root {
+      --bg-gradient: radial-gradient(circle at 15% 50%, #1e1b4b, #0f172a, #020617);
+      --glass-bg: rgba(30, 41, 59, 0.4);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+      --dropdown-bg: rgba(15, 23, 42, 0.98); 
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --input-bg: rgba(15, 23, 42, 0.6);
+      --row-hover: rgba(255, 255, 255, 0.05);
+      --th-bg: rgba(15, 23, 42, 0.4);
+    }
+
+    body.light-mode {
+      --bg-gradient: radial-gradient(circle at 15% 50%, #e0e7ff, #f1f5f9, #f8fafc);
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+      --dropdown-bg: rgba(255, 255, 255, 0.98); 
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --accent: #0ea5e9;
+      --accent-hover: #0284c7;
+      --input-bg: rgba(255, 255, 255, 0.8);
+      --row-hover: rgba(0, 0, 0, 0.02);
+      --th-bg: rgba(255, 255, 255, 0.4);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-main);
+      margin: 0;
+      padding: 2rem;
+      min-height: 100vh;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.5s ease, color 0.5s ease;
+    }
+
+    /* ANIMATIONS & GLASSMORPHISM */
+    .animate-in { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .delay-3 { animation-delay: 0.3s; opacity: 0; }
+
+    .glass-panel { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 16px; }
+
+    [data-tooltip] { position: relative; }
+    [data-tooltip]::before { content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); color: var(--text-main); padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1000; pointer-events: none; }
+    [data-tooltip]:hover::before { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+
+    /* HEADERS & NAVIGATION */
+    .header-container, .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 20px; }
+    .header { padding: 15px 25px; margin-bottom: 40px; }
+    .title-group, .brand-group { display: flex; align-items: center; gap: 15px; }
+    .brand-logo { height: 28px; border-radius: 4px; }
+    .header h1, h1 { margin: 0; font-size: 1.6rem; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: -0.02em; }
+    .agent-header-info { display: flex; gap: 20px; color: var(--text-muted); font-size: 0.85rem; margin-top: 6px; font-weight: 500;}
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .icon-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; width: 40px; height: 40px; padding: 0; box-sizing: border-box; text-decoration: none; line-height: 0; }
+    .icon-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+    .icon-btn svg { width: 18px; height: 18px; display: block; }
+    #themeIcon { font-size: 1.1rem; line-height: 1; display: block; margin-top: 2px; }
+
+    .btn-back { background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; }
+    .btn-back:hover { background: rgba(255,255,255,0.1); transform: translateX(-4px); }
+
+    /* LOGIN SCREEN */
+    #loginScreen { display: flex; justify-content: center; align-items: center; flex: 1; }
+    .login-card { padding: 50px 40px; width: 100%; max-width: 420px; text-align: center; }
+    .login-card h2 { margin-top: 0; margin-bottom: 8px; font-weight: 700; font-size: 1.8rem; }
+    .login-card p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 30px; }
+    .otp-group { margin-bottom: 20px; text-align: left; }
+    .otp-group label { display: block; font-size: 0.8rem; margin-bottom: 8px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .otp-group input { width: 100%; padding: 14px 16px; background-color: var(--input-bg); color: var(--text-main); border: 1px solid var(--glass-border); border-radius: 10px; box-sizing: border-box; margin-bottom: 15px; font-family: inherit; font-size: 1rem; outline: none; transition: all 0.3s; }
+    .otp-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
+    .btn-login { width: 100%; background-color: var(--accent); color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s; }
+    .btn-login:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(2, 132, 199, 0.3); }
+    .divider { display: flex; align-items: center; text-align: center; margin: 30px 0; color: var(--text-muted); font-size: 0.85rem; }
+    .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--glass-border); }
+    .divider:not(:empty)::before { margin-right: 1em; }
+    .divider:not(:empty)::after { margin-left: 1em; }
+
+    /* DASHBOARD METRICS & GRIDS */
+    .section-title { font-size: 1rem; color: var(--text-muted); margin: 30px 0 20px 0; text-transform: uppercase; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--glass-border); }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .metric-card { padding: 20px; text-align: center; text-decoration: none; color: inherit; transition: all 0.3s; display: flex; flex-direction: column; justify-content: center; border: 2px solid transparent; cursor: pointer;}
+    .metric-card:hover { transform: translateY(-8px) scale(1.02); border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2); }
+    .metric-card.active-filter { border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
+    .metric-card h3 { margin: 0; font-size: 0.9rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase;}
+    .metric-card p { margin: 12px 0 0 0; font-size: 2.5rem; font-weight: 700; color: var(--text-main); }
+    .stats-subtext { margin-top: 10px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;}
+    .stats-open { color: #38bdf8; }
+    .stats-closed { color: #94a3b8; }
+    .total-card { grid-column: 1 / -1; border-color: var(--accent); background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, transparent 100%); }
+    .total-card p { color: var(--accent); }
+
+    /* CONTROLS, FILTERS & DROPDOWNS */
+    .controls-panel { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; padding: 16px 24px; position: relative; z-index: 50; margin-bottom: 20px; }
+    .filter-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+    .filter-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
+    .filter-input, .select-btn, .filter-group input[type="text"] { background-color: var(--input-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; height: 40px; box-sizing: border-box; outline: none; font-family: inherit; transition: all 0.3s; cursor: pointer; }
+    .filter-input:focus, .select-btn:hover, .filter-group input[type="text"]:focus { border-color: var(--accent); }
+
+    .custom-select { position: relative; width: 160px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.3); background-color: var(--glass-bg); color: inherit; font-family: inherit; font-size: 0.9rem; outline: none; cursor: pointer; }
+    .dark-mode .custom-select { background-color: rgba(30, 41, 59, 0.7); }
+    select.custom-select { padding: 8px 12px; height: 40px; appearance: none; }
+    
+    .select-btn { display: flex; justify-content: space-between; align-items: center; user-select: none; border: none; padding: 0; background: transparent; height: auto; }
+    .select-dropdown { position: absolute; top: 100%; left: 0; width: 100%; background-color: var(--dropdown-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 8px; margin-top: 6px; max-height: 250px; overflow-y: auto; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; }
+    .select-dropdown.active { display: block; }
+    .select-dropdown label { display: flex; align-items: center; padding: 10px 14px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; color: var(--text-main); }
+    .select-dropdown label:hover { background-color: var(--row-hover); }
+    .select-dropdown input[type="checkbox"] { margin-right: 10px; accent-color: var(--accent); cursor: pointer; }
+
+    /* Toggles & Spinners for Reports */
+    .controls-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 15px; }
+    .filters-group { display: flex; gap: 15px; align-items: center; }
+    .toggle-wrapper { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 500; }
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #3b82f6; }
+    input:checked + .slider:before { transform: translateX(20px); }
+    .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 50%; border-top-color: #3b82f6; animation: spin 1s ease-in-out infinite; margin-left: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Flatpickr Overrides */
+    .flatpickr-calendar { background: var(--dropdown-bg) !important; backdrop-filter: blur(24px) !important; border: 1px solid var(--glass-border) !important; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important; border-radius: 16px !important; color: var(--text-main) !important; font-family: inherit !important; }
+    .flatpickr-day { color: var(--text-main) !important; border-radius: 8px !important; }
+    .flatpickr-day:hover { background: var(--row-hover) !important; }
+    .flatpickr-day.selected { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; font-weight: 600; }
+    .flatpickr-month, .flatpickr-weekday, .flatpickr-current-month input.cur-year { color: var(--text-main) !important; fill: var(--text-main) !important; }
+
+    /* BUTTONS */
+    .btn-group { display: flex; gap: 12px; }
+    .btn-action { color: white; border: none; padding: 0 18px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; height: 40px; font-family: inherit; transition: all 0.3s; }
+    .btn-action:hover { transform: translateY(-2px); }
+    .btn-export { background-color: #10b981; }
+    .btn-export:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+    .btn-clear { background-color: var(--text-muted); }
+    .btn-clear:hover { background-color: #475569; }
+    .btn-view { color: var(--accent); background: transparent; border: 1px solid var(--accent); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.3s;}
+    .btn-view:hover { background: var(--accent); color: #fff;}
+
+    /* TABLES & BADGES */
+    .table-container { overflow-x: auto; border-radius: 16px; position: relative; z-index: 1; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 16px 20px; border-bottom: 1px solid var(--glass-border); font-size: 0.9rem; }
+    th { background-color: var(--th-bg); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; }
+    tr { transition: background 0.2s ease; }
+    tr:hover { background-color: var(--row-hover); }
+    .priority-badge { color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; display: inline-block; }
+    .dept-badge { background-color: var(--input-bg); padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; border: 1px solid var(--glass-border); }
+    .ticket-link { color: var(--accent); text-decoration: none; font-weight: 600; cursor: pointer; }
+    .ticket-link:hover { text-decoration: underline; }
+
+    /* SECURITY PIN MODAL */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 10000; display: none; align-items: center; justify-content: center; }
+    .modal-content { padding: 45px 40px; width: 90%; max-width: 360px; text-align: center; background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); backdrop-filter: blur(30px) saturate(200%); -webkit-backdrop-filter: blur(30px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); border-radius: 32px; }
+    body.light-mode .modal-content { background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(241, 245, 249, 0.9)); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
+    .modal-content h3 { margin-top: 0; font-size: 1.4rem; margin-bottom: 8px; font-weight: 700; letter-spacing: -0.02em; }
+    .pin-input { width: 100%; background: transparent !important; border: none !important; border-bottom: 2px solid var(--glass-border) !important; border-radius: 0 !important; font-size: 2.5rem !important; letter-spacing: 16px !important; text-align: center !important; color: var(--text-main) !important; box-shadow: none !important; padding: 10px 0 !important; margin-bottom: 40px !important; font-weight: 500 !important; outline: none !important; transition: all 0.3s ease !important; }
+    .pin-input:focus { border-bottom-color: var(--accent) !important; box-shadow: 0 15px 15px -15px var(--accent) !important; transform: translateY(-2px); }
+    .pin-input::placeholder { color: var(--text-muted); opacity: 0.3; font-size: 1.5rem; letter-spacing: 10px; vertical-align: middle; }
+    body.light-mode .pin-input { border-bottom-color: rgba(0,0,0,0.15) !important; }
+    .modal-content .btn-action { flex: 1; display: inline-flex; justify-content: center; padding: 14px 20px; border-radius: 12px; height: auto; }
+    .modal-content .btn-clear { background-color: transparent; border: 1px solid var(--glass-border); color: var(--text-main); }
+    .modal-content .btn-clear:hover { background-color: rgba(255,255,255,0.1); transform: translateY(-2px);}
+
+    /* FOOTER */
+    footer { text-align: center; padding: 30px 0 10px 0; color: var(--text-muted); font-size: 0.8rem; margin-top: auto; }
+  </style>
+</head>
+<body>
+
+  <!-- UNIVERSAL PIN MODAL -->
+  <div id="pinModal" class="modal-overlay">
+    <div class="modal-content animate-in">
+      <div style="width: 56px; height: 56px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
+        <svg width="28" height="28" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+      </div>
+      <h3>Admin Access</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px;">Enter security PIN to force live data sync</p>
+      <input type="password" id="pinInput" class="pin-input" placeholder="•••••" maxlength="5" autocomplete="off">
+      <div style="display: flex; gap: 15px; justify-content: center;">
+        <button class="btn-action btn-clear" onclick="closePinModal()">Cancel</button>
+        <button class="btn-action btn-export" id="submitPinBtn">Authenticate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN VIEW -->
+  <div id="view-login" class="page-view active" style="display: flex; justify-content: center; align-items: center; flex: 1;">
+    <div class="login-card glass-panel animate-in delay-1">
+      <h2>Staff Login</h2>
+      <p>Authorized accounts only.</p>
+      <div class="otp-group">
+        <label>Email Address</label>
+        <input type="email" id="emailInput" placeholder="name@mindmatrix.net">
+        <button class="btn-login" onclick="requestOTP()">Send OTP</button>
+      </div>
+      <div class="otp-group" id="otpStep2" style="display: none;">
+        <label>One-Time Password</label>
+        <input type="text" id="otpInput" placeholder="Enter 6-digit code">
+        <button class="btn-login" onclick="verifyOTP()">Login securely</button>
+      </div>
+      
+      <div class="divider">OR</div>
+
+      <!-- Google SSO Container -->
+      <div style="display: flex; justify-content: center; width: 100%;">
+        <div id="g_id_onload" data-client_id="801862906305-d2sbfbbcpih507cc8bot5sav1nlt8606.apps.googleusercontent.com" data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin" data-auto_prompt="false"></div>
+        <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-logo_alignment="left"></div>
+      </div>
+      
+      <p id="loginError" style="color: #ef4444; margin-top: 20px; font-size: 0.9rem; display: none; font-weight: 500;"></p>
+    </div>
+  </div>
+
+  <!-- SECURE APP WRAPPER -->
+  <div id="view-secure-app" class="page-view">
+    
+    <!-- UNIVERSAL HEADER -->
+    <div class="header-container animate-in">
+      <div class="title-group">
+        <!-- Dynamic Back Button -->
+        <button class="btn-back" id="globalBackBtn" style="display:none;" onclick="navigateTo('dashboard')">← Dashboard</button>
+        <button class="btn-back" id="backToAgentsBtn" style="display:none;" onclick="showAgentsList()">← All Agents</button>
+        
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+          <h1 id="globalPageTitle" style="display: flex; align-items: center; gap: 10px; margin: 0;">
+            <img src="https://www.google.com/s2/favicons?domain=mindmatrix.net&sz=128" alt="Mindmatrix" class="brand-logo">
+            <span id="headerTitleText">Support Portal</span>
+          </h1>
+          <div id="lastUpdatedText" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; font-weight: 500;"></div>
+          <div id="agentHeaderInfo" class="agent-header-info" style="display:none;"></div>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Reports Button -->
+        <button class="icon-btn nav-link" onclick="navigateTo('reports')" data-tooltip="View Reports">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </button>
+        <!-- Agents Button -->
+        <button class="icon-btn nav-link" onclick="navigateTo('agents')" data-tooltip="View Agents">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        </button>
+        <button class="icon-btn theme-toggle" onclick="toggleTheme()" data-tooltip="Toggle Theme">
+          <span id="themeIcon">☀️</span>
+        </button>
+        <button class="icon-btn logout-btn" onclick="logout()" data-tooltip="Logout">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        </button>
+      </div>
+    </div> 
+
+    <!-- 1. DASHBOARD VIEW -->
+    <div id="view-dashboard" class="app-subview active">
+      <div id="dashboardContainer">
+        <div style="text-align: center; padding: 50px;" class="animate-in delay-1">
+          <p style="color: var(--accent); font-size: 1.2rem; font-weight: 500;">Syncing secure data...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. REPORTS VIEW -->
+    <div id="view-reports" class="app-subview" style="display:none;">
+      <div class="controls-container animate-in delay-1">
+        <div class="filters-group">
+          <select id="reportsDepartmentFilter" class="custom-select" onchange="renderReportsView()">
+            <option value="All">All Departments</option>
+            <option value="Support">Support</option>
+            <option value="Services">Services</option>
+            <option value="Development">Development</option>
+            <option value="Production">Production</option>
+            <option value="IT Requests">IT Requests</option>
+            <option value="Project Management">Project Management</option>
+            <option value="Specialist Team">Specialist Team</option>
+            <option value="Billing">Billing</option>
+            <option value="Concierge Services">Concierge Services</option>
+            <option value="SalesHelp">SalesHelp</option>
+          </select>
+          <select id="reportsTimeframeFilter" class="custom-select" onchange="renderReportsView()">
+            <option value="All">Any Update Time</option>
+            <option value="14">No Updates > 2 Weeks</option>
+            <option value="30">No Updates > 30 Days</option>
+            <option value="60">No Updates > 60 Days</option>
+          </select>
+        </div>
+        <div class="toggle-wrapper">
+          <span>90-Day History</span>
+          <label class="switch">
+            <input type="checkbox" id="reportsHistoryToggle" onchange="handleReportsToggle()">
+            <span class="slider"></span>
+          </label>
+          <span id="reportsLoadingIndicator" style="display:none;" class="loading-spinner"></span>
+        </div>
+      </div>
+      <div class="section-title animate-in delay-1" id="reportsCardsTitle">Global Priority Distribution (Open Tickets)</div>
+      <div class="dashboard-grid animate-in delay-1" id="reportsPriorityCardsContainer"></div>
+      <div class="section-title animate-in delay-1">Ticket Log <span id="reportsFilterSubtext" style="font-weight:normal; font-size:0.9rem; color:#888;"></span></div>
+      <div class="table-container glass-panel animate-in delay-1">
+        <table>
+          <thead id="reportsTableHeader"></thead>
+          <tbody id="reportsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 3. AGENTS VIEW -->
+    <div id="view-agents" class="app-subview" style="display:none;">
+      <!-- Agents List Subview -->
+      <div id="agentsListView" class="animate-in delay-1">
+        <div class="table-container glass-panel">
+          <table>
+            <thead>
+              <tr><th>Agent Name</th><th>Email Address</th><th>Current Open Tickets</th><th>Action</th></tr>
+            </thead>
+            <tbody id="agentsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Agent Details Subview -->
+      <div id="agentDetailsView" class="animate-in delay-1" style="display:none;">
+        <div class="section-title">Performance Summary</div>
+        <div class="dashboard-grid" id="agentStatsCards"></div>
+        <div class="section-title">Current Open Backlog By Priority</div>
+        <div class="dashboard-grid" id="agentPriorityCards"></div>
+        <div class="section-title">Assigned Tickets</div>
+        <div class="controls-panel glass-panel">
+          <div class="filter-group">
+            <label>Search</label>
+            <input type="text" id="agentSearchText" class="filter-input" placeholder="ID or Subject..." onkeyup="applyAgentFilters()" style="width: 160px;">
+          </div>
+          <div class="filter-group"><label>Start Date</label><input type="text" id="agentDateStart" class="filter-input" placeholder="Select Date..." style="width: 130px;"></div>
+          <div class="filter-group"><label>End Date</label><input type="text" id="agentDateEnd" class="filter-input" placeholder="Select Date..." style="width: 130px;"></div>
+          <div class="filter-group">
+            <label>Status</label>
+            <div class="custom-select">
+              <div class="select-btn" onclick="toggleDropdown('agentStatusDropdown')"><span id="agentStatusLabel">All Statuses</span> ▼</div>
+              <div class="select-dropdown" id="agentStatusDropdown"></div>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Priority</label>
+            <div class="custom-select">
+              <div class="select-btn" onclick="toggleDropdown('agentPriorityDropdown')"><span id="agentPriorityLabel">All Priorities</span> ▼</div>
+              <div class="select-dropdown" id="agentPriorityDropdown"></div>
+            </div>
+          </div>
+          <div class="btn-group" style="margin-left: auto;">
+            <button class="btn-action btn-clear" onclick="clearAgentFilters()">Clear Filters</button>
+          </div>
+        </div>
+        <div class="table-container glass-panel">
+          <table>
+            <thead><tr><th>Ticket #</th><th>Subject</th><th>Account / Client</th><th>Priority</th><th>Status</th><th>Created</th><th>Last Updated</th><th>Closed Date</th></tr></thead>
+            <tbody id="agentTicketsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. TICKETS VIEW (Deep Dive Log) -->
+    <div id="view-tickets" class="app-subview" style="display:none;">
+      <div class="controls-panel glass-panel animate-in">
+        <div class="filter-group"><label>Start Date</label><input type="text" id="ticketsDateStart" placeholder="Select Date..."></div>
+        <div class="filter-group"><label>End Date</label><input type="text" id="ticketsDateEnd" placeholder="Select Date..."></div>
+        <div class="filter-group">
+          <label>Client Name</label>
+          <div class="custom-select">
+            <div class="select-btn" onclick="toggleDropdown('ticketsClientDropdown')"><span id="ticketsClientLabel">All Clients</span> ▼</div>
+            <div class="select-dropdown" id="ticketsClientDropdown"></div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Assignee</label>
+          <div class="custom-select">
+            <div class="select-btn" onclick="toggleDropdown('ticketsAssigneeDropdown')"><span id="ticketsAssigneeLabel">All Assignees</span> ▼</div>
+            <div class="select-dropdown" id="ticketsAssigneeDropdown"></div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Priority</label>
+          <div class="custom-select">
+            <div class="select-btn" onclick="toggleDropdown('ticketsPriorityDropdown')"><span id="ticketsPriorityLabel">All Priorities</span> ▼</div>
+            <div class="select-dropdown" id="ticketsPriorityDropdown"></div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Status</label>
+          <div class="custom-select">
+            <div class="select-btn" onclick="toggleDropdown('ticketsStatusDropdown')"><span id="ticketsStatusLabel">All Statuses</span> ▼</div>
+            <div class="select-dropdown" id="ticketsStatusDropdown"></div>
+          </div>
+        </div>
+        <div class="btn-group" style="margin-left: auto;">
+          <button class="btn-action btn-clear" onclick="clearTicketsFilters()" data-tooltip="Reset all filters">Clear</button>
+          <button class="btn-action btn-export" onclick="exportTicketsToCSV()" data-tooltip="Download current view">Export</button>
+        </div>
+      </div>
+      <div class="table-container glass-panel animate-in delay-1">
+        <table>
+          <thead>
+            <tr><th>Ticket #</th><th>Subject</th><th>Client Name</th><th>Priority</th><th>Department</th><th>Assignee</th><th>Status</th><th>Created Date</th><th>Action</th></tr>
+          </thead>
+          <tbody id="ticketsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    
+  </div> <!-- END SECURE APP WRAPPER -->
+
+  <footer>Powered by NovaForge AI | &copy; 2026 Mindmatrix | v1.2.0</footer>
+
+  <script>
+    // ==========================================
+    // GLOBAL STATE & UTILITIES
+    // ==========================================
+    const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
+    const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
+    
+    // Shared Memory Core
+    window.allGlobalTickets = [];
+    window.exactStatsData = null;
+    
+    // View States
+    const state = {
+      reports: { isHistoryMode: false, activePriority: null, historyData: [] },
+      agents: { map: {}, currentId: null, currentTickets: [], filteredTickets: [] },
+      tickets: { activeTickets: [], currentFiltered: [], filterType: null, filterValue: null }
+    };
+
+    const tableDateFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' });
+    const csvDateFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'numeric', day: 'numeric', year: 'numeric' });
+
+    function getMidnightET(year, month, day) {
+      const shiftM = String(month).padStart(2, '0'); const shiftD = String(day).padStart(2, '0');
+      const t4 = new Date(`${year}-${shiftM}-${shiftD}T00:00:00-04:00`); const t5 = new Date(`${year}-${shiftM}-${shiftD}T00:00:00-05:00`);
+      const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false });
+      return (fmt.format(t4) === '24' || fmt.format(t4) === '0' || fmt.format(t4) === '00') ? t4 : t5;
+    }
+    function getETMidnightForOffset(daysOffset) {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date());
+      const y = parseInt(parts.find(p=>p.type==='year').value, 10); const m = parseInt(parts.find(p=>p.type==='month').value, 10) - 1; const d = parseInt(parts.find(p=>p.type==='day').value, 10);
+      const dummy = new Date(Date.UTC(y, m, d + daysOffset));
+      return getMidnightET(dummy.getUTCFullYear(), dummy.getUTCMonth() + 1, dummy.getUTCDate());
+    }
+
+    // ==========================================
+    // INITIALIZATION & AUTH
+    // ==========================================
+    function initTheme() {
+      if (localStorage.getItem('theme') === 'light') { document.body.classList.add('light-mode'); document.getElementById('themeIcon').textContent = '🌙'; }
+    }
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-mode');
+      document.getElementById('themeIcon').textContent = isLight ? '🌙' : '☀️';
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    }
+
+    function checkSession() {
+      const authExpiry = localStorage.getItem('auth_expiry');
+      if (authExpiry && Date.now() < parseInt(authExpiry)) { loadSecureApp(); }
+    }
+    function logout() {
+      localStorage.clear();
+      window.location.reload();
+    }
+
+    function renderGoogleButton() {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({ client_id: "801862906305-d2sbfbbcpih507cc8bot5sav1nlt8606.apps.googleusercontent.com", callback: handleGoogleLogin, context: "signin", ux_mode: "popup" });
+      }
+    }
+    function handleGoogleLogin(response) {
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      if (payload.email.endsWith('@mindmatrix.net')) loadSecureApp();
+      else { document.getElementById('loginError').textContent = 'Access denied. Must use a Mindmatrix account.'; document.getElementById('loginError').style.display = 'block'; }
+    }
+
+    let pendingEmail = "";
+    async function requestOTP() {
+      const email = document.getElementById('emailInput').value.trim(); const btn = document.querySelector('button[onclick="requestOTP()"]');
+      if (!email.endsWith('@mindmatrix.net')) { document.getElementById('loginError').textContent = 'Restricted domain.'; document.getElementById('loginError').style.display='block'; return; }
+      btn.textContent = "Sending..."; btn.disabled = true;
+      try {
+        const res = await fetch(PROXY_URL, { method: 'POST', body: JSON.stringify({ action: 'sendOtp', email: email }) });
+        const result = await res.json(); if (result.error) throw new Error();
+        pendingEmail = email; document.getElementById('otpStep2').style.display = 'block'; btn.textContent = "OTP Sent!";
+      } catch (err) { btn.textContent = "Send OTP"; btn.disabled = false; }
+    }
+    async function verifyOTP() {
+      const otp = document.getElementById('otpInput').value.trim(); const btn = document.querySelector('button[onclick="verifyOTP()"]');
+      if (!otp) return; btn.textContent = "Verifying..."; btn.disabled = true;
+      try {
+        const res = await fetch(PROXY_URL, { method: 'POST', body: JSON.stringify({ action: 'verifyOtp', email: pendingEmail, otp: otp }) });
+        const result = await res.json(); if (result.error) throw new Error();
+        loadSecureApp();
+      } catch (err) { btn.textContent = "Login securely"; btn.disabled = false; }
+    }
+
+    // ==========================================
+    // CORE SPA NAVIGATION & DATA FETCHING
+    // ==========================================
+    function loadSecureApp() {
+      localStorage.setItem('auth_expiry', Date.now() + (48 * 60 * 60 * 1000));
+      document.getElementById('view-login').classList.remove('active');
+      document.getElementById('view-secure-app').classList.add('active');
+      fetchGlobalData(); // Centralized fetch
+    }
+
+    function navigateTo(viewName, filterType = null, filterValue = null) {
+      // Hide all subviews
+      document.querySelectorAll('.app-subview').forEach(el => el.style.display = 'none');
+      document.getElementById(`view-${viewName}`).style.display = 'block';
+      
+      // Reset headers
+      document.getElementById('globalBackBtn').style.display = viewName === 'dashboard' ? 'none' : 'inline-flex';
+      document.getElementById('backToAgentsBtn').style.display = 'none';
+      document.getElementById('lastUpdatedText').style.display = viewName === 'dashboard' ? 'block' : 'none';
+      document.getElementById('agentHeaderInfo').style.display = 'none';
+      
+      const titleEl = document.getElementById('headerTitleText');
+      if(viewName === 'dashboard') titleEl.textContent = 'Support Portal';
+      if(viewName === 'reports') { titleEl.textContent = 'Reports Dashboard'; renderReportsView(); }
+      if(viewName === 'agents') { titleEl.textContent = 'Support Agents'; showAgentsList(); }
+      if(viewName === 'tickets') { initTicketsView(filterType, filterValue); }
+    }
+
+    async function fetchGlobalData(forceLive = false, pin = '') {
+      const container = document.getElementById('dashboardContainer');
+      const lastUpdatedEl = document.getElementById('lastUpdatedText');
+      if(forceLive && lastUpdatedEl) lastUpdatedEl.textContent = "⏱️ Forcing live sync...";
+
+      try {
+        const now = Date.now();
+        const cacheTimestamp = localStorage.getItem('zoho_data_timestamp');
+        const cachedTickets = localStorage.getItem('zoho_tickets_cache');
+        const cachedStats = localStorage.getItem('zoho_exact_stats');
+
+        let lastUpdateMs = null;
+
+        if (!forceLive && cacheTimestamp && cachedTickets && (now - parseInt(cacheTimestamp) < 15 * 60 * 1000)) {
+            window.allGlobalTickets = JSON.parse(cachedTickets);
+            window.exactStatsData = cachedStats ? JSON.parse(cachedStats) : null;
+            lastUpdateMs = parseInt(cacheTimestamp);
+        } else {
+            const fetchUrl = forceLive ? `${PROXY_URL}?refresh=true&pin=${encodeURIComponent(pin)}` : PROXY_URL;
+            const response = await fetch(fetchUrl, { method: 'GET' });
+            const result = await response.json();
+            if (result.error) throw new Error(result.error);
+            
+            window.exactStatsData = result.exactStats;
+            lastUpdateMs = result.lastUpdated || now;
+            
+            window.allGlobalTickets = (result.data || []).map(t => {
+              let cName = "Unknown";
+              if (t.customFields && t.customFields['Client Name']) cName = t.customFields['Client Name'];
+              else if (t.cf && t.cf['Client Name']) cName = t.cf['Client Name'];
+              else if (t['Client Name']) cName = t['Client Name'];
+              else if (t.clientName) cName = t.clientName;
+              else if (t.contact && t.contact.account && t.contact.account.accountName) cName = t.contact.account.accountName;
+              else if (t.contact) cName = `${t.contact.firstName || ''} ${t.contact.lastName || ''}`.trim();
+
+              return {
+                id: t.id, ticketNumber: t.ticketNumber, subject: t.subject, status: t.status, priority: t.priority,
+                department: t.department ? { name: t.department.name } : null,
+                assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, email: t.assignee.email } : null,
+                createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, agentRespondedTime: t.agentRespondedTime,
+                clientName: cName
+              };
+            });
+            
+            localStorage.setItem('zoho_tickets_cache', JSON.stringify(window.allGlobalTickets));
+            if(window.exactStatsData) localStorage.setItem('zoho_exact_stats', JSON.stringify(window.exactStatsData));
+            localStorage.setItem('zoho_data_timestamp', lastUpdateMs.toString());
+        }
+
+        if (lastUpdateMs && lastUpdatedEl) {
+          const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+          lastUpdatedEl.innerHTML = `⏱️ Last updated: ${formatter.format(new Date(lastUpdateMs))} ET`;
+        }
+        
+        renderMainDashboard(); // Default landing
+      } catch (err) {
+        if(forceLive) { alert(err.message); return; }
+        container.innerHTML = `<div class="glass-panel" style="padding:30px; text-align:center; color:#ef4444;">Error: ${err.message}</div>`;
+      }
+    }
+
+    // ==========================================
+    // VIEW 1: DASHBOARD
+    // ==========================================
+    function renderMainDashboard() {
+      const container = document.getElementById('dashboardContainer');
+      const today = getETMidnightForOffset(0); const yesterday = getETMidnightForOffset(-1); const last7Days = getETMidnightForOffset(-7); const last30Days = getETMidnightForOffset(-30);
+      const weekdayFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' }).format(new Date());
+      const daysMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+      const currentWeek = getETMidnightForOffset(-daysMap[weekdayFmt]); const lastWeekStart = getETMidnightForOffset(-daysMap[weekdayFmt] - 7);
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit'}).formatToParts(new Date());
+      const curY = parseInt(parts.find(p=>p.type==='year').value, 10); const curM = parseInt(parts.find(p=>p.type==='month').value, 10);
+      const currentMonth = getMidnightET(curY, curM, 1); const lastMonthStart = getMidnightET(curM === 1 ? curY - 1 : curY, curM === 1 ? 12 : curM - 1, 1);
+
+      const timeCounts = { today: 0, yesterday: 0, last7: 0, currentWeek: 0, lastWeek: 0, last30: 0, currentMonth: 0, lastMonth: 0 };
+      const stats = { today: { total: 0, open: 0, closed: 0 }, yesterday: { total: 0, open: 0, closed: 0 }, currentWeek: { total: 0, open: 0, closed: 0 }, lastWeek: { total: 0, open: 0, closed: 0 }, last7: { total: 0, open: 0, closed: 0 }, currentMonth: { total: 0, open: 0, closed: 0 }, lastMonth: { total: 0, open: 0, closed: 0 }, last30: { total: 0, open: 0, closed: 0 } };
+      const deptCounts = {}; const priorityCounts = {};
+
+      window.allGlobalTickets.forEach(t => {
+        const tDate = new Date(t.createdTime); const closedDate = t.closedTime ? new Date(t.closedTime) : null;
+        const isClosed = (t.status || '').toLowerCase().includes('close');
+        
+        const incC = (k) => { stats[key=k].total++; if (!isClosed) { stats[k].open++; timeCounts[k]++; } };
+        if (tDate >= today) incC('today'); if (tDate >= yesterday && tDate < today) incC('yesterday'); if (tDate >= last7Days) incC('last7'); if (tDate >= currentWeek) incC('currentWeek'); if (tDate >= lastWeekStart && tDate < currentWeek) incC('lastWeek'); if (tDate >= last30Days) incC('last30'); if (tDate >= currentMonth) incC('currentMonth'); if (tDate >= lastMonthStart && tDate < currentMonth) incC('lastMonth');
+        const incCl = (k) => { stats[k].closed++; };
+        if (isClosed && closedDate) {
+          if (closedDate >= today) incCl('today'); if (closedDate >= yesterday && closedDate < today) incCl('yesterday'); if (closedDate >= last7Days) incCl('last7'); if (closedDate >= currentWeek) incCl('currentWeek'); if (closedDate >= lastWeekStart && closedDate < currentWeek) incCl('lastWeek'); if (closedDate >= last30Days) incCl('last30'); if (closedDate >= currentMonth) incCl('currentMonth'); if (closedDate >= lastMonthStart && closedDate < currentMonth) incCl('lastMonth');
+        }
+        if (!isClosed) {
+          const dName = t.department ? t.department.name : 'General'; deptCounts[dName] = (deptCounts[dName] || 0) + 1;
+          const p = t.priority || 'None'; priorityCounts[p] = (priorityCounts[p] || 0) + 1;
+        }
+      });
+
+      const openLength = window.allGlobalTickets.filter(t => !((t.status || '').toLowerCase().includes('close'))).length;
+      const card = (title, filter, sObj) => `<div onclick="navigateTo('tickets', 'timeframe', '${filter}')" class="metric-card glass-panel"><h3>${title}</h3><p>${sObj.total}</p><div class="stats-subtext"><span class="stats-open">Open: ${sObj.open}</span> &nbsp;|&nbsp; <span class="stats-closed">Closed: ${sObj.closed}</span></div></div>`;
+
+      let html = `<div class="dashboard-grid animate-in delay-1" style="margin-bottom: 30px;"><div onclick="navigateTo('tickets', 'all', 'all')" class="metric-card glass-panel total-card"><h3>Total Open Tickets</h3><p>${openLength}</p></div></div>
+        <div class="section-title animate-in delay-1">Ticket Volumes (Open Only)</div>
+        <div class="dashboard-grid animate-in delay-2" style="margin-bottom: 30px;">
+          <div onclick="navigateTo('tickets','timeframe','today')" class="metric-card glass-panel"><h3>Today</h3><p>${timeCounts.today}</p></div>
+          <div onclick="navigateTo('tickets','timeframe','yesterday')" class="metric-card glass-panel"><h3>Yesterday</h3><p>${timeCounts.yesterday}</p></div>
+          <div onclick="navigateTo('tickets','timeframe','currentWeek')" class="metric-card glass-panel"><h3>This Week</h3><p>${timeCounts.currentWeek}</p></div>
+          <div onclick="navigateTo('tickets','timeframe','lastWeek')" class="metric-card glass-panel"><h3>Last Week</h3><p>${timeCounts.lastWeek}</p></div>
+          <div onclick="navigateTo('tickets','timeframe','last7')" class="metric-card glass-panel"><h3>Last 7 Days</h3><p>${timeCounts.last7}</p></div>
+          <div onclick="navigateTo('tickets','timeframe','currentMonth')" class="metric-card glass-panel"><h3>This Month</h3><p>${timeCounts.currentMonth}</p></div>
+          <div onclick="navigateTo('tickets','timeframe','lastMonth')" class="metric-card glass-panel"><h3>Last Month</h3><p>${timeCounts.lastMonth}</p></div>
+          <div onclick="navigateTo('tickets','timeframe','last30')" class="metric-card glass-panel"><h3>Last 30 Days</h3><p>${timeCounts.last30}</p></div>
+        </div>
+        <div class="section-title animate-in delay-1">Ticket Stats (All Open & Closed)</div>
+        <div class="dashboard-grid animate-in delay-2">
+          ${card('Today','today',stats.today)} ${card('Yesterday','yesterday',stats.yesterday)} ${card('This Week','currentWeek',stats.currentWeek)} ${card('Last Week','lastWeek',stats.lastWeek)}
+          ${card('Last 7 Days','last7',stats.last7)} ${card('This Month','currentMonth',stats.currentMonth)} ${card('Last Month','lastMonth',stats.lastMonth)} ${card('Last 30 Days','last30',stats.last30)}
+        </div>
+        <div class="section-title animate-in delay-2">Open Tickets By Priority</div><div class="dashboard-grid animate-in delay-3">`;
+      
+      Object.entries(priorityCounts).forEach(([priority, count]) => {
+        if (count > 0) {
+          let bg = '#94a3b8'; let tc = '#ffffff'; const p = priority.toLowerCase();
+          if (p.includes('low')) { bg = '#86efac'; tc = '#0f172a'; } else if (p.includes('medium')) { bg = '#fde047'; tc = '#0f172a'; } else if (p.includes('high')) { bg = '#f97316'; tc = '#ffffff'; } else if (p.includes('urgent')) { bg = '#fca5a5'; tc = '#0f172a'; } else if (p.includes('critical')) { bg = '#ef4444'; tc = '#ffffff'; } 
+          html += `<div onclick="navigateTo('tickets', 'priority', '${encodeURIComponent(priority)}')" class="metric-card glass-panel"><div><span class="priority-badge" style="background-color:${bg}; color:${tc};">${priority}</span></div><p>${count}</p></div>`;
+        }
+      });
+      html += `</div><div class="section-title animate-in delay-3">Open Tickets By Department</div><div class="dashboard-grid animate-in delay-3" style="margin-bottom: 20px;">`;
+      Object.entries(deptCounts).forEach(([dept, count]) => { html += `<div onclick="navigateTo('tickets', 'department', '${encodeURIComponent(dept)}')" class="metric-card glass-panel"><h3>${dept}</h3><p>${count}</p></div>`; });
+      container.innerHTML = html + `</div>`;
+    }
+
+    // ==========================================
+    // VIEW 2: REPORTS
+    // ==========================================
+    async function fetchHistoricalData() {
+      if (state.reports.historyData.length > 0) return;
+      document.getElementById('reportsLoadingIndicator').style.display = 'inline-block';
+      try {
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+        const res = await fetch(url); const text = await res.text();
+        const jsonString = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+        const data = JSON.parse(jsonString);
+        const getV = (row, idx) => (row.c && row.c[idx] && row.c[idx].v) ? row.c[idx].v : null;
+        state.reports.historyData = data.table.rows.map(row => ({
+          id: getV(row, 0), ticketNumber: getV(row, 1), subject: getV(row, 2), department: { name: getV(row, 3) }, assignee: { lastName: getV(row, 4) }, status: getV(row, 5), priority: getV(row, 6), createdTime: getV(row, 7), closedTime: getV(row, 8), resolutionTime: getV(row, 9), modifiedTime: getV(row, 10)
+        }));
+      } catch (err) { alert("Failed to load historical data."); }
+      finally { document.getElementById('reportsLoadingIndicator').style.display = 'none'; }
+    }
+    
+    async function handleReportsToggle() {
+      state.reports.isHistoryMode = document.getElementById('reportsHistoryToggle').checked;
+      state.reports.activePriority = null;
+      document.getElementById('reportsCardsTitle').innerText = state.reports.isHistoryMode ? "Global Priority Distribution (Last 90 Days)" : "Global Priority Distribution (Open Tickets)";
+      if (state.reports.isHistoryMode) await fetchHistoricalData();
+      renderReportsView();
+    }
+    
+    function renderReportsView() {
+      const deptFilter = document.getElementById('reportsDepartmentFilter').value;
+      const timeFilter = document.getElementById('reportsTimeframeFilter').value;
+      let cData = state.reports.isHistoryMode ? state.reports.historyData : window.allGlobalTickets;
+      if (!cData || cData.length === 0) return;
+
+      if (deptFilter !== 'All') cData = cData.filter(t => (t.department ? t.department.name || '' : '').toLowerCase().includes(deptFilter.toLowerCase()));
+      if (timeFilter !== 'All') {
+        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - parseInt(timeFilter, 10));
+        cData = cData.filter(t => { const ref = t.agentRespondedTime || t.modifiedTime || t.createdTime; return ref ? new Date(ref) < cutoff : false; });
+      }
+      if (!state.reports.isHistoryMode) cData = cData.filter(t => !(t.status || '').toLowerCase().includes('close'));
+
+      const pCounts = { "Critical": 0, "Urgent": 0, "High": 0, "Medium": 0, "Low": 0, "None": 0 };
+      cData.forEach(t => { const prio = t.priority ? t.priority.toLowerCase() : 'none';
+        if(prio.includes('critical')) pCounts.Critical++; else if(prio.includes('urgent')) pCounts.Urgent++; else if(prio.includes('high')) pCounts.High++; else if(prio.includes('medium')) pCounts.Medium++; else if(prio.includes('low')) pCounts.Low++; else pCounts.None++;
+      });
+
+      let pHT = ''; const clrs = { "Critical": "#ef4444", "Urgent": "#fca5a5", "High": "#f97316", "Medium": "#fde047", "Low": "#86efac", "None": "#94a3b8" };
+      Object.entries(pCounts).forEach(([p, c]) => {
+        if(c > 0 || p !== "None") {
+          const act = state.reports.activePriority === p ? 'active-filter' : '';
+          pHT += `<div class="metric-card glass-panel ${act}" onclick="state.reports.activePriority=(state.reports.activePriority==='${p}'?null:'${p}'); renderReportsView();"><div><span class="priority-badge" style="background-color:${clrs[p]}; color:${(p==='Medium'||p==='Low'||p==='Urgent')?'#0f172a':'#fff'};">${p}</span></div><p>${c}</p></div>`;
+        }
+      });
+      document.getElementById('reportsPriorityCardsContainer').innerHTML = pHT;
+
+      if (state.reports.activePriority) {
+        document.getElementById('reportsFilterSubtext').innerText = `(Filtered by ${state.reports.activePriority})`;
+        cData = cData.filter(t => { const pt = t.priority ? t.priority.toLowerCase() : 'none'; return state.reports.activePriority === "None" ? pt === 'none' : pt.includes(state.reports.activePriority.toLowerCase()); });
+      } else document.getElementById('reportsFilterSubtext').innerText = "";
+
+      document.getElementById('reportsTableHeader').innerHTML = state.reports.isHistoryMode ? `<tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Agent Responded Time</th><th>Created Date</th><th>Closed Date</th><th>Resolution (Hrs)</th></tr>` : `<tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Agent Responded Time</th><th>Created Date</th></tr>`;
+      
+      const tb = document.getElementById('reportsTableBody'); tb.innerHTML = '';
+      if(cData.length === 0) { tb.innerHTML = `<tr><td colspan="${state.reports.isHistoryMode?9:7}" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
+      
+      cData.forEach(t => {
+        const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.lastName || t.assignee.firstName || 'Unassigned').trim() : 'Unassigned';
+        const crt = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
+        const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
+        const rsp = rspData ? tableDateFmt.format(new Date(rspData)) : '-';
+        
+        let bg = '#94a3b8'; let tc = '#ffffff'; const pL = pr.toLowerCase();
+        if(pL.includes('low')){bg='#86efac';tc='#0f172a';} else if(pL.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pL.includes('high')){bg='#f97316';} else if(pL.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pL.includes('critical')){bg='#ef4444';}
+        const bHTML = pr !== '-' ? `<span class="priority-badge" style="background-color:${bg}; color:${tc};">${pr}</span>` : pr;
+
+        let rHtml = `<td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td><td><strong>${t.subject}</strong></td><td>${bHTML}</td><td>${t.status||'-'}</td><td>${asgn}</td><td>${rsp}</td><td>${crt}</td>`;
+        if (state.reports.isHistoryMode) rHtml += `<td>${t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'}</td><td><strong>${t.resolutionTime||'-'}</strong></td>`;
+        const tr = document.createElement('tr'); tr.innerHTML = rHtml; tb.appendChild(tr);
+      });
+    }
+
+    // ==========================================
+    // VIEW 3: AGENTS
+    // ==========================================
+    function showAgentsList() {
+      document.getElementById('agentsListView').style.display = 'block'; document.getElementById('agentDetailsView').style.display = 'none';
+      document.getElementById('globalBackBtn').style.display = 'inline-flex'; document.getElementById('backToAgentsBtn').style.display = 'none';
+      document.getElementById('headerTitleText').textContent = 'Support Agents'; document.getElementById('agentHeaderInfo').style.display = 'none';
+      
+      state.agents.map = {};
+      window.allGlobalTickets.forEach(t => {
+        if (t.assignee && t.assignee.id) {
+          const aId = t.assignee.id;
+          if (!state.agents.map[aId]) state.agents.map[aId] = { id: aId, firstName: t.assignee.firstName || '', lastName: t.assignee.lastName || '', email: t.assignee.email || 'N/A', department: t.department ? t.department.name : 'General', openTickets: 0 };
+          if (!(t.status || '').toLowerCase().includes('clos')) state.agents.map[aId].openTickets++;
+        }
+      });
+      const sorted = Object.values(state.agents.map).sort((a, b) => b.openTickets - a.openTickets);
+      const tb = document.getElementById('agentsTableBody'); tb.innerHTML = '';
+      if(sorted.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:40px;">No agents found.</td></tr>`; return; }
+      
+      sorted.forEach((ag, i) => {
+        const tr = document.createElement('tr'); tr.className='animate-in'; tr.style.animationDelay=`${0.05*i}s`;
+        tr.innerHTML = `<td><strong>${ag.firstName} ${ag.lastName}</strong></td><td>${ag.email}</td><td><span style="color:var(--accent); font-weight:700;">${ag.openTickets}</span></td><td><button class="btn-view" onclick="openAgentDetails('${ag.id}')">View Details</button></td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    function openAgentDetails(aId) {
+      const ag = state.agents.map[aId]; if(!ag) return;
+      document.getElementById('agentsListView').style.display = 'none'; document.getElementById('agentDetailsView').style.display = 'block';
+      document.getElementById('globalBackBtn').style.display = 'none'; document.getElementById('backToAgentsBtn').style.display = 'inline-flex';
+      document.getElementById('headerTitleText').textContent = `${ag.firstName} ${ag.lastName}`;
+      const hInfo = document.getElementById('agentHeaderInfo'); hInfo.style.display = 'flex';
+      hInfo.innerHTML = `<span>✉️ ${ag.email}</span> | <span>🏢 ${ag.department}</span> | <span style="color:#10b981;">● Active</span>`;
+
+      state.agents.currentId = aId;
+      state.agents.currentTickets = window.allGlobalTickets.filter(t => t.assignee && t.assignee.id === aId);
+      state.agents.filteredTickets = [...state.agents.currentTickets];
+      calcAgentKPIs(); populateAgentDropdowns(); renderAgentTable();
+    }
+    
+    function calcAgentKPIs() {
+      const today = getETMidnightForOffset(0); const yesterday = getETMidnightForOffset(-1);
+      const currentWeek = getETMidnightForOffset(-{ 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 }[new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' }).format(new Date())]);
+      const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit'}).formatToParts(new Date());
+      const currentMonth = getMidnightET(parseInt(p.find(x=>x.type==='year').value,10), parseInt(p.find(x=>x.type==='month').value,10), 1);
+      
+      const s = { todayOpen: 0, yest: {t:0,o:0,c:0}, wk: {t:0,o:0,c:0}, mo: {t:0,o:0,c:0} };
+      const pC = { "Critical": 0, "Urgent": 0, "High": 0, "Medium": 0, "Low": 0 };
+
+      state.agents.currentTickets.forEach(t => {
+        const d = new Date(t.createdTime); const isC = (t.status || '').toLowerCase().includes('close');
+        if (!isC) { const pr = (t.priority||'').toLowerCase(); if(pr.includes('critical')) pC.Critical++; else if(pr.includes('urgent')) pC.Urgent++; else if(pr.includes('high')) pC.High++; else if(pr.includes('medium')) pC.Medium++; else if(pr.includes('low')) pC.Low++; }
+        const i = (o) => { o.t++; if(isC) o.c++; else o.o++; };
+        if (d >= today && !isC) s.todayOpen++; if (d >= yesterday && d < today) i(s.yest); if (d >= currentWeek) i(s.wk); if (d >= currentMonth) i(s.mo);
+      });
+      const cH = (tl, ob) => `<div class="metric-card glass-panel"><h3>${tl}</h3><p>${ob.t}</p><div class="stats-subtext"><span class="stats-open">Open: ${ob.o}</span> &nbsp;|&nbsp; <span class="stats-closed">Closed: ${ob.c}</span></div></div>`;
+      document.getElementById('agentStatsCards').innerHTML = `<div class="metric-card glass-panel" style="border-color:var(--accent);"><h3>Open Today</h3><p style="color:var(--accent);">${s.todayOpen}</p></div>` + cH('Yesterday', s.yest) + cH('This Week', s.wk) + cH('This Month', s.mo);
+      
+      let pH = ''; const clrs = { "Critical": "#ef4444", "Urgent": "#fca5a5", "High": "#f97316", "Medium": "#fde047", "Low": "#86efac" };
+      Object.entries(pC).forEach(([pr, ct]) => { pH += `<div class="metric-card glass-panel"><div><span class="priority-badge" style="background-color:${clrs[pr]}; color:${(pr==='Medium'||pr==='Low'||pr==='Urgent')?'#0f172a':'#fff'};">${pr}</span></div><p>${ct}</p></div>`; });
+      document.getElementById('agentPriorityCards').innerHTML = pH;
+    }
+    
+    function populateAgentDropdowns() {
+      const st = new Set(); const pr = new Set();
+      state.agents.currentTickets.forEach(t => { st.add(t.status || '-'); pr.add(t.priority || '-'); });
+      const fill = (id, set) => { const el = document.getElementById(id); el.innerHTML = ''; Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyAgentFilters()"> ${v}</label>`; }); };
+      fill('agentStatusDropdown', st); fill('agentPriorityDropdown', pr);
+    }
+    
+    function applyAgentFilters() {
+      const sS = Array.from(document.querySelectorAll('#agentStatusDropdown input:checked')).map(c=>c.value);
+      const sP = Array.from(document.querySelectorAll('#agentPriorityDropdown input:checked')).map(c=>c.value);
+      document.getElementById('agentStatusLabel').innerText = sS.length ? `${sS.length} Selected` : 'All Statuses';
+      document.getElementById('agentPriorityLabel').innerText = sP.length ? `${sP.length} Selected` : 'All Priorities';
+      
+      const txt = document.getElementById('agentSearchText').value.toLowerCase();
+      const dS = document.getElementById('agentDateStart').value; const dE = document.getElementById('agentDateEnd').value;
+      
+      state.agents.filteredTickets = state.agents.currentTickets.filter(t => {
+        const cD = new Date(t.createdTime); let pD = true;
+        if(dS){ const [y,m,d]=dS.split('-'); pD = pD && (cD >= getMidnightET(y,m,d)); }
+        if(dE){ const [y,m,d]=dE.split('-'); pD = pD && (cD <= new Date(getMidnightET(y,m,d).getTime()+86399999)); }
+        return (sS.length===0 || sS.includes(t.status||'-')) && (sP.length===0 || sP.includes(t.priority||'-')) && (txt==='' || (t.subject||'').toLowerCase().includes(txt) || (t.ticketNumber||'').toLowerCase().includes(txt)) && pD;
+      });
+      renderAgentTable();
+    }
+    
+    function clearAgentFilters() { document.getElementById('agentSearchText').value = ''; document.getElementById('agentDateStart')._flatpickr.clear(); document.getElementById('agentDateEnd')._flatpickr.clear(); document.querySelectorAll('#agentStatusDropdown input, #agentPriorityDropdown input').forEach(c=>c.checked=false); applyAgentFilters(); }
+    
+    function renderAgentTable() {
+      const tb = document.getElementById('agentTicketsTableBody'); tb.innerHTML = '';
+      if(state.agents.filteredTickets.length===0) { tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
+      state.agents.filteredTickets.forEach(t => {
+        const p = t.priority||'-'; const pl = p.toLowerCase(); let bg='#94a3b8'; let tc='#fff';
+        if(pl.includes('low')){bg='#86efac';tc='#0f172a';} else if(pl.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pl.includes('high')){bg='#f97316';} else if(pl.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
+        const tbHTML = document.createElement('tr');
+        tbHTML.innerHTML = `<td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td><td><strong>${t.subject}</strong></td><td>${t.clientName||'-'}</td><td><span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span></td><td><span class="dept-badge">${t.status}</span></td><td>${t.createdTime?tableDateFmt.format(new Date(t.createdTime)):'-'}</td><td>${t.modifiedTime?tableDateFmt.format(new Date(t.modifiedTime)):'-'}</td><td>${t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'}</td>`;
+        tb.appendChild(tbHTML);
+      });
+    }
+
+    // ==========================================
+    // VIEW 4: TICKETS DEEP DIVE
+    // ==========================================
+    function initTicketsView(filterType, filterValue) {
+      document.getElementById('headerTitleText').textContent = 'Loading Tickets...';
+      state.tickets.filterType = filterType; state.tickets.filterValue = filterValue;
+      
+      let baseT = window.allGlobalTickets.filter(t => !((t.status||'').toLowerCase().includes('clos')));
+      
+      if (filterType === 'priority') baseT = baseT.filter(t => t.priority === decodeURIComponent(filterValue));
+      else if (filterType === 'department') baseT = baseT.filter(t => (t.department?t.department.name:'General') === decodeURIComponent(filterValue));
+      else if (filterType === 'timeframe') {
+        const today = getETMidnightForOffset(0); const yesterday = getETMidnightForOffset(-1); const last7 = getETMidnightForOffset(-7); const last30 = getETMidnightForOffset(-30);
+        const cwOff = -{ 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 }[new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' }).format(new Date())];
+        const cW = getETMidnightForOffset(cwOff); const lWS = getETMidnightForOffset(cwOff-7);
+        const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit'}).formatToParts(new Date());
+        const cM = getMidnightET(parseInt(p.find(x=>x.type==='year').value,10), parseInt(p.find(x=>x.type==='month').value,10), 1);
+        const lMS = getMidnightET(parseInt(p.find(x=>x.type==='year').value,10)+(parseInt(p.find(x=>x.type==='month').value,10)===1?-1:0), parseInt(p.find(x=>x.type==='month').value,10)===1?12:parseInt(p.find(x=>x.type==='month').value,10)-1, 1);
+        
+        baseT = baseT.filter(t => {
+          const d = new Date(t.createdTime);
+          if(filterValue==='today') return d>=today; if(filterValue==='yesterday') return d>=yesterday&&d<today; if(filterValue==='last7') return d>=last7;
+          if(filterValue==='currentWeek') return d>=cW; if(filterValue==='lastWeek') return d>=lWS&&d<cW; if(filterValue==='last30') return d>=last30;
+          if(filterValue==='currentMonth') return d>=cM; if(filterValue==='lastMonth') return d>=lMS&&d<cM; return true;
+        });
+        const ttls = { today: "Today's", yesterday: "Yesterday's", last7: "Last 7 Days", currentWeek: "This Week's", lastWeek: "Last Week's", last30: "Last 30 Days", currentMonth: "This Month's", lastMonth: "Last Month's" };
+        document.getElementById('headerTitleText').textContent = `${ttls[filterValue]||filterValue} Tickets`;
+      } else { document.getElementById('headerTitleText').textContent = 'All Tickets'; }
+      
+      state.tickets.activeTickets = baseT; state.tickets.currentFiltered = [...baseT];
+      populateTicketsDropdowns(); renderTicketsTable();
+    }
+    
+    function populateTicketsDropdowns() {
+      const cl = new Set(); const ag = new Set(); const pr = new Set(); const st = new Set();
+      state.tickets.activeTickets.forEach(t => { cl.add(t.clientName||'-'); ag.add(t.assignee?`${t.assignee.firstName||''} ${t.assignee.lastName||''}`.trim():'Unassigned'); pr.add(t.priority||'-'); st.add(t.status||'-'); });
+      const fill = (id, set) => { const el = document.getElementById(id); el.innerHTML = ''; Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyTicketsFilters()"> ${v}</label>`; }); };
+      fill('ticketsClientDropdown', cl); fill('ticketsAssigneeDropdown', ag); fill('ticketsPriorityDropdown', pr); fill('ticketsStatusDropdown', st);
+    }
+    
+    function applyTicketsFilters() {
+      const sC = Array.from(document.querySelectorAll('#ticketsClientDropdown input:checked')).map(c=>c.value); const sA = Array.from(document.querySelectorAll('#ticketsAssigneeDropdown input:checked')).map(c=>c.value);
+      const sP = Array.from(document.querySelectorAll('#ticketsPriorityDropdown input:checked')).map(c=>c.value); const sS = Array.from(document.querySelectorAll('#ticketsStatusDropdown input:checked')).map(c=>c.value);
+      document.getElementById('ticketsClientLabel').innerText = sC.length ? `${sC.length} Selected` : 'All Clients'; document.getElementById('ticketsAssigneeLabel').innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
+      document.getElementById('ticketsPriorityLabel').innerText = sP.length ? `${sP.length} Selected` : 'All Priorities'; document.getElementById('ticketsStatusLabel').innerText = sS.length ? `${sS.length} Selected` : 'All Statuses';
+      const dS = document.getElementById('ticketsDateStart').value; const dE = document.getElementById('ticketsDateEnd').value;
+      
+      state.tickets.currentFiltered = state.tickets.activeTickets.filter(t => {
+        const asn = t.assignee?`${t.assignee.firstName||''} ${t.assignee.lastName||''}`.trim():'Unassigned'; const cD = new Date(t.createdTime); let pD = true;
+        if(dS){ const [y,m,d]=dS.split('-'); pD = pD && (cD >= getMidnightET(y,m,d)); }
+        if(dE){ const [y,m,d]=dE.split('-'); pD = pD && (cD <= new Date(getMidnightET(y,m,d).getTime()+86399999)); }
+        return (sC.length===0 || sC.includes(t.clientName||'-')) && (sA.length===0 || sA.includes(asn)) && (sP.length===0 || sP.includes(t.priority||'-')) && (sS.length===0 || sS.includes(t.status||'-')) && pD;
+      });
+      renderTicketsTable();
+    }
+    function clearTicketsFilters() { document.getElementById('ticketsDateStart')._flatpickr.clear(); document.getElementById('ticketsDateEnd')._flatpickr.clear(); document.querySelectorAll('#view-tickets .select-dropdown input').forEach(c=>c.checked=false); applyTicketsFilters(); }
+    
+    function renderTicketsTable() {
+      const tb = document.getElementById('ticketsTableBody'); tb.innerHTML = '';
+      if(state.tickets.currentFiltered.length===0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 60px;">No tickets match.</td></tr>`; return; }
+      state.tickets.currentFiltered.forEach((t, i) => {
+        const asn = t.assignee?`${t.assignee.firstName||''} ${t.assignee.lastName||''}`.trim():'Unassigned';
+        const p = t.priority||'-'; const pl = p.toLowerCase(); let bg='#94a3b8'; let tc='#fff';
+        if(pl.includes('low')){bg='#86efac';tc='#0f172a';} else if(pl.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pl.includes('high')){bg='#f97316';} else if(pl.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
+        const tr = document.createElement('tr'); tr.className='animate-in'; tr.style.animationDelay=`${0.1+(i*0.02)}s`;
+        tr.innerHTML = `<td><strong>#${t.ticketNumber}</strong></td><td><strong>${t.subject}</strong></td><td>${t.clientName||'-'}</td><td><span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span></td><td><span class="dept-badge">${t.department?t.department.name:'General'}</span></td><td>${asn}</td><td>${t.status||'-'}</td><td>${t.createdTime?csvDateFmt.format(new Date(t.createdTime)):'-'}</td><td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">Open ↗</a></td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    function exportTicketsToCSV() {
+      let csv = "\uFEFFTicket #,Subject,Client Name,Priority,Department,Assignee,Status,Created Date,Ticket Link\n";
+      state.tickets.currentFiltered.forEach(t => {
+        csv += `${t.ticketNumber||""},"${(t.subject||"").replace(/"/g,'""')}","${(t.clientName||"").replace(/"/g,'""')}",${t.priority||"-"},${t.department?t.department.name:"General"},${t.assignee?`${t.assignee.firstName||''} ${t.assignee.lastName||''}`.trim():"Unassigned"},${t.status||""},${t.createdTime?csvDateFmt.format(new Date(t.createdTime)):""},https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}\n`;
+      });
+      const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `Tickets_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); 
+    }
+
+    // ==========================================
+    // UTILS & BINDINGS
+    // ==========================================
+    function showPinModal() { document.getElementById('pinModal').style.display = 'flex'; document.getElementById('pinInput').value = ''; setTimeout(()=>document.getElementById('pinInput').focus(), 100); }
+    function closePinModal() { document.getElementById('pinModal').style.display = 'none'; }
+    document.getElementById('submitPinBtn').addEventListener('click', () => { const p = document.getElementById('pinInput').value; closePinModal(); fetchGlobalData(true, p); });
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.altKey && (e.key === 'r' || e.key === 'R')) { e.preventDefault(); const ae = localStorage.getItem('auth_expiry'); if(ae && Date.now()<parseInt(ae)) showPinModal(); }
+      if (e.altKey && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); const ae = localStorage.getItem('auth_expiry'); if(ae && Date.now()<parseInt(ae) && window.exactStatsData) {
+        let cp = ""; ["Support","Services","Development","Production","IT Requests","Project Management","Specialist Team","Billing","Concierge Services","SalesHelp"].forEach(d => { const s = window.exactStatsData[d] || {totalOpen:0,yesterdayNew:0,yesterdayClosed:0}; cp += `${s.totalOpen}\t${s.yesterdayNew}\t${s.yesterdayClosed}\t`; });
+        navigator.clipboard.writeText(cp.replace(/\t$/, '')).then(() => alert("✅ Exact Zoho Reports Data copied!")).catch(err => alert("Copy failed"));
+      }}
+    });
+
+    document.addEventListener('click', (e) => { if (!e.target.closest('.custom-select')) document.querySelectorAll('.select-dropdown').forEach(el => el.classList.remove('active')); });
+    function toggleDropdown(id) { document.querySelectorAll('.select-dropdown').forEach(el => { if (el.id !== id) el.classList.remove('active'); }); document.getElementById(id).classList.toggle('active'); }
+
+    // INITIALIZATION
+    initTheme();
+    flatpickr("#agentDateStart", { dateFormat: "Y-m-d", onChange: applyAgentFilters, disableMobile: true }); flatpickr("#agentDateEnd", { dateFormat: "Y-m-d", onChange: applyAgentFilters, disableMobile: true });
+    flatpickr("#ticketsDateStart", { dateFormat: "Y-m-d", onChange: applyTicketsFilters, disableMobile: true }); flatpickr("#ticketsDateEnd", { dateFormat: "Y-m-d", onChange: applyTicketsFilters, disableMobile: true });
+    checkSession();
+  </script>
+</body>
+</html>
