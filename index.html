@@ -17,14 +17,24 @@
 
   <style>
     /* =========================================
-       SPA ROUTING & VIEW TOGGLES
+       SPA ROUTING & STRICT VIEW TOGGLES
        ========================================= */
-    .page-view { display: none; width: 100%; animation: fadeIn 0.3s ease; }
-    .page-view.active { display: block; }
+    .page-view { display: none !important; width: 100%; }
+    .page-view.active { display: block !important; animation: fadeIn 0.3s ease; }
+    
+    /* Login screen flexbox centering strictly scoped to active state */
+    #view-login.page-view.active { 
+      display: flex !important; 
+      justify-content: center; 
+      align-items: center; 
+      flex: 1; 
+      min-height: 80vh;
+    }
+
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     /* =========================================
-       GLOBAL VARIABLES & THEMES (From style.css)
+       GLOBAL VARIABLES & THEMES
        ========================================= */
     :root {
       --bg-gradient: radial-gradient(circle at 15% 50%, #1e1b4b, #0f172a, #020617);
@@ -100,8 +110,7 @@
     .btn-back { background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; }
     .btn-back:hover { background: rgba(255,255,255,0.1); transform: translateX(-4px); }
 
-    /* LOGIN SCREEN */
-    #loginScreen { display: flex; justify-content: center; align-items: center; flex: 1; }
+    /* LOGIN CARD */
     .login-card { padding: 50px 40px; width: 100%; max-width: 420px; text-align: center; }
     .login-card h2 { margin-top: 0; margin-bottom: 8px; font-weight: 700; font-size: 1.8rem; }
     .login-card p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 30px; }
@@ -228,7 +237,7 @@
   </div>
 
   <!-- LOGIN VIEW -->
-  <div id="view-login" class="page-view active" style="display: flex; justify-content: center; align-items: center; flex: 1;">
+  <div id="view-login" class="page-view active">
     <div class="login-card glass-panel animate-in delay-1">
       <h2>Staff Login</h2>
       <p>Authorized accounts only.</p>
@@ -294,7 +303,7 @@
     </div> 
 
     <!-- 1. DASHBOARD VIEW -->
-    <div id="view-dashboard" class="app-subview active">
+    <div id="view-dashboard" class="app-subview">
       <div id="dashboardContainer">
         <div style="text-align: center; padding: 50px;" class="animate-in delay-1">
           <p style="color: var(--accent); font-size: 1.2rem; font-weight: 500;">Syncing secure data...</p>
@@ -348,7 +357,6 @@
 
     <!-- 3. AGENTS VIEW -->
     <div id="view-agents" class="app-subview" style="display:none;">
-      <!-- Agents List Subview -->
       <div id="agentsListView" class="animate-in delay-1">
         <div class="table-container glass-panel">
           <table>
@@ -359,7 +367,6 @@
           </table>
         </div>
       </div>
-      <!-- Agent Details Subview -->
       <div id="agentDetailsView" class="animate-in delay-1" style="display:none;">
         <div class="section-title">Performance Summary</div>
         <div class="dashboard-grid" id="agentStatsCards"></div>
@@ -400,7 +407,7 @@
       </div>
     </div>
 
-    <!-- 4. TICKETS VIEW (Deep Dive Log) -->
+    <!-- 4. TICKETS VIEW -->
     <div id="view-tickets" class="app-subview" style="display:none;">
       <div class="controls-panel glass-panel animate-in">
         <div class="filter-group"><label>Start Date</label><input type="text" id="ticketsDateStart" placeholder="Select Date..."></div>
@@ -500,8 +507,19 @@
 
     function checkSession() {
       const authExpiry = localStorage.getItem('auth_expiry');
-      if (authExpiry && Date.now() < parseInt(authExpiry)) { loadSecureApp(); }
+      if (authExpiry && Date.now() < parseInt(authExpiry)) {
+        loadSecureApp();
+      } else {
+        showLoginScreen();
+      }
     }
+
+    function showLoginScreen() {
+      localStorage.removeItem('auth_expiry');
+      document.getElementById('view-secure-app').classList.remove('active');
+      document.getElementById('view-login').classList.add('active');
+    }
+
     function logout() {
       localStorage.clear();
       window.location.reload();
@@ -546,22 +564,21 @@
       localStorage.setItem('auth_expiry', Date.now() + (48 * 60 * 60 * 1000));
       document.getElementById('view-login').classList.remove('active');
       document.getElementById('view-secure-app').classList.add('active');
-      fetchGlobalData(); // Centralized fetch
+      navigateTo('dashboard');
+      fetchGlobalData(); 
     }
 
     function navigateTo(viewName, filterType = null, filterValue = null) {
-      // Hide all subviews
       document.querySelectorAll('.app-subview').forEach(el => el.style.display = 'none');
       document.getElementById(`view-${viewName}`).style.display = 'block';
       
-      // Reset headers
       document.getElementById('globalBackBtn').style.display = viewName === 'dashboard' ? 'none' : 'inline-flex';
       document.getElementById('backToAgentsBtn').style.display = 'none';
       document.getElementById('lastUpdatedText').style.display = viewName === 'dashboard' ? 'block' : 'none';
       document.getElementById('agentHeaderInfo').style.display = 'none';
       
       const titleEl = document.getElementById('headerTitleText');
-      if(viewName === 'dashboard') titleEl.textContent = 'Support Portal';
+      if(viewName === 'dashboard') { titleEl.textContent = 'Support Portal'; renderMainDashboard(); }
       if(viewName === 'reports') { titleEl.textContent = 'Reports Dashboard'; renderReportsView(); }
       if(viewName === 'agents') { titleEl.textContent = 'Support Agents'; showAgentsList(); }
       if(viewName === 'tickets') { initTicketsView(filterType, filterValue); }
@@ -621,7 +638,7 @@
           lastUpdatedEl.innerHTML = `⏱️ Last updated: ${formatter.format(new Date(lastUpdateMs))} ET`;
         }
         
-        renderMainDashboard(); // Default landing
+        renderMainDashboard(); 
       } catch (err) {
         if(forceLive) { alert(err.message); return; }
         container.innerHTML = `<div class="glass-panel" style="padding:30px; text-align:center; color:#ef4444;">Error: ${err.message}</div>`;
@@ -633,6 +650,8 @@
     // ==========================================
     function renderMainDashboard() {
       const container = document.getElementById('dashboardContainer');
+      if (!window.allGlobalTickets || window.allGlobalTickets.length === 0) return;
+
       const today = getETMidnightForOffset(0); const yesterday = getETMidnightForOffset(-1); const last7Days = getETMidnightForOffset(-7); const last30Days = getETMidnightForOffset(-30);
       const weekdayFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' }).format(new Date());
       const daysMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
@@ -649,7 +668,7 @@
         const tDate = new Date(t.createdTime); const closedDate = t.closedTime ? new Date(t.closedTime) : null;
         const isClosed = (t.status || '').toLowerCase().includes('close');
         
-        const incC = (k) => { stats[key=k].total++; if (!isClosed) { stats[k].open++; timeCounts[k]++; } };
+        const incC = (k) => { stats[k].total++; if (!isClosed) { stats[k].open++; timeCounts[k]++; } };
         if (tDate >= today) incC('today'); if (tDate >= yesterday && tDate < today) incC('yesterday'); if (tDate >= last7Days) incC('last7'); if (tDate >= currentWeek) incC('currentWeek'); if (tDate >= lastWeekStart && tDate < currentWeek) incC('lastWeek'); if (tDate >= last30Days) incC('last30'); if (tDate >= currentMonth) incC('currentMonth'); if (tDate >= lastMonthStart && tDate < currentMonth) incC('lastMonth');
         const incCl = (k) => { stats[k].closed++; };
         if (isClosed && closedDate) {
