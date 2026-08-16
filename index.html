@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Desk Portal | Master Dashboard</title>
+  <title>Desk Portal | Master Dashboard (Sandbox)</title>
   
   <link rel="icon" href="https://www.google.com/s2/favicons?domain=mindmatrix.net&sz=128" type="image/x-icon">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -147,23 +147,13 @@
     .filter-input, .select-btn, .filter-group input[type="text"] { background-color: var(--input-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; height: 40px; box-sizing: border-box; outline: none; font-family: inherit; transition: all 0.3s; cursor: pointer; }
     .filter-input:focus, .select-btn:hover, .filter-group input[type="text"]:focus { border-color: var(--accent); }
 
-    .custom-select { position: relative; width: 160px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.3); background-color: var(--glass-bg); color: inherit; font-family: inherit; font-size: 0.9rem; outline: none; cursor: pointer; }
-    .dark-mode .custom-select { background-color: rgba(30, 41, 59, 0.7); }
-    select.custom-select { 
-      padding: 8px 36px 8px 12px; 
-      height: 40px; 
-      appearance: none; 
-      -webkit-appearance: none;
-      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>');
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      background-size: 14px;
-    }
-    
-    .select-btn { display: flex; justify-content: space-between; align-items: center; user-select: none; border: none; padding: 0; background: transparent; height: auto; }
+    .custom-select { position: relative; width: 160px; padding: 0; border: none; background: transparent; }
+    .select-btn { display: flex; justify-content: space-between; align-items: center; user-select: none; width: 100%; }
     .select-dropdown { position: absolute; top: 100%; left: 0; width: 100%; background-color: var(--dropdown-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 8px; margin-top: 6px; max-height: 250px; overflow-y: auto; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; }
     .select-dropdown.active { display: block; }
-    .select-dropdown label { display: flex; align-items: center; padding: 10px 14px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; color: var(--text-main); }
+    
+    /* Cleaned up label hover to act as a proper clickable button list */
+    .select-dropdown label { display: flex; align-items: center; padding: 10px 14px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; color: var(--text-main); margin: 0; }
     .select-dropdown label:hover { background-color: var(--row-hover); }
     .select-dropdown input[type="checkbox"] { margin-right: 10px; accent-color: var(--accent); cursor: pointer; }
 
@@ -324,25 +314,39 @@
     <div id="view-reports" class="app-subview" style="display:none;">
       <div class="controls-container animate-in delay-1">
         <div class="filters-group">
-          <select id="reportsDepartmentFilter" class="custom-select" onchange="renderReportsView()">
-            <option value="All">All Departments</option>
-            <option value="Support">Support</option>
-            <option value="Services">Services</option>
-            <option value="Development">Development</option>
-            <option value="Production">Production</option>
-            <option value="IT Requests">IT Requests</option>
-            <option value="Project Management">Project Management</option>
-            <option value="Specialist Team">Specialist Team</option>
-            <option value="Billing">Billing</option>
-            <option value="Concierge Services">Concierge Services</option>
-            <option value="SalesHelp">SalesHelp</option>
-          </select>
-          <select id="reportsTimeframeFilter" class="custom-select" onchange="renderReportsView()">
-            <option value="All">Any Update Time</option>
-            <option value="14">No Updates > 2 Weeks</option>
-            <option value="30">No Updates > 30 Days</option>
-            <option value="60">No Updates > 60 Days</option>
-          </select>
+          
+          <!-- Replaced native <select> with Custom Single-Select Glass Dropdowns -->
+          <div class="custom-select" style="width: 200px;">
+            <div class="select-btn" onclick="toggleDropdown('reportsDeptDropdown')">
+              <span id="reportsDeptLabel">All Departments</span> ▼
+            </div>
+            <div class="select-dropdown" id="reportsDeptDropdown">
+              <label onclick="setReportsFilter('department', 'All', 'All Departments')">All Departments</label>
+              <label onclick="setReportsFilter('department', 'Support', 'Support')">Support</label>
+              <label onclick="setReportsFilter('department', 'Services', 'Services')">Services</label>
+              <label onclick="setReportsFilter('department', 'Development', 'Development')">Development</label>
+              <label onclick="setReportsFilter('department', 'Production', 'Production')">Production</label>
+              <label onclick="setReportsFilter('department', 'IT Requests', 'IT Requests')">IT Requests</label>
+              <label onclick="setReportsFilter('department', 'Project Management', 'Project Management')">Project Management</label>
+              <label onclick="setReportsFilter('department', 'Specialist Team', 'Specialist Team')">Specialist Team</label>
+              <label onclick="setReportsFilter('department', 'Billing', 'Billing')">Billing</label>
+              <label onclick="setReportsFilter('department', 'Concierge Services', 'Concierge Services')">Concierge Services</label>
+              <label onclick="setReportsFilter('department', 'SalesHelp', 'SalesHelp')">SalesHelp</label>
+            </div>
+          </div>
+
+          <div class="custom-select" style="width: 210px;">
+            <div class="select-btn" onclick="toggleDropdown('reportsTimeDropdown')">
+              <span id="reportsTimeLabel">Any Update Time</span> ▼
+            </div>
+            <div class="select-dropdown" id="reportsTimeDropdown">
+              <label onclick="setReportsFilter('timeframe', 'All', 'Any Update Time')">Any Update Time</label>
+              <label onclick="setReportsFilter('timeframe', '14', 'No Updates > 2 Weeks')">No Updates > 2 Weeks</label>
+              <label onclick="setReportsFilter('timeframe', '30', 'No Updates > 30 Days')">No Updates > 30 Days</label>
+              <label onclick="setReportsFilter('timeframe', '60', 'No Updates > 60 Days')">No Updates > 60 Days</label>
+            </div>
+          </div>
+
         </div>
         <div class="toggle-wrapper">
           <span>90-Day History</span>
@@ -479,9 +483,9 @@
     window.allGlobalTickets = [];
     window.exactStatsData = null;
     
-    // View States
+    // View States (Updated for Reports Dropdown Fixes)
     const state = {
-      reports: { isHistoryMode: false, activePriority: null, historyData: [] },
+      reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All' },
       agents: { map: {}, currentId: null, currentTickets: [], filteredTickets: [] },
       tickets: { activeTickets: [], currentFiltered: [], filterType: null, filterValue: null }
     };
@@ -515,7 +519,7 @@
     }
 
     function checkSession() {
-      const authExpiry = localStorage.getItem('auth_expiry');
+      const authExpiry = localStorage.getItem('sandbox_auth_expiry');
       if (authExpiry && Date.now() < parseInt(authExpiry)) {
         loadSecureApp();
       } else {
@@ -524,13 +528,18 @@
     }
 
     function showLoginScreen() {
-      localStorage.removeItem('auth_expiry');
+      localStorage.removeItem('sandbox_auth_expiry');
+      sessionStorage.removeItem('sandbox_current_view');
       document.getElementById('view-secure-app').classList.remove('active');
       document.getElementById('view-login').classList.add('active');
     }
 
     function logout() {
-      localStorage.clear();
+      localStorage.removeItem('sandbox_auth_expiry');
+      localStorage.removeItem('sandbox_zoho_tickets_cache');
+      localStorage.removeItem('sandbox_zoho_data_timestamp');
+      localStorage.removeItem('sandbox_zoho_exact_stats');
+      sessionStorage.removeItem('sandbox_current_view');
       window.location.reload();
     }
 
@@ -570,14 +579,21 @@
     // CORE SPA NAVIGATION & DATA FETCHING
     // ==========================================
     function loadSecureApp() {
-      localStorage.setItem('auth_expiry', Date.now() + (48 * 60 * 60 * 1000));
+      localStorage.setItem('sandbox_auth_expiry', Date.now() + (48 * 60 * 60 * 1000));
       document.getElementById('view-login').classList.remove('active');
       document.getElementById('view-secure-app').classList.add('active');
-      navigateTo('dashboard');
+      
+      // Memory Persistence: Load the last view if refreshed, or default to dashboard
+      const savedView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
+      navigateTo(savedView);
+      
       fetchGlobalData(); 
     }
 
     function navigateTo(viewName, filterType = null, filterValue = null) {
+      // Memory Persistence: Save current view securely in browser session
+      sessionStorage.setItem('sandbox_current_view', viewName);
+      
       document.querySelectorAll('.app-subview').forEach(el => el.style.display = 'none');
       document.getElementById(`view-${viewName}`).style.display = 'block';
       
@@ -600,9 +616,9 @@
 
       try {
         const now = Date.now();
-        const cacheTimestamp = localStorage.getItem('zoho_data_timestamp');
-        const cachedTickets = localStorage.getItem('zoho_tickets_cache');
-        const cachedStats = localStorage.getItem('zoho_exact_stats');
+        const cacheTimestamp = localStorage.getItem('sandbox_zoho_data_timestamp');
+        const cachedTickets = localStorage.getItem('sandbox_zoho_tickets_cache');
+        const cachedStats = localStorage.getItem('sandbox_zoho_exact_stats');
 
         let lastUpdateMs = null;
 
@@ -637,9 +653,9 @@
               };
             });
             
-            localStorage.setItem('zoho_tickets_cache', JSON.stringify(window.allGlobalTickets));
-            if(window.exactStatsData) localStorage.setItem('zoho_exact_stats', JSON.stringify(window.exactStatsData));
-            localStorage.setItem('zoho_data_timestamp', lastUpdateMs.toString());
+            localStorage.setItem('sandbox_zoho_tickets_cache', JSON.stringify(window.allGlobalTickets));
+            if(window.exactStatsData) localStorage.setItem('sandbox_zoho_exact_stats', JSON.stringify(window.exactStatsData));
+            localStorage.setItem('sandbox_zoho_data_timestamp', lastUpdateMs.toString());
         }
 
         if (lastUpdateMs && lastUpdatedEl) {
@@ -647,7 +663,12 @@
           lastUpdatedEl.innerHTML = `⏱️ Last updated: ${formatter.format(new Date(lastUpdateMs))} ET`;
         }
         
-        renderMainDashboard(); 
+        // Render whatever view the user is currently on securely
+        const currentView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
+        if(currentView === 'dashboard') renderMainDashboard();
+        if(currentView === 'reports') renderReportsView();
+        if(currentView === 'agents') showAgentsList();
+        
       } catch (err) {
         if(forceLive) { alert(err.message); return; }
         container.innerHTML = `<div class="glass-panel" style="padding:30px; text-align:center; color:#ef4444;">Error: ${err.message}</div>`;
@@ -749,10 +770,23 @@
       if (state.reports.isHistoryMode) await fetchHistoricalData();
       renderReportsView();
     }
+
+    // Fixed single-select custom dropdown mapping
+    function setReportsFilter(type, value, labelText) {
+      if(type === 'department') {
+        state.reports.departmentFilter = value;
+        document.getElementById('reportsDeptLabel').innerText = labelText;
+      } else if (type === 'timeframe') {
+        state.reports.timeframeFilter = value;
+        document.getElementById('reportsTimeLabel').innerText = labelText;
+      }
+      document.querySelectorAll('.select-dropdown').forEach(el => el.classList.remove('active'));
+      renderReportsView();
+    }
     
     function renderReportsView() {
-      const deptFilter = document.getElementById('reportsDepartmentFilter').value;
-      const timeFilter = document.getElementById('reportsTimeframeFilter').value;
+      const deptFilter = state.reports.departmentFilter;
+      const timeFilter = state.reports.timeframeFilter;
       let cData = state.reports.isHistoryMode ? state.reports.historyData : window.allGlobalTickets;
       if (!cData || cData.length === 0) return;
 
@@ -992,8 +1026,8 @@
     document.getElementById('submitPinBtn').addEventListener('click', () => { const p = document.getElementById('pinInput').value; closePinModal(); fetchGlobalData(true, p); });
     
     document.addEventListener('keydown', (e) => {
-      if (e.altKey && (e.key === 'r' || e.key === 'R')) { e.preventDefault(); const ae = localStorage.getItem('auth_expiry'); if(ae && Date.now()<parseInt(ae)) showPinModal(); }
-      if (e.altKey && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); const ae = localStorage.getItem('auth_expiry'); if(ae && Date.now()<parseInt(ae) && window.exactStatsData) {
+      if (e.altKey && (e.key === 'r' || e.key === 'R')) { e.preventDefault(); const ae = localStorage.getItem('sandbox_auth_expiry'); if(ae && Date.now()<parseInt(ae)) showPinModal(); }
+      if (e.altKey && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); const ae = localStorage.getItem('sandbox_auth_expiry'); if(ae && Date.now()<parseInt(ae) && window.exactStatsData) {
         let cp = ""; ["Support","Services","Development","Production","IT Requests","Project Management","Specialist Team","Billing","Concierge Services","SalesHelp"].forEach(d => { const s = window.exactStatsData[d] || {totalOpen:0,yesterdayNew:0,yesterdayClosed:0}; cp += `${s.totalOpen}\t${s.yesterdayNew}\t${s.yesterdayClosed}\t`; });
         navigator.clipboard.writeText(cp.replace(/\t$/, '')).then(() => alert("✅ Exact Zoho Reports Data copied!")).catch(err => alert("Copy failed"));
       }}
