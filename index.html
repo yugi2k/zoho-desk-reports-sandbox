@@ -141,8 +141,6 @@
     .total-card p { color: var(--accent); }
 
     /* CONTROLS, FILTERS & DROPDOWNS */
-    
-    /* FIX: Added relative positioning and high z-index to parent containers */
     .controls-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 15px; position: relative; z-index: 100; }
     .controls-panel { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; padding: 16px 24px; position: relative; z-index: 100; margin-bottom: 20px; }
     
@@ -311,9 +309,10 @@
 
     <!-- 2. REPORTS VIEW -->
     <div id="view-reports" class="app-subview" style="display:none;">
+      
+      <!-- Top Level Controls -->
       <div class="controls-container animate-in delay-1">
         <div class="filters-group">
-          
           <div class="custom-select" style="width: 200px;">
             <div class="select-btn filter-input" onclick="toggleDropdown('reportsDeptDropdown')">
               <span id="reportsDeptLabel">All Departments</span> ▼
@@ -332,7 +331,6 @@
               <label onclick="setReportsFilter('department', 'SalesHelp', 'SalesHelp')">SalesHelp</label>
             </div>
           </div>
-
           <div class="custom-select" style="width: 210px;">
             <div class="select-btn filter-input" onclick="toggleDropdown('reportsTimeDropdown')">
               <span id="reportsTimeLabel">Any Update Time</span> ▼
@@ -344,7 +342,6 @@
               <label onclick="setReportsFilter('timeframe', '60', 'No Updates > 60 Days')">No Updates > 60 Days</label>
             </div>
           </div>
-
         </div>
         <div class="toggle-wrapper">
           <span>90-Day History</span>
@@ -355,8 +352,38 @@
           <span id="reportsLoadingIndicator" style="display:none;" class="loading-spinner"></span>
         </div>
       </div>
+      
+      <!-- NEW: Local Table Controls -->
+      <div class="controls-panel glass-panel animate-in delay-1" style="margin-bottom: 20px;">
+        <div class="filter-group">
+          <label>Search</label>
+          <input type="text" id="reportsSearchText" class="filter-input" placeholder="Ticket # or Subject..." onkeyup="renderReportsView()" style="width: 160px;">
+        </div>
+        <div class="filter-group"><label>Start Date</label><input type="text" id="reportsDateStart" class="filter-input" placeholder="Select Date..." style="width: 130px;"></div>
+        <div class="filter-group"><label>End Date</label><input type="text" id="reportsDateEnd" class="filter-input" placeholder="Select Date..." style="width: 130px;"></div>
+        <div class="filter-group">
+          <label>Assignee</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsAssigneeDropdown')"><span id="reportsAssigneeLabel">All Assignees</span> ▼</div>
+            <div class="select-dropdown" id="reportsAssigneeDropdown"></div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Status</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsStatusDropdown')"><span id="reportsStatusLabel">All Statuses</span> ▼</div>
+            <div class="select-dropdown" id="reportsStatusDropdown"></div>
+          </div>
+        </div>
+        <div class="btn-group" style="margin-left: auto;">
+          <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear Filters</button>
+          <button class="btn-action btn-export" onclick="exportReportsToCSV()">Export</button>
+        </div>
+      </div>
+
       <div class="section-title animate-in delay-1" id="reportsCardsTitle">Global Priority Distribution (Open Tickets)</div>
       <div class="dashboard-grid animate-in delay-1" id="reportsPriorityCardsContainer"></div>
+      
       <div class="section-title animate-in delay-1">Ticket Log <span id="reportsFilterSubtext" style="font-weight:normal; font-size:0.9rem; color:#888;"></span></div>
       <div class="table-container glass-panel animate-in delay-1">
         <table>
@@ -481,7 +508,7 @@
     window.exactStatsData = null;
     
     const state = {
-      reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All' },
+      reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All', currentFiltered: [] },
       agents: { map: {}, currentId: null, currentTickets: [], filteredTickets: [] },
       tickets: { activeTickets: [], currentFiltered: [], filterType: null, filterValue: null }
     };
@@ -587,7 +614,6 @@
       document.getElementById('view-login').classList.remove('active');
       document.getElementById('view-secure-app').classList.add('active');
       
-      // Determine what page the user wants based on the URL
       const pathSegment = window.location.pathname.replace(/\/$/, '').split('/').pop();
       let initialView = 'dashboard';
       if (['reports', 'agents', 'tickets'].includes(pathSegment)) {
@@ -603,7 +629,6 @@
     function navigateTo(viewName, filterType = null, filterValue = null, skipHistory = false) {
       sessionStorage.setItem('sandbox_current_view', viewName);
       
-      // Push State logic to explicitly update the browser URL
       if (!skipHistory) {
         let basePath = window.location.pathname.replace(/\/(reports|agents|tickets)$/, '');
         if (!basePath.endsWith('/')) basePath += '/';
@@ -621,7 +646,7 @@
       
       const titleEl = document.getElementById('headerTitleText');
       if(viewName === 'dashboard') { titleEl.textContent = 'Support Portal'; renderMainDashboard(); }
-      if(viewName === 'reports') { titleEl.textContent = 'Reports Dashboard'; renderReportsView(); }
+      if(viewName === 'reports') { titleEl.textContent = 'Reports Dashboard'; initReportsView(); }
       if(viewName === 'agents') { titleEl.textContent = 'Support Agents'; showAgentsList(); }
       if(viewName === 'tickets') { initTicketsView(filterType, filterValue); }
     }
@@ -685,7 +710,7 @@
         
         const currentView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
         if(currentView === 'dashboard') renderMainDashboard();
-        if(currentView === 'reports') renderReportsView();
+        if(currentView === 'reports') initReportsView();
         if(currentView === 'agents') showAgentsList();
         
       } catch (err) {
@@ -766,6 +791,25 @@
     // ==========================================
     // VIEW 2: REPORTS
     // ==========================================
+    function initReportsView() {
+      let cData = state.reports.isHistoryMode ? state.reports.historyData : window.allGlobalTickets;
+      populateReportsDropdowns(cData || []);
+      renderReportsView();
+    }
+
+    function populateReportsDropdowns(baseData) {
+      const ag = new Set(); const st = new Set();
+      baseData.forEach(t => { 
+        ag.add(t.assignee ? `${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`.trim() : 'Unassigned'); 
+        st.add(t.status || '-'); 
+      });
+      const fill = (id, set) => { 
+        const el = document.getElementById(id); el.innerHTML = ''; 
+        Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="renderReportsView()"> ${v}</label>`; }); 
+      };
+      fill('reportsAssigneeDropdown', ag); fill('reportsStatusDropdown', st);
+    }
+
     async function fetchHistoricalData() {
       if (state.reports.historyData.length > 0) return;
       document.getElementById('reportsLoadingIndicator').style.display = 'inline-block';
@@ -787,7 +831,7 @@
       state.reports.activePriority = null;
       document.getElementById('reportsCardsTitle').innerText = state.reports.isHistoryMode ? "Global Priority Distribution (Last 90 Days)" : "Global Priority Distribution (Open Tickets)";
       if (state.reports.isHistoryMode) await fetchHistoricalData();
-      renderReportsView();
+      initReportsView();
     }
 
     function setReportsFilter(type, value, labelText) {
@@ -799,6 +843,25 @@
         document.getElementById('reportsTimeLabel').innerText = labelText;
       }
       document.querySelectorAll('.select-dropdown').forEach(el => el.classList.remove('active'));
+      
+      // Update options available in local dropdowns based on top-level choices
+      let cData = state.reports.isHistoryMode ? state.reports.historyData : window.allGlobalTickets;
+      if (state.reports.departmentFilter !== 'All') cData = cData.filter(t => (t.department ? t.department.name || '' : '').toLowerCase().includes(state.reports.departmentFilter.toLowerCase()));
+      if (state.reports.timeframeFilter !== 'All') {
+        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - parseInt(state.reports.timeframeFilter, 10));
+        cData = cData.filter(t => { const ref = t.agentRespondedTime || t.modifiedTime || t.createdTime; return ref ? new Date(ref) < cutoff : false; });
+      }
+      if (!state.reports.isHistoryMode) cData = cData.filter(t => !(t.status || '').toLowerCase().includes('close'));
+      populateReportsDropdowns(cData);
+
+      renderReportsView();
+    }
+
+    function clearReportsLocalFilters() {
+      document.getElementById('reportsSearchText').value = '';
+      document.getElementById('reportsDateStart')._flatpickr.clear();
+      document.getElementById('reportsDateEnd')._flatpickr.clear();
+      document.querySelectorAll('#reportsAssigneeDropdown input, #reportsStatusDropdown input').forEach(c=>c.checked=false);
       renderReportsView();
     }
     
@@ -808,6 +871,7 @@
       let cData = state.reports.isHistoryMode ? state.reports.historyData : window.allGlobalTickets;
       if (!cData || cData.length === 0) return;
 
+      // 1. Top Level Filters
       if (deptFilter !== 'All') cData = cData.filter(t => (t.department ? t.department.name || '' : '').toLowerCase().includes(deptFilter.toLowerCase()));
       if (timeFilter !== 'All') {
         const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - parseInt(timeFilter, 10));
@@ -815,6 +879,35 @@
       }
       if (!state.reports.isHistoryMode) cData = cData.filter(t => !(t.status || '').toLowerCase().includes('close'));
 
+      // 2. Local Table Filters
+      const sA = Array.from(document.querySelectorAll('#reportsAssigneeDropdown input:checked')).map(c=>c.value);
+      const sS = Array.from(document.querySelectorAll('#reportsStatusDropdown input:checked')).map(c=>c.value);
+      document.getElementById('reportsAssigneeLabel').innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
+      document.getElementById('reportsStatusLabel').innerText = sS.length ? `${sS.length} Selected` : 'All Statuses';
+      
+      const searchTxt = (document.getElementById('reportsSearchText').value || '').toLowerCase();
+      const dS = document.getElementById('reportsDateStart').value;
+      const dE = document.getElementById('reportsDateEnd').value;
+
+      cData = cData.filter(t => {
+        const asn = t.assignee ? `${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`.trim() : 'Unassigned';
+        const stat = t.status || '-';
+        const subj = (t.subject || '').toLowerCase();
+        const tNum = (t.ticketNumber || '').toLowerCase();
+        const cD = new Date(t.createdTime);
+        
+        let pD = true;
+        if(dS){ const [y,m,d]=dS.split('-'); pD = pD && (cD >= getMidnightET(y,m,d)); }
+        if(dE){ const [y,m,d]=dE.split('-'); pD = pD && (cD <= new Date(getMidnightET(y,m,d).getTime()+86399999)); }
+
+        return (searchTxt === '' || subj.includes(searchTxt) || tNum.includes(searchTxt)) &&
+               (sA.length === 0 || sA.includes(asn)) &&
+               (sS.length === 0 || sS.includes(stat)) && pD;
+      });
+
+      state.reports.currentFiltered = cData;
+
+      // 3. Priority Cards
       const pCounts = { "Critical": 0, "Urgent": 0, "High": 0, "Medium": 0, "Low": 0, "None": 0 };
       cData.forEach(t => { const prio = t.priority ? t.priority.toLowerCase() : 'none';
         if(prio.includes('critical')) pCounts.Critical++; else if(prio.includes('urgent')) pCounts.Urgent++; else if(prio.includes('high')) pCounts.High++; else if(prio.includes('medium')) pCounts.Medium++; else if(prio.includes('low')) pCounts.Low++; else pCounts.None++;
@@ -829,17 +922,19 @@
       });
       document.getElementById('reportsPriorityCardsContainer').innerHTML = pHT;
 
+      // 4. Apply active priority filter and render table
+      let tableData = cData;
       if (state.reports.activePriority) {
         document.getElementById('reportsFilterSubtext').innerText = `(Filtered by ${state.reports.activePriority})`;
-        cData = cData.filter(t => { const pt = t.priority ? t.priority.toLowerCase() : 'none'; return state.reports.activePriority === "None" ? pt === 'none' : pt.includes(state.reports.activePriority.toLowerCase()); });
-      } else document.getElementById('reportsFilterSubtext').innerText = "";
+        tableData = tableData.filter(t => { const pt = t.priority ? t.priority.toLowerCase() : 'none'; return state.reports.activePriority === "None" ? pt === 'none' : pt.includes(state.reports.activePriority.toLowerCase()); });
+      } else { document.getElementById('reportsFilterSubtext').innerText = ""; }
 
       document.getElementById('reportsTableHeader').innerHTML = state.reports.isHistoryMode ? `<tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Agent Responded Time</th><th>Created Date</th><th>Closed Date</th><th>Resolution (Hrs)</th></tr>` : `<tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Agent Responded Time</th><th>Created Date</th></tr>`;
       
       const tb = document.getElementById('reportsTableBody'); tb.innerHTML = '';
-      if(cData.length === 0) { tb.innerHTML = `<tr><td colspan="${state.reports.isHistoryMode?9:7}" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
+      if(tableData.length === 0) { tb.innerHTML = `<tr><td colspan="${state.reports.isHistoryMode?9:7}" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
       
-      cData.forEach(t => {
+      tableData.forEach(t => {
         const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.lastName || t.assignee.firstName || 'Unassigned').trim() : 'Unassigned';
         const crt = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
         const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
@@ -853,6 +948,28 @@
         if (state.reports.isHistoryMode) rHtml += `<td>${t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'}</td><td><strong>${t.resolutionTime||'-'}</strong></td>`;
         const tr = document.createElement('tr'); tr.innerHTML = rHtml; tb.appendChild(tr);
       });
+    }
+
+    function exportReportsToCSV() {
+      let csv = "\uFEFFTicket #,Subject,Priority,Status,Assignee,Agent Responded Time,Created Date" + (state.reports.isHistoryMode ? ",Closed Date,Resolution (Hrs)" : "") + ",Ticket Link\n";
+      
+      let exportData = state.reports.currentFiltered;
+      if (state.reports.activePriority) {
+        exportData = exportData.filter(t => { const pt = t.priority ? t.priority.toLowerCase() : 'none'; return state.reports.activePriority === "None" ? pt === 'none' : pt.includes(state.reports.activePriority.toLowerCase()); });
+      }
+
+      exportData.forEach(t => {
+        const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.lastName || t.assignee.firstName || 'Unassigned').trim() : 'Unassigned';
+        const crt = t.createdTime ? csvDateFmt.format(new Date(t.createdTime)) : '-';
+        const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
+        const rsp = rspData ? csvDateFmt.format(new Date(rspData)) : '-';
+        
+        let row = `${t.ticketNumber||""},"${(t.subject||"").replace(/"/g,'""')}",${pr},${t.status||""},${asgn},${rsp},${crt}`;
+        if (state.reports.isHistoryMode) { row += `,${t.closedTime ? csvDateFmt.format(new Date(t.closedTime)) : '-'},${t.resolutionTime||'-'}`; }
+        row += `,https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}\n`;
+        csv += row;
+      });
+      const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `Reports_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); 
     }
 
     // ==========================================
@@ -1058,6 +1175,7 @@
     initTheme();
     flatpickr("#agentDateStart", { dateFormat: "Y-m-d", onChange: applyAgentFilters, disableMobile: true }); flatpickr("#agentDateEnd", { dateFormat: "Y-m-d", onChange: applyAgentFilters, disableMobile: true });
     flatpickr("#ticketsDateStart", { dateFormat: "Y-m-d", onChange: applyTicketsFilters, disableMobile: true }); flatpickr("#ticketsDateEnd", { dateFormat: "Y-m-d", onChange: applyTicketsFilters, disableMobile: true });
+    flatpickr("#reportsDateStart", { dateFormat: "Y-m-d", onChange: renderReportsView, disableMobile: true }); flatpickr("#reportsDateEnd", { dateFormat: "Y-m-d", onChange: renderReportsView, disableMobile: true });
     checkSession();
   </script>
 </body>
