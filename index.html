@@ -141,7 +141,7 @@
     .total-card p { color: var(--accent); }
 
     /* CONTROLS, FILTERS & DROPDOWNS */
-    .controls-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 15px; position: relative; z-index: 100; }
+    .controls-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 15px; position: relative; z-index: 200; }
     .controls-panel { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; padding: 16px 24px; position: relative; z-index: 100; margin-bottom: 20px; }
     
     .filter-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
@@ -353,7 +353,7 @@
         </div>
       </div>
       
-      <!-- NEW: Local Table Controls -->
+      <!-- Local Table Controls -->
       <div class="controls-panel glass-panel animate-in delay-1" style="margin-bottom: 20px;">
         <div class="filter-group">
           <label>Search</label>
@@ -563,7 +563,8 @@
       localStorage.removeItem('sandbox_zoho_data_timestamp');
       localStorage.removeItem('sandbox_zoho_exact_stats');
       sessionStorage.removeItem('sandbox_current_view');
-      window.location.href = window.location.pathname.replace(/\/(reports|agents|tickets)$/, '');
+      window.location.hash = ''; 
+      window.location.reload();
     }
 
     function renderGoogleButton() {
@@ -599,14 +600,11 @@
     }
 
     // ==========================================
-    // SPA BROWSER ROUTING & NAVIGATION
+    // SPA HASH ROUTING (Zero-404 Architecture)
     // ==========================================
-    window.addEventListener('popstate', function(e) {
-      if(e.state && e.state.view) {
-        navigateTo(e.state.view, e.state.filterType, e.state.filterValue, true);
-      } else {
-        navigateTo('dashboard', null, null, true);
-      }
+    window.addEventListener('hashchange', function() {
+      const view = window.location.hash.replace('#', '') || 'dashboard';
+      navigateTo(view, null, null, true);
     });
 
     function loadSecureApp() {
@@ -614,11 +612,8 @@
       document.getElementById('view-login').classList.remove('active');
       document.getElementById('view-secure-app').classList.add('active');
       
-      const pathSegment = window.location.pathname.replace(/\/$/, '').split('/').pop();
-      let initialView = 'dashboard';
-      if (['reports', 'agents', 'tickets'].includes(pathSegment)) {
-          initialView = pathSegment;
-      } else {
+      let initialView = window.location.hash.replace('#', '');
+      if (!['reports', 'agents', 'tickets'].includes(initialView)) {
           initialView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
       }
       
@@ -630,10 +625,10 @@
       sessionStorage.setItem('sandbox_current_view', viewName);
       
       if (!skipHistory) {
-        let basePath = window.location.pathname.replace(/\/(reports|agents|tickets)$/, '');
-        if (!basePath.endsWith('/')) basePath += '/';
-        let newPath = viewName === 'dashboard' ? basePath : basePath + viewName;
-        window.history.pushState({ view: viewName, filterType, filterValue }, "", newPath);
+        const newHash = viewName === 'dashboard' ? '' : `#${viewName}`;
+        if (window.location.hash !== newHash) {
+            window.history.pushState(null, null, newHash || window.location.pathname + window.location.search);
+        }
       }
       
       document.querySelectorAll('.app-subview').forEach(el => el.style.display = 'none');
@@ -844,7 +839,6 @@
       }
       document.querySelectorAll('.select-dropdown').forEach(el => el.classList.remove('active'));
       
-      // Update options available in local dropdowns based on top-level choices
       let cData = state.reports.isHistoryMode ? state.reports.historyData : window.allGlobalTickets;
       if (state.reports.departmentFilter !== 'All') cData = cData.filter(t => (t.department ? t.department.name || '' : '').toLowerCase().includes(state.reports.departmentFilter.toLowerCase()));
       if (state.reports.timeframeFilter !== 'All') {
@@ -871,7 +865,6 @@
       let cData = state.reports.isHistoryMode ? state.reports.historyData : window.allGlobalTickets;
       if (!cData || cData.length === 0) return;
 
-      // 1. Top Level Filters
       if (deptFilter !== 'All') cData = cData.filter(t => (t.department ? t.department.name || '' : '').toLowerCase().includes(deptFilter.toLowerCase()));
       if (timeFilter !== 'All') {
         const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - parseInt(timeFilter, 10));
@@ -879,7 +872,6 @@
       }
       if (!state.reports.isHistoryMode) cData = cData.filter(t => !(t.status || '').toLowerCase().includes('close'));
 
-      // 2. Local Table Filters
       const sA = Array.from(document.querySelectorAll('#reportsAssigneeDropdown input:checked')).map(c=>c.value);
       const sS = Array.from(document.querySelectorAll('#reportsStatusDropdown input:checked')).map(c=>c.value);
       document.getElementById('reportsAssigneeLabel').innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
@@ -907,7 +899,6 @@
 
       state.reports.currentFiltered = cData;
 
-      // 3. Priority Cards
       const pCounts = { "Critical": 0, "Urgent": 0, "High": 0, "Medium": 0, "Low": 0, "None": 0 };
       cData.forEach(t => { const prio = t.priority ? t.priority.toLowerCase() : 'none';
         if(prio.includes('critical')) pCounts.Critical++; else if(prio.includes('urgent')) pCounts.Urgent++; else if(prio.includes('high')) pCounts.High++; else if(prio.includes('medium')) pCounts.Medium++; else if(prio.includes('low')) pCounts.Low++; else pCounts.None++;
@@ -922,7 +913,6 @@
       });
       document.getElementById('reportsPriorityCardsContainer').innerHTML = pHT;
 
-      // 4. Apply active priority filter and render table
       let tableData = cData;
       if (state.reports.activePriority) {
         document.getElementById('reportsFilterSubtext').innerText = `(Filtered by ${state.reports.activePriority})`;
