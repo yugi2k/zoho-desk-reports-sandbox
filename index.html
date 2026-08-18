@@ -22,7 +22,6 @@
     .page-view { display: none !important; width: 100%; }
     .page-view.active { display: block !important; animation: fadeIn 0.3s ease; }
     
-    /* Login screen flexbox centering strictly scoped to active state */
     #view-login.page-view.active { 
       display: flex !important; 
       justify-content: center; 
@@ -157,7 +156,7 @@
     .select-dropdown label:hover { background-color: var(--row-hover); }
     .select-dropdown input[type="checkbox"] { margin-right: 10px; accent-color: var(--accent); cursor: pointer; }
 
-    /* Toggles & Spinners for Reports */
+    /* Toggles & Spinners */
     .filters-group { display: flex; gap: 15px; align-items: center; }
     .toggle-wrapper { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 500; }
     .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
@@ -186,8 +185,6 @@
     .btn-clear:hover { background-color: #475569; }
     .btn-view { color: var(--accent); background: transparent; border: 1px solid var(--accent); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.3s;}
     .btn-view:hover { background: var(--accent); color: #fff;}
-    
-    /* NEW: Danger/Urgent Button */
     .btn-danger { background-color: #ef4444; }
     .btn-danger:hover { background-color: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
 
@@ -494,19 +491,42 @@
       </div>
     </div>
     
-    <!-- 5. NEW: CRITICAL / URGENT VIEW -->
+    <!-- 5. CRITICAL / URGENT VIEW -->
     <div id="view-critical" class="app-subview" style="display:none;">
       <div class="controls-panel glass-panel animate-in delay-1">
+        <!-- New Filters -->
+        <div class="filter-group">
+          <label>Client Name</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('criticalClientDropdown')"><span id="criticalClientLabel">All Clients</span> ▼</div>
+            <div class="select-dropdown" id="criticalClientDropdown"></div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Priority</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('criticalPriorityDropdown')"><span id="criticalPriorityLabel">All Priorities</span> ▼</div>
+            <div class="select-dropdown" id="criticalPriorityDropdown"></div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Department</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('criticalDeptDropdown')"><span id="criticalDeptLabel">All Departments</span> ▼</div>
+            <div class="select-dropdown" id="criticalDeptDropdown"></div>
+          </div>
+        </div>
+        
         <div class="filter-group">
           <label>Select Columns</label>
           <div class="custom-select" style="width: 250px;">
             <div class="select-btn filter-input" onclick="toggleDropdown('criticalColsDropdown')"><span id="criticalColsLabel">7 Columns Selected</span> ▼</div>
-            <div class="select-dropdown" id="criticalColsDropdown">
-                <!-- Checkboxes populated via JS -->
-            </div>
+            <div class="select-dropdown" id="criticalColsDropdown"></div>
           </div>
         </div>
+        
         <div class="btn-group" style="margin-left: auto;">
+          <button class="btn-action btn-clear" onclick="clearCriticalFilters()">Clear Filters</button>
           <button class="btn-action btn-export" onclick="exportCriticalToCSV()">Export Data</button>
         </div>
       </div>
@@ -518,7 +538,7 @@
       </div>
     </div>
 
-    <!-- 6. NEW: ADMIN RESOLUTION TIME ENTRY VIEW -->
+    <!-- 6. ADMIN RESOLUTION TIME ENTRY VIEW -->
     <div id="view-admin" class="app-subview" style="display:none;">
       <div class="section-title animate-in delay-1">Admin Configuration: Issue Resolved Times</div>
       <div class="table-container glass-panel animate-in delay-1">
@@ -556,7 +576,7 @@
       reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All', currentFiltered: [] },
       agents: { map: {}, currentId: null, currentTickets: [], filteredTickets: [] },
       tickets: { activeTickets: [], currentFiltered: [], filterType: null, filterValue: null },
-      critical: { selectedCols: [] }
+      critical: { selectedCols: [], baseData: [], filteredData: [] }
     };
 
     // Columns Definition for Critical View
@@ -746,14 +766,17 @@
               else if (t.contact) cName = `${t.contact.firstName || ''} ${t.contact.lastName || ''}`.trim();
 
               let contactEmail = t.email || (t.contact && t.contact.email) || 'N/A';
-              let moduleVal = t.customFields && t.customFields['Module'] ? t.customFields['Module'] : 'N/A';
-              let classVal = t.customFields && t.customFields['Classifications'] ? t.customFields['Classifications'] : 'N/A';
+              
+              // Upgraded logic to aggressively parse custom fields regardless of API payload structure
+              let moduleVal = (t.customFields && t.customFields['Module']) || (t.cf && t.cf['Module']) || (t.customFields && t.customFields['module']) || (t.cf && t.cf['module']) || 'N/A';
+              let classVal = (t.customFields && t.customFields['Classifications']) || (t.cf && t.cf['Classifications']) || (t.customFields && t.customFields['classifications']) || (t.cf && t.cf['classifications']) || 'N/A';
 
               return {
                 id: t.id, ticketNumber: t.ticketNumber, subject: t.subject, status: t.status, priority: t.priority,
                 department: t.department ? { name: t.department.name } : null,
                 assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, email: t.assignee.email } : null,
-                createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, agentRespondedTime: t.agentRespondedTime,
+                createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
+                agentRespondedTime: t.agentRespondedTime || t.modifiedTime || t.createdTime, // Fallback applied globally to prevent blank UI
                 clientName: cName, email: contactEmail, module: moduleVal, classification: classVal
               };
             });
@@ -1221,6 +1244,20 @@
       }
       state.critical.selectedCols = savedCols;
       
+      const july1 = new Date('2026-07-01T00:00:00');
+      state.critical.baseData = window.allGlobalTickets.filter(t => {
+        const cD = new Date(t.createdTime);
+        if (cD < july1) return false;
+        const st = (t.status || '').toLowerCase();
+        const pr = (t.priority || '').toLowerCase();
+        const su = (t.subject || '').toLowerCase();
+        return st.includes('critical') || st.includes('urgent') || pr.includes('critical') || pr.includes('urgent') || su.includes('critical') || su.includes('urgent');
+      });
+      
+      state.critical.filteredData = [...state.critical.baseData];
+      
+      populateCriticalDropdowns();
+      
       const drop = document.getElementById('criticalColsDropdown');
       drop.innerHTML = '';
       CRITICAL_COLS.forEach(c => {
@@ -1230,6 +1267,47 @@
       document.getElementById('criticalColsLabel').innerText = `${savedCols.length} Columns Selected`;
       
       renderCriticalView();
+    }
+    
+    function populateCriticalDropdowns() {
+      const cl = new Set(), pr = new Set(), dp = new Set();
+      state.critical.baseData.forEach(t => {
+        cl.add(t.clientName || '-');
+        pr.add(t.priority || '-');
+        dp.add(t.department ? t.department.name : 'General');
+      });
+      const fill = (id, set) => {
+        const el = document.getElementById(id); el.innerHTML = '';
+        Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyCriticalFilters()"> ${v}</label>`; });
+      };
+      fill('criticalClientDropdown', cl);
+      fill('criticalPriorityDropdown', pr);
+      fill('criticalDeptDropdown', dp);
+    }
+    
+    function applyCriticalFilters() {
+      const sC = Array.from(document.querySelectorAll('#criticalClientDropdown input:checked')).map(c=>c.value);
+      const sP = Array.from(document.querySelectorAll('#criticalPriorityDropdown input:checked')).map(c=>c.value);
+      const sD = Array.from(document.querySelectorAll('#criticalDeptDropdown input:checked')).map(c=>c.value);
+
+      document.getElementById('criticalClientLabel').innerText = sC.length ? `${sC.length} Selected` : 'All Clients';
+      document.getElementById('criticalPriorityLabel').innerText = sP.length ? `${sP.length} Selected` : 'All Priorities';
+      document.getElementById('criticalDeptLabel').innerText = sD.length ? `${sD.length} Selected` : 'All Departments';
+
+      state.critical.filteredData = state.critical.baseData.filter(t => {
+        const cName = t.clientName || '-';
+        const prio = t.priority || '-';
+        const dept = t.department ? t.department.name : 'General';
+        return (sC.length===0 || sC.includes(cName)) &&
+               (sP.length===0 || sP.includes(prio)) &&
+               (sD.length===0 || sD.includes(dept));
+      });
+      renderCriticalView();
+    }
+    
+    function clearCriticalFilters() {
+      document.querySelectorAll('#criticalClientDropdown input, #criticalPriorityDropdown input, #criticalDeptDropdown input').forEach(c=>c.checked=false);
+      applyCriticalFilters();
     }
 
     function updateCriticalCols() {
@@ -1242,20 +1320,7 @@
     }
 
     function renderCriticalView() {
-      const july1 = new Date('2026-07-01T00:00:00');
       let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
-      
-      let cData = window.allGlobalTickets.filter(t => {
-        const cD = new Date(t.createdTime);
-        if (cD < july1) return false;
-        const st = (t.status || '').toLowerCase();
-        const pr = (t.priority || '').toLowerCase();
-        const su = (t.subject || '').toLowerCase();
-        return st.includes('critical') || st.includes('urgent') || 
-               pr.includes('critical') || pr.includes('urgent') || 
-               su.includes('critical') || su.includes('urgent');
-      });
-
       const th = document.getElementById('criticalTableHeader');
       const tb = document.getElementById('criticalTableBody');
       th.innerHTML = ''; tb.innerHTML = '';
@@ -1267,9 +1332,9 @@
       headerHtml += '</tr>';
       th.innerHTML = headerHtml;
       
-      if(cData.length === 0) { tb.innerHTML = `<tr><td colspan="${colsToRender.length}" style="text-align:center; padding:40px;">No critical or urgent tickets found since July 1, 2026.</td></tr>`; return; }
+      if(state.critical.filteredData.length === 0) { tb.innerHTML = `<tr><td colspan="${colsToRender.length}" style="text-align:center; padding:40px;">No matching critical or urgent tickets found.</td></tr>`; return; }
       
-      cData.forEach(t => {
+      state.critical.filteredData.forEach(t => {
         const tr = document.createElement('tr');
         let rowHtml = '';
         colsToRender.forEach(c => {
@@ -1303,18 +1368,9 @@
       const colsToRender = CRITICAL_COLS.filter(c => state.critical.selectedCols.includes(c.id));
       let csv = "\uFEFF" + colsToRender.map(c => c.name).join(",") + "\n";
       
-      const july1 = new Date('2026-07-01T00:00:00');
       let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
-      let cData = window.allGlobalTickets.filter(t => {
-        const cD = new Date(t.createdTime);
-        if (cD < july1) return false;
-        const st = (t.status || '').toLowerCase();
-        const pr = (t.priority || '').toLowerCase();
-        const su = (t.subject || '').toLowerCase();
-        return st.includes('critical') || st.includes('urgent') || pr.includes('critical') || pr.includes('urgent') || su.includes('critical') || su.includes('urgent');
-      });
 
-      cData.forEach(t => {
+      state.critical.filteredData.forEach(t => {
         let row = [];
         colsToRender.forEach(c => {
           let val = '-';
@@ -1340,7 +1396,7 @@
     }
 
     // ==========================================
-    // VIEW 6: ADMIN RESOLVED TIME ENTRY
+    // VIEW 6: ADMIN RESOLUTION TIME ENTRY
     // ==========================================
     function saveResolvedTime(ticketId, val) {
       let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
