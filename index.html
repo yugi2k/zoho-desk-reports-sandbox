@@ -1576,6 +1576,38 @@
       });
     }
 
+    // ==========================================
+    // KEYBOARD SHORTCUTS
+    // ==========================================
+    document.addEventListener('keydown', (e) => {
+      // Force Refresh Shortcut (Alt + R)
+      if (e.altKey && (e.key === 'r' || e.key === 'R')) { 
+        e.preventDefault(); 
+        const ae = localStorage.getItem('sandbox_auth_expiry'); 
+        if(ae && Date.now()<parseInt(ae)) showPinModal(); 
+      }
+      
+      // History Modal Shortcut (Alt + C)
+      if (e.altKey && (e.key === 'c' || e.key === 'C')) { 
+        e.preventDefault(); 
+        const ae = localStorage.getItem('sandbox_auth_expiry'); 
+        if(ae && Date.now()<parseInt(ae)) openStatsModal(); 
+      }
+
+      // Hidden Admin Shortcut (Alt + A)
+      if (e.altKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        const pwd = prompt("Enter Admin Password:");
+        if (pwd === '48268') {
+           navigateTo('admin');
+        } else if (pwd !== null) {
+           alert("Incorrect Password.");
+        }
+      }
+    });
+
+
+
     // INITIALIZATION
     initTheme();
     flatpickr("#agentDateStart", { dateFormat: "Y-m-d", onChange: applyAgentFilters, disableMobile: true }); flatpickr("#agentDateEnd", { dateFormat: "Y-m-d", onChange: applyAgentFilters, disableMobile: true });
