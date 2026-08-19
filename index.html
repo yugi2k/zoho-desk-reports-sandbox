@@ -568,13 +568,25 @@
 
   <script>
     // ==========================================
+    // SECURITY: DISABLE DEV TOOLS & RIGHT CLICK
+    // ==========================================
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F12' || e.keyCode === 123) { e.preventDefault(); }
+        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.keyCode === 73)) { e.preventDefault(); }
+        if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j' || e.keyCode === 74)) { e.preventDefault(); }
+        if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c' || e.keyCode === 67)) { e.preventDefault(); }
+        if (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) { e.preventDefault(); }
+    });
+
+    // ==========================================
     // GLOBAL STATE & UTILITIES
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
     const CACHE_VER = '_v2';
     
-    // ⚠️ TEMPORARY WHITELIST: Only these exact emails can access the portal
+    // ⚠️ TEMPORARY WHITELIST
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
       'admin@mindmatrix.net'
@@ -776,12 +788,9 @@
             lastUpdateMs = result.lastUpdated || now;
             
             window.allGlobalTickets = (result.data || []).map(t => {
-              
-              // FIX: Robust Dynamic Custom Field Parser
               let cName = "";
               let cf = t.customFields || t.cf || {};
               
-              // Try exact dynamic match first
               for (let key in cf) {
                   let normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
                   if (normalized.includes('clientname')) {
@@ -790,11 +799,9 @@
                   }
               }
               
-              // Try hardcoded fallbacks if dynamic loop missed it
               if (!cName && cf['cf_client_name_1']) cName = cf['cf_client_name_1'];
               if (!cName && cf['Client Name']) cName = cf['Client Name'];
 
-              // If it is genuinely empty in Zoho, return 'Unknown'
               if (!cName || cName.trim() === "") {
                   cName = 'Unknown';
               }
@@ -815,6 +822,13 @@
               };
             });
             
+            // Clean up old storage versions to prevent Quota Exceeded errors
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('sandbox_zoho_') && !key.endsWith(CACHE_VER)) {
+                    localStorage.removeItem(key);
+                }
+            });
+
             localStorage.setItem('sandbox_zoho_tickets_cache' + CACHE_VER, JSON.stringify(window.allGlobalTickets));
             if(window.exactStatsData) localStorage.setItem('sandbox_zoho_exact_stats' + CACHE_VER, JSON.stringify(window.exactStatsData));
             localStorage.setItem('sandbox_zoho_data_timestamp' + CACHE_VER, lastUpdateMs.toString());
@@ -1525,6 +1539,9 @@
       });
     }
 
+    // ==========================================
+    // KEYBOARD SHORTCUTS
+    // ==========================================
     document.addEventListener('keydown', (e) => {
       if (e.altKey && (e.key === 'r' || e.key === 'R')) { e.preventDefault(); const ae = localStorage.getItem('sandbox_auth_expiry'); if(ae && Date.now()<parseInt(ae)) showPinModal(); }
       
