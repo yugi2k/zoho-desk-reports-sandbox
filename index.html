@@ -36,6 +36,7 @@
       --input-bg: rgba(15, 23, 42, 0.6);
       --row-hover: rgba(255, 255, 255, 0.1);
       --th-bg: rgba(15, 23, 42, 0.4);
+      --scrollbar-thumb: rgba(255, 255, 255, 0.2);
     }
 
     body.light-mode {
@@ -51,6 +52,7 @@
       --input-bg: rgba(255, 255, 255, 0.8);
       --row-hover: rgba(0, 0, 0, 0.06);
       --th-bg: rgba(255, 255, 255, 0.4);
+      --scrollbar-thumb: rgba(0, 0, 0, 0.2);
     }
 
     body { font-family: 'Inter', sans-serif; background: var(--bg-gradient); background-attachment: fixed; color: var(--text-main); margin: 0; padding: 2rem; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; transition: background 0.5s ease, color 0.5s ease; }
@@ -155,7 +157,19 @@
     .btn-danger:hover { background-color: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
     .btn-copy { background-color: var(--accent); font-size: 0.8rem; height: 32px; padding: 0 12px; }
 
+    /* Custom Scrollbar Styles for the Top Linked Scrollbar */
+    .top-scrollbar { overflow-x: auto; overflow-y: hidden; height: 12px; margin-bottom: 4px; border-radius: 6px; display: block; }
+    .top-scrollbar::-webkit-scrollbar { height: 10px; }
+    .top-scrollbar::-webkit-scrollbar-track { background: var(--glass-bg); border-radius: 6px; }
+    .top-scrollbar::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 6px; }
+    .top-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
     .table-container { overflow-x: auto; border-radius: 16px; position: relative; z-index: 1; }
+    .table-container::-webkit-scrollbar { height: 10px; }
+    .table-container::-webkit-scrollbar-track { background: var(--glass-bg); border-radius: 0 0 16px 16px; }
+    .table-container::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 6px; }
+    .table-container::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th, td { padding: 16px 20px; border-bottom: 1px solid var(--glass-border); font-size: 0.9rem; }
     th { background-color: var(--th-bg); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; white-space: nowrap; }
@@ -290,7 +304,7 @@
       
       <div class="header-actions">
         <button class="icon-btn nav-link" onclick="navigateTo('reports')" data-tooltip="View Reports">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
         </button>
         <button class="icon-btn nav-link" onclick="navigateTo('agents')" data-tooltip="View Agents">
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
@@ -542,7 +556,14 @@
           <button class="btn-action btn-export" onclick="exportCriticalToCSV()">Export Data</button>
         </div>
       </div>
-      <div class="table-container glass-panel animate-in delay-1">
+      
+      <!-- TOP SCROLLBAR -->
+      <div class="top-scrollbar animate-in delay-1" id="criticalTopScroll">
+        <div id="criticalTopScrollDummy"></div>
+      </div>
+
+      <!-- TABLE CONTAINER -->
+      <div class="table-container glass-panel animate-in delay-1" id="criticalTableContainer">
         <table>
           <thead id="criticalTableHeader"></thead>
           <tbody id="criticalTableBody"></tbody>
@@ -591,13 +612,11 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
-    const CACHE_VER = '_v3'; // FIX: Bumped cache version to force re-fetch of client names
+    const CACHE_VER = '_v4'; // Bumped cache to aggressively flush old custom field logic
     
-    // ⚠️ TEMPORARY WHITELIST
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
       'admin@mindmatrix.net'
-      // Add other permitted emails here, comma separated
     ];
     
     window.allGlobalTickets = [];
@@ -795,19 +814,28 @@
             
             window.allGlobalTickets = (result.data || []).map(t => {
               
-              // FIX: Explicit target for cf_client_name_1 based on new API discovery
               let cf = t.customFields || t.cf || {};
-              let cName = cf['cf_client_name_1'] || cf['Client Name'] || 'Unknown';
-              if (!cName || cName.trim() === "") cName = 'Unknown';
+              // Search multiple places for the client name just to be completely safe
+              let cName = cf['cf_client_name_1'] || t['cf_client_name_1'] || cf['Client Name'] || t['Client Name'];
+              
+              if (!cName) {
+                  for (let key in cf) {
+                      if (key.toLowerCase().includes('clientname')) {
+                          cName = cf[key]; break;
+                      }
+                  }
+              }
+              if (!cName || cName.toString().trim() === "") cName = 'Unknown';
 
-              let moduleVal = cf['Module'] || cf['module'] || 'N/A';
-              let classVal = cf['Classifications'] || cf['classifications'] || 'N/A';
+              let moduleVal = (t.customFields && t.customFields['Module']) || (t.cf && t.cf['Module']) || (t.customFields && t.customFields['module']) || (t.cf && t.cf['module']) || 'N/A';
+              let classVal = (t.customFields && t.customFields['Classifications']) || (t.cf && t.cf['Classifications']) || (t.customFields && t.customFields['classifications']) || (t.cf && t.cf['classifications']) || 'N/A';
+              
               let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
               return {
                 id: t.id, ticketNumber: t.ticketNumber, subject: t.subject, status: t.status, priority: t.priority,
                 department: t.department ? { name: t.department.name } : null,
-                assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, email: t.assignee.email, fullName: fullName } : null,
+                assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, fullName: fullName } : null,
                 createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
                 agentRespondedTime: t.agentRespondedTime || t.modifiedTime || t.createdTime, 
                 clientName: cName, module: moduleVal, classification: classVal
@@ -1280,7 +1308,7 @@
     function initCriticalView() {
       let savedCols = JSON.parse(localStorage.getItem('sandbox_critical_columns'));
       if (!savedCols) {
-          savedCols = CRITICAL_COLS.slice(0, 7).map(c => c.id);
+          savedCols = CRITICAL_COLS.slice(0, 6).map(c => c.id);
           localStorage.setItem('sandbox_critical_columns', JSON.stringify(savedCols));
       }
       state.critical.selectedCols = savedCols;
@@ -1387,7 +1415,6 @@
         colsToRender.forEach(c => {
           let val = '-';
           if(c.id === 'col_created') val = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
-          else if(c.id === 'col_email') val = t.email;
           else if(c.id === 'col_client') val = t.clientName;
           else if(c.id === 'col_id') val = `<a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a>`;
           else if(c.id === 'col_subject') val = `<strong>${t.subject}</strong>`;
@@ -1409,6 +1436,20 @@
         tr.innerHTML = rowHtml;
         tb.appendChild(tr);
       });
+
+      // Synchronize Dual Scrollbars
+      setTimeout(() => {
+        const topScroll = document.getElementById('criticalTopScroll');
+        const dummy = document.getElementById('criticalTopScrollDummy');
+        const tableCont = document.getElementById('criticalTableContainer');
+        const table = tableCont.querySelector('table');
+
+        if(table && dummy) {
+            dummy.style.width = table.offsetWidth + 'px';
+            topScroll.onscroll = () => { tableCont.scrollLeft = topScroll.scrollLeft; };
+            tableCont.onscroll = () => { topScroll.scrollLeft = tableCont.scrollLeft; };
+        }
+      }, 100);
     }
 
     function exportCriticalToCSV() {
@@ -1422,7 +1463,6 @@
         colsToRender.forEach(c => {
           let val = '-';
           if(c.id === 'col_created') val = t.createdTime ? csvDateFmt.format(new Date(t.createdTime)) : '-';
-          else if(c.id === 'col_email') val = t.email;
           else if(c.id === 'col_client') val = t.clientName;
           else if(c.id === 'col_id') val = t.ticketNumber;
           else if(c.id === 'col_subject') val = t.subject;
@@ -1535,29 +1575,6 @@
         setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = 'var(--accent)'; }, 2000);
       });
     }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.altKey && (e.key === 'r' || e.key === 'R')) { e.preventDefault(); const ae = localStorage.getItem('sandbox_auth_expiry'); if(ae && Date.now()<parseInt(ae)) showPinModal(); }
-      
-      if (e.altKey && (e.key === 'c' || e.key === 'C')) { 
-        e.preventDefault(); 
-        const ae = localStorage.getItem('sandbox_auth_expiry'); 
-        if(ae && Date.now()<parseInt(ae)) openStatsModal(); 
-      }
-
-      if (e.altKey && (e.key === 'a' || e.key === 'A')) {
-        e.preventDefault();
-        const pwd = prompt("Enter Admin Password:");
-        if (pwd === '48268') {
-           navigateTo('admin');
-        } else if (pwd !== null) {
-           alert("Incorrect Password.");
-        }
-      }
-    });
-
-    document.addEventListener('click', (e) => { if (!e.target.closest('.custom-select')) document.querySelectorAll('.select-dropdown').forEach(el => el.classList.remove('active')); });
-    function toggleDropdown(id) { document.querySelectorAll('.select-dropdown').forEach(el => { if (el.id !== id) el.classList.remove('active'); }); document.getElementById(id).classList.toggle('active'); }
 
     // INITIALIZATION
     initTheme();
