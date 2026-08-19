@@ -227,7 +227,6 @@
               <th rowspan="2" style="background-color: var(--th-bg); position: sticky; top: 0; z-index: 2; border-left: 1px solid var(--glass-border);">Action</th>
             </tr>
             <tr>
-              <!-- Script will inject headers O/N/C 10 times -->
               <script>
                 for(let i=0; i<10; i++) {
                   document.write('<th style="border-left: 1px solid var(--glass-border); background-color: var(--th-bg); position: sticky; top: 38px; z-index: 2;" title="Total Open">O</th><th style="background-color: var(--th-bg); position: sticky; top: 38px; z-index: 2;" title="Yesterday New">N</th><th style="background-color: var(--th-bg); position: sticky; top: 38px; z-index: 2;" title="Yesterday Closed">C</th>');
@@ -779,16 +778,20 @@
             
             window.allGlobalTickets = (result.data || []).map(t => {
               // FIX: Strictly grab custom field 'Client Name'. Drop generic Contact/Account fallbacks.
-              let cName = (t.customFields && t.customFields['Client Name']) || (t.cf && t.cf['Client Name']) || 'Unknown';
+              let cName = (t.customFields && (t.customFields['Client Name'] || t.customFields['cf_client_name'] || t.customFields['cf_client_name_1'])) || 
+                          (t.cf && (t.cf['Client Name'] || t.cf['cf_client_name'] || t.cf['cf_client_name_1'])) || 'Unknown';
 
               let contactEmail = t.email || (t.contact && t.contact.email) || 'N/A';
               let moduleVal = (t.customFields && t.customFields['Module']) || (t.cf && t.cf['Module']) || (t.customFields && t.customFields['module']) || (t.cf && t.cf['module']) || 'N/A';
               let classVal = (t.customFields && t.customFields['Classifications']) || (t.cf && t.cf['Classifications']) || (t.customFields && t.customFields['classifications']) || (t.cf && t.cf['classifications']) || 'N/A';
+              
+              // FIX: Construct proper full name for the assignee
+              let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
               return {
                 id: t.id, ticketNumber: t.ticketNumber, subject: t.subject, status: t.status, priority: t.priority,
                 department: t.department ? { name: t.department.name } : null,
-                assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, email: t.assignee.email } : null,
+                assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, email: t.assignee.email, fullName: fullName } : null,
                 createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
                 agentRespondedTime: t.agentRespondedTime || t.modifiedTime || t.createdTime, 
                 clientName: cName, email: contactEmail, module: moduleVal, classification: classVal
@@ -899,7 +902,7 @@
     function populateReportsDropdowns(baseData) {
       const ag = new Set(); const st = new Set();
       baseData.forEach(t => { 
-        ag.add(t.assignee ? `${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`.trim() : 'Unassigned'); 
+        ag.add(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned'); 
         st.add(t.status || '-'); 
       });
       const fill = (id, set) => { 
@@ -919,7 +922,9 @@
         const data = JSON.parse(jsonString);
         const getV = (row, idx) => (row.c && row.c[idx] && row.c[idx].v) ? row.c[idx].v : null;
         state.reports.historyData = data.table.rows.map(row => ({
-          id: getV(row, 0), ticketNumber: getV(row, 1), subject: getV(row, 2), department: { name: getV(row, 3) }, assignee: { lastName: getV(row, 4) }, status: getV(row, 5), priority: getV(row, 6), createdTime: getV(row, 7), closedTime: getV(row, 8), resolutionTime: getV(row, 9), modifiedTime: getV(row, 10)
+          id: getV(row, 0), ticketNumber: getV(row, 1), subject: getV(row, 2), department: { name: getV(row, 3) }, 
+          assignee: { fullName: getV(row, 4), firstName: '', lastName: '' }, // fullName comes from sheet column 4
+          status: getV(row, 5), priority: getV(row, 6), createdTime: getV(row, 7), closedTime: getV(row, 8), resolutionTime: getV(row, 9), modifiedTime: getV(row, 10)
         }));
       } catch (err) { alert("Failed to load historical data."); }
       finally { document.getElementById('reportsLoadingIndicator').style.display = 'none'; }
@@ -986,7 +991,7 @@
       const dE = document.getElementById('reportsDateEnd').value;
 
       cData = cData.filter(t => {
-        const asn = t.assignee ? `${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`.trim() : 'Unassigned';
+        const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
         const stat = t.status || '-';
         const subj = (t.subject || '').toLowerCase();
         const tNum = (t.ticketNumber || '').toLowerCase();
@@ -1029,7 +1034,7 @@
       if(tableData.length === 0) { tb.innerHTML = `<tr><td colspan="${state.reports.isHistoryMode?9:7}" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
       
       tableData.forEach(t => {
-        const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.lastName || t.assignee.firstName || 'Unassigned').trim() : 'Unassigned';
+        const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
         const crt = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
         const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
         const rsp = rspData ? tableDateFmt.format(new Date(rspData)) : '-';
@@ -1053,7 +1058,7 @@
       }
 
       exportData.forEach(t => {
-        const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.lastName || t.assignee.firstName || 'Unassigned').trim() : 'Unassigned';
+        const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
         const crt = t.createdTime ? csvDateFmt.format(new Date(t.createdTime)) : '-';
         const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
         const rsp = rspData ? csvDateFmt.format(new Date(rspData)) : '-';
@@ -1204,7 +1209,7 @@
     
     function populateTicketsDropdowns() {
       const cl = new Set(); const ag = new Set(); const pr = new Set(); const st = new Set();
-      state.tickets.activeTickets.forEach(t => { cl.add(t.clientName||'-'); ag.add(t.assignee?`${t.assignee.firstName||''} ${t.assignee.lastName||''}`.trim():'Unassigned'); pr.add(t.priority||'-'); st.add(t.status||'-'); });
+      state.tickets.activeTickets.forEach(t => { cl.add(t.clientName||'-'); ag.add(t.assignee? (t.assignee.fullName || 'Unassigned') :'Unassigned'); pr.add(t.priority||'-'); st.add(t.status||'-'); });
       const fill = (id, set) => { const el = document.getElementById(id); el.innerHTML = ''; Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyTicketsFilters()"> ${v}</label>`; }); };
       fill('ticketsClientDropdown', cl); fill('ticketsAssigneeDropdown', ag); fill('ticketsPriorityDropdown', pr); fill('ticketsStatusDropdown', st);
     }
@@ -1217,7 +1222,7 @@
       const dS = document.getElementById('ticketsDateStart').value; const dE = document.getElementById('ticketsDateEnd').value;
       
       state.tickets.currentFiltered = state.tickets.activeTickets.filter(t => {
-        const asn = t.assignee?`${t.assignee.firstName||''} ${t.assignee.lastName||''}`.trim():'Unassigned'; const cD = new Date(t.createdTime); let pD = true;
+        const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned'; const cD = new Date(t.createdTime); let pD = true;
         if(dS){ const [y,m,d]=dS.split('-'); pD = pD && (cD >= getMidnightET(y,m,d)); }
         if(dE){ const [y,m,d]=dE.split('-'); pD = pD && (cD <= new Date(getMidnightET(y,m,d).getTime()+86399999)); }
         return (sC.length===0 || sC.includes(t.clientName||'-')) && (sA.length===0 || sA.includes(asn)) && (sP.length===0 || sP.includes(t.priority||'-')) && (sS.length===0 || sS.includes(t.status||'-')) && pD;
@@ -1230,7 +1235,7 @@
       const tb = document.getElementById('ticketsTableBody'); tb.innerHTML = '';
       if(state.tickets.currentFiltered.length===0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 60px;">No tickets match.</td></tr>`; return; }
       state.tickets.currentFiltered.forEach((t, i) => {
-        const asn = t.assignee?`${t.assignee.firstName||''} ${t.assignee.lastName||''}`.trim():'Unassigned';
+        const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
         const p = t.priority||'-'; const pl = p.toLowerCase(); let bg='#94a3b8'; let tc='#fff';
         if(pl.includes('low')){bg='#86efac';tc='#0f172a';} else if(pl.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pl.includes('high')){bg='#f97316';} else if(pl.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
         const tr = document.createElement('tr'); tr.className='animate-in'; tr.style.animationDelay=`${0.1+(i*0.02)}s`;
@@ -1242,7 +1247,7 @@
     function exportTicketsToCSV() {
       let csv = "\uFEFFTicket #,Subject,Client Name,Priority,Department,Assignee,Status,Created Date,Ticket Link\n";
       state.tickets.currentFiltered.forEach(t => {
-        csv += `${t.ticketNumber||""},"${(t.subject||"").replace(/"/g,'""')}","${(t.clientName||"").replace(/"/g,'""')}",${t.priority||"-"},${t.department?t.department.name:"General"},${t.assignee?`${t.assignee.firstName||''} ${t.assignee.lastName||''}`.trim():"Unassigned"},${t.status||""},${t.createdTime?csvDateFmt.format(new Date(t.createdTime)):""},https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}\n`;
+        csv += `${t.ticketNumber||""},"${(t.subject||"").replace(/"/g,'""')}","${(t.clientName||"").replace(/"/g,'""')}",${t.priority||"-"},${t.department?t.department.name:"General"},${t.assignee ? (t.assignee.fullName || 'Unassigned') : "Unassigned"},${t.status||""},${t.createdTime?csvDateFmt.format(new Date(t.createdTime)):""},https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}\n`;
       });
       const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `Tickets_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); 
     }
@@ -1454,7 +1459,6 @@
     function closePinModal() { document.getElementById('pinModal').style.display = 'none'; }
     document.getElementById('submitPinBtn').addEventListener('click', () => { const p = document.getElementById('pinInput').value; closePinModal(); fetchGlobalData(true, p); });
     
-    // FIX: Rebuilt Stats Modal Rendering
     async function openStatsModal() {
       document.getElementById('statsModal').style.display = 'flex';
       document.getElementById('statsTableBody').innerHTML = '<tr><td colspan="32" style="text-align:center; padding:30px; font-weight:500;">Connecting to Google Drive...</td></tr>';
@@ -1482,7 +1486,6 @@
         
         depts.forEach(d => {
             const s = stats[d] || {totalOpen:0, yesterdayNew:0, yesterdayClosed:0};
-            // FIX: Render individual Open, New, Closed columns
             rowHtml += `<td style="border-left: 1px solid var(--glass-border);">${s.totalOpen}</td><td>${s.yesterdayNew}</td><td>${s.yesterdayClosed}</td>`;
             cpStr += `${s.totalOpen}\t${s.yesterdayNew}\t${s.yesterdayClosed}\t`;
         });
