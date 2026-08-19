@@ -572,6 +572,7 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
+    const CACHE_VER = '_v2';
     
     // ⚠️ TEMPORARY WHITELIST: Only these exact emails can access the portal
     const ALLOWED_EMAILS = [
@@ -648,9 +649,9 @@
 
     function logout() {
       localStorage.removeItem('sandbox_auth_expiry');
-      localStorage.removeItem('sandbox_zoho_tickets_cache');
-      localStorage.removeItem('sandbox_zoho_data_timestamp');
-      localStorage.removeItem('sandbox_zoho_exact_stats');
+      localStorage.removeItem('sandbox_zoho_tickets_cache' + CACHE_VER);
+      localStorage.removeItem('sandbox_zoho_data_timestamp' + CACHE_VER);
+      localStorage.removeItem('sandbox_zoho_exact_stats' + CACHE_VER);
       sessionStorage.removeItem('sandbox_current_view');
       window.location.hash = ''; 
       window.location.reload();
@@ -663,7 +664,6 @@
     }
     function handleGoogleLogin(response) {
       const payload = JSON.parse(atob(response.credential.split('.')[1]));
-      // FIX: Check against Temporary Whitelist
       if (ALLOWED_EMAILS.includes(payload.email.toLowerCase())) {
           loadSecureApp();
       } else { 
@@ -676,7 +676,6 @@
     async function requestOTP() {
       const email = document.getElementById('emailInput').value.trim().toLowerCase(); 
       const btn = document.querySelector('button[onclick="requestOTP()"]');
-      // FIX: Check against Temporary Whitelist
       if (!ALLOWED_EMAILS.includes(email)) { 
           document.getElementById('loginError').textContent = 'Access temporarily restricted to specific users.'; 
           document.getElementById('loginError').style.display='block'; return; 
@@ -757,9 +756,9 @@
 
       try {
         const now = Date.now();
-        const cacheTimestamp = localStorage.getItem('sandbox_zoho_data_timestamp');
-        const cachedTickets = localStorage.getItem('sandbox_zoho_tickets_cache');
-        const cachedStats = localStorage.getItem('sandbox_zoho_exact_stats');
+        const cacheTimestamp = localStorage.getItem('sandbox_zoho_data_timestamp' + CACHE_VER);
+        const cachedTickets = localStorage.getItem('sandbox_zoho_tickets_cache' + CACHE_VER);
+        const cachedStats = localStorage.getItem('sandbox_zoho_exact_stats' + CACHE_VER);
 
         let lastUpdateMs = null;
 
@@ -777,15 +776,33 @@
             lastUpdateMs = result.lastUpdated || now;
             
             window.allGlobalTickets = (result.data || []).map(t => {
-              // FIX: Strictly grab custom field 'Client Name'. Drop generic Contact/Account fallbacks.
-              let cName = (t.customFields && (t.customFields['Client Name'] || t.customFields['cf_client_name'] || t.customFields['cf_client_name_1'])) || 
-                          (t.cf && (t.cf['Client Name'] || t.cf['cf_client_name'] || t.cf['cf_client_name_1'])) || 'Unknown';
+              
+              // FIX: Robust Dynamic Custom Field Parser
+              let cName = "";
+              let cf = t.customFields || t.cf || {};
+              
+              // Try exact dynamic match first
+              for (let key in cf) {
+                  let normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  if (normalized.includes('clientname')) {
+                      cName = cf[key];
+                      break;
+                  }
+              }
+              
+              // Try hardcoded fallbacks if dynamic loop missed it
+              if (!cName && cf['cf_client_name_1']) cName = cf['cf_client_name_1'];
+              if (!cName && cf['Client Name']) cName = cf['Client Name'];
+
+              // If it is genuinely empty in Zoho, return 'Unknown'
+              if (!cName || cName.trim() === "") {
+                  cName = 'Unknown';
+              }
 
               let contactEmail = t.email || (t.contact && t.contact.email) || 'N/A';
               let moduleVal = (t.customFields && t.customFields['Module']) || (t.cf && t.cf['Module']) || (t.customFields && t.customFields['module']) || (t.cf && t.cf['module']) || 'N/A';
               let classVal = (t.customFields && t.customFields['Classifications']) || (t.cf && t.cf['Classifications']) || (t.customFields && t.customFields['classifications']) || (t.cf && t.cf['classifications']) || 'N/A';
               
-              // FIX: Construct proper full name for the assignee
               let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
               return {
@@ -798,9 +815,9 @@
               };
             });
             
-            localStorage.setItem('sandbox_zoho_tickets_cache', JSON.stringify(window.allGlobalTickets));
-            if(window.exactStatsData) localStorage.setItem('sandbox_zoho_exact_stats', JSON.stringify(window.exactStatsData));
-            localStorage.setItem('sandbox_zoho_data_timestamp', lastUpdateMs.toString());
+            localStorage.setItem('sandbox_zoho_tickets_cache' + CACHE_VER, JSON.stringify(window.allGlobalTickets));
+            if(window.exactStatsData) localStorage.setItem('sandbox_zoho_exact_stats' + CACHE_VER, JSON.stringify(window.exactStatsData));
+            localStorage.setItem('sandbox_zoho_data_timestamp' + CACHE_VER, lastUpdateMs.toString());
         }
 
         if (lastUpdateMs && lastUpdatedEl) {
@@ -923,7 +940,7 @@
         const getV = (row, idx) => (row.c && row.c[idx] && row.c[idx].v) ? row.c[idx].v : null;
         state.reports.historyData = data.table.rows.map(row => ({
           id: getV(row, 0), ticketNumber: getV(row, 1), subject: getV(row, 2), department: { name: getV(row, 3) }, 
-          assignee: { fullName: getV(row, 4), firstName: '', lastName: '' }, // fullName comes from sheet column 4
+          assignee: { fullName: getV(row, 4), firstName: '', lastName: '' }, 
           status: getV(row, 5), priority: getV(row, 6), createdTime: getV(row, 7), closedTime: getV(row, 8), resolutionTime: getV(row, 9), modifiedTime: getV(row, 10)
         }));
       } catch (err) { alert("Failed to load historical data."); }
