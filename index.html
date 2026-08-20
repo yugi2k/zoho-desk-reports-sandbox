@@ -157,7 +157,6 @@
     .btn-danger:hover { background-color: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
     .btn-copy { background-color: var(--accent); font-size: 0.8rem; height: 32px; padding: 0 12px; }
 
-    /* Custom Scrollbar Styles for the Top Linked Scrollbar */
     .top-scrollbar { overflow-x: auto; overflow-y: hidden; height: 12px; margin-bottom: 4px; border-radius: 6px; display: block; }
     .top-scrollbar::-webkit-scrollbar { height: 10px; }
     .top-scrollbar::-webkit-scrollbar-track { background: var(--glass-bg); border-radius: 6px; }
@@ -393,7 +392,7 @@
           </div>
         </div>
         <div class="btn-group" style="margin-left: auto;">
-          <button class="btn-action btn-danger" onclick="navigateTo('critical')" data-tooltip="Critical & Urgent Tickets">Critical / Urgent</button>
+          <button class="btn-action btn-danger" onclick="navigateTo('critical')" data-tooltip="Critical Reports">Critical Reports</button>
           <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear Filters</button>
           <button class="btn-action btn-export" onclick="exportReportsToCSV()">Export</button>
         </div>
@@ -542,7 +541,14 @@
             <div class="select-dropdown" id="criticalStatusDropdown"></div>
           </div>
         </div>
-
+        <!-- NEW: Created Month Filter -->
+        <div class="filter-group">
+          <label>Created Month</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('criticalMonthDropdown')"><span id="criticalMonthLabel">All Months</span> ▼</div>
+            <div class="select-dropdown" id="criticalMonthDropdown"></div>
+          </div>
+        </div>
         <div class="filter-group">
           <label>Select Columns</label>
           <div class="custom-select" style="width: 250px;">
@@ -612,7 +618,7 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
-    const CACHE_VER = '_v4'; // Bumped cache to aggressively flush old custom field logic
+    const CACHE_VER = '_v5'; // V5 enforces new Contact/Account logic and new Critical view rules
     
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
@@ -779,7 +785,7 @@
       if(viewName === 'reports') { titleEl.textContent = 'Reports Dashboard'; initReportsView(); }
       if(viewName === 'agents') { titleEl.textContent = 'Support Agents'; showAgentsList(); }
       if(viewName === 'tickets') { initTicketsView(filterType, filterValue); }
-      if(viewName === 'critical') { titleEl.textContent = 'Critical & Urgent Tickets'; initCriticalView(); }
+      if(viewName === 'critical') { titleEl.textContent = 'Critical Reports'; initCriticalView(); }
       if(viewName === 'admin') { titleEl.textContent = 'Admin Console'; renderAdminView(); }
     }
 
@@ -814,22 +820,15 @@
             
             window.allGlobalTickets = (result.data || []).map(t => {
               
-              let cf = t.customFields || t.cf || {};
-              // Search multiple places for the client name just to be completely safe
-              let cName = cf['cf_client_name_1'] || t['cf_client_name_1'] || cf['Client Name'] || t['Client Name'];
-              
-              if (!cName) {
-                  for (let key in cf) {
-                      if (key.toLowerCase().includes('clientname')) {
-                          cName = cf[key]; break;
-                      }
-                  }
+              // FIX: Restored the stable Account Name fallback logic since customFields are blocked in bulk APIs
+              let cName = 'Unknown';
+              if (t.contact && t.contact.account && t.contact.account.accountName) {
+                  cName = t.contact.account.accountName;
+              } else if (t.contact) {
+                  cName = (`${t.contact.firstName || ''} ${t.contact.lastName || ''}`).trim();
               }
-              if (!cName || cName.toString().trim() === "") cName = 'Unknown';
+              if (!cName || cName === "") cName = 'Unknown';
 
-              let moduleVal = (t.customFields && t.customFields['Module']) || (t.cf && t.cf['Module']) || (t.customFields && t.customFields['module']) || (t.cf && t.cf['module']) || 'N/A';
-              let classVal = (t.customFields && t.customFields['Classifications']) || (t.cf && t.cf['Classifications']) || (t.customFields && t.customFields['classifications']) || (t.cf && t.cf['classifications']) || 'N/A';
-              
               let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
               return {
@@ -838,7 +837,7 @@
                 assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, fullName: fullName } : null,
                 createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
                 agentRespondedTime: t.agentRespondedTime || t.modifiedTime || t.createdTime, 
-                clientName: cName, module: moduleVal, classification: classVal
+                clientName: cName, module: 'N/A', classification: 'N/A' // Hardcoded N/A for custom fields since API stripped them
               };
             });
             
@@ -1303,7 +1302,7 @@
     }
 
     // ==========================================
-    // VIEW 5: CRITICAL / URGENT TICKETS
+    // VIEW 5: CRITICAL REPORTS VIEW
     // ==========================================
     function initCriticalView() {
       let savedCols = JSON.parse(localStorage.getItem('sandbox_critical_columns'));
@@ -1313,18 +1312,20 @@
       }
       state.critical.selectedCols = savedCols;
       
-      const july1 = new Date('2026-07-01T00:00:00');
+      const jan1 = new Date('2026-01-01T00:00:00');
+      
       state.critical.baseData = window.allGlobalTickets.filter(t => {
         const cD = new Date(t.createdTime);
-        if (cD < july1) return false;
-        const st = (t.status || '').toLowerCase();
+        if (cD < jan1) return false;
+        
         const pr = (t.priority || '').toLowerCase();
         const su = (t.subject || '').toLowerCase();
-        return st.includes('critical') || st.includes('urgent') || pr.includes('critical') || pr.includes('urgent') || su.includes('critical') || su.includes('urgent');
+        
+        // FIX: Only Critical tickets based on Priority or Subject
+        return pr === 'critical' || su.includes('critical');
       });
       
       state.critical.filteredData = [...state.critical.baseData];
-      
       populateCriticalDropdowns();
       
       const drop = document.getElementById('criticalColsDropdown');
@@ -1339,21 +1340,30 @@
     }
     
     function populateCriticalDropdowns() {
-      const cl = new Set(), pr = new Set(), dp = new Set(), st = new Set();
+      const cl = new Set(), pr = new Set(), dp = new Set(), st = new Set(), mo = new Set();
       state.critical.baseData.forEach(t => {
         cl.add(t.clientName || '-');
         pr.add(t.priority || '-');
         dp.add(t.department ? t.department.name : 'General');
         st.add(t.status || '-');
+        
+        if (t.createdTime) {
+          const d = new Date(t.createdTime);
+          const monthStr = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+          mo.add(monthStr);
+        }
       });
+      
       const fill = (id, set) => {
         const el = document.getElementById(id); el.innerHTML = '';
         Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyCriticalFilters()"> ${v}</label>`; });
       };
+      
       fill('criticalClientDropdown', cl);
       fill('criticalPriorityDropdown', pr);
       fill('criticalDeptDropdown', dp);
       fill('criticalStatusDropdown', st);
+      fill('criticalMonthDropdown', mo);
     }
     
     function applyCriticalFilters() {
@@ -1361,27 +1371,40 @@
       const sP = Array.from(document.querySelectorAll('#criticalPriorityDropdown input:checked')).map(c=>c.value);
       const sD = Array.from(document.querySelectorAll('#criticalDeptDropdown input:checked')).map(c=>c.value);
       const sS = Array.from(document.querySelectorAll('#criticalStatusDropdown input:checked')).map(c=>c.value);
+      const sM = Array.from(document.querySelectorAll('#criticalMonthDropdown input:checked')).map(c=>c.value);
 
       document.getElementById('criticalClientLabel').innerText = sC.length ? `${sC.length} Selected` : 'All Clients';
       document.getElementById('criticalPriorityLabel').innerText = sP.length ? `${sP.length} Selected` : 'All Priorities';
       document.getElementById('criticalDeptLabel').innerText = sD.length ? `${sD.length} Selected` : 'All Departments';
       document.getElementById('criticalStatusLabel').innerText = sS.length ? `${sS.length} Selected` : 'All Statuses';
+      document.getElementById('criticalMonthLabel').innerText = sM.length ? `${sM.length} Selected` : 'All Months';
 
       state.critical.filteredData = state.critical.baseData.filter(t => {
         const cName = t.clientName || '-';
         const prio = t.priority || '-';
         const dept = t.department ? t.department.name : 'General';
         const stat = t.status || '-';
+        
+        let monthMatch = true;
+        if (sM.length > 0 && t.createdTime) {
+            const d = new Date(t.createdTime);
+            const mStr = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+            monthMatch = sM.includes(mStr);
+        } else if (sM.length > 0) {
+            monthMatch = false;
+        }
+
         return (sC.length===0 || sC.includes(cName)) &&
                (sP.length===0 || sP.includes(prio)) &&
                (sD.length===0 || sD.includes(dept)) &&
-               (sS.length===0 || sS.includes(stat));
+               (sS.length===0 || sS.includes(stat)) &&
+               monthMatch;
       });
       renderCriticalView();
     }
     
     function clearCriticalFilters() {
-      document.querySelectorAll('#criticalClientDropdown input, #criticalPriorityDropdown input, #criticalDeptDropdown input, #criticalStatusDropdown input').forEach(c=>c.checked=false);
+      document.querySelectorAll('#view-critical .select-dropdown input').forEach(c=>c.checked=false);
       applyCriticalFilters();
     }
 
@@ -1407,7 +1430,7 @@
       headerHtml += '</tr>';
       th.innerHTML = headerHtml;
       
-      if(state.critical.filteredData.length === 0) { tb.innerHTML = `<tr><td colspan="${colsToRender.length}" style="text-align:center; padding:40px;">No matching critical or urgent tickets found.</td></tr>`; return; }
+      if(state.critical.filteredData.length === 0) { tb.innerHTML = `<tr><td colspan="${colsToRender.length}" style="text-align:center; padding:40px;">No matching critical tickets found.</td></tr>`; return; }
       
       state.critical.filteredData.forEach(t => {
         const tr = document.createElement('tr');
@@ -1437,7 +1460,6 @@
         tb.appendChild(tr);
       });
 
-      // Synchronize Dual Scrollbars
       setTimeout(() => {
         const topScroll = document.getElementById('criticalTopScroll');
         const dummy = document.getElementById('criticalTopScrollDummy');
@@ -1492,20 +1514,19 @@
     }
 
     function renderAdminView() {
-      const july1 = new Date('2026-07-01T00:00:00');
+      const jan1 = new Date('2026-01-01T00:00:00');
       let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
       
       let cData = window.allGlobalTickets.filter(t => {
         const cD = new Date(t.createdTime);
-        if (cD < july1) return false;
-        const st = (t.status || '').toLowerCase();
+        if (cD < jan1) return false;
         const pr = (t.priority || '').toLowerCase();
         const su = (t.subject || '').toLowerCase();
-        return st.includes('critical') || st.includes('urgent') || pr.includes('critical') || pr.includes('urgent') || su.includes('critical') || su.includes('urgent');
+        return pr === 'critical' || su.includes('critical');
       });
       
       const tb = document.getElementById('adminTableBody'); tb.innerHTML = '';
-      if(cData.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:40px;">No critical/urgent tickets found since July 1, 2026.</td></tr>`; return; }
+      if(cData.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:40px;">No critical tickets found since Jan 1, 2026.</td></tr>`; return; }
       
       cData.forEach(t => {
         const val = customResolvedTimes[t.id] || '';
@@ -1580,21 +1601,18 @@
     // KEYBOARD SHORTCUTS
     // ==========================================
     document.addEventListener('keydown', (e) => {
-      // Force Refresh Shortcut (Alt + R)
       if (e.altKey && (e.key === 'r' || e.key === 'R')) { 
         e.preventDefault(); 
         const ae = localStorage.getItem('sandbox_auth_expiry'); 
         if(ae && Date.now()<parseInt(ae)) showPinModal(); 
       }
       
-      // History Modal Shortcut (Alt + C)
       if (e.altKey && (e.key === 'c' || e.key === 'C')) { 
         e.preventDefault(); 
         const ae = localStorage.getItem('sandbox_auth_expiry'); 
         if(ae && Date.now()<parseInt(ae)) openStatsModal(); 
       }
 
-      // Hidden Admin Shortcut (Alt + A)
       if (e.altKey && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault();
         const pwd = prompt("Enter Admin Password:");
@@ -1606,7 +1624,8 @@
       }
     });
 
-
+    document.addEventListener('click', (e) => { if (!e.target.closest('.custom-select')) document.querySelectorAll('.select-dropdown').forEach(el => el.classList.remove('active')); });
+    function toggleDropdown(id) { document.querySelectorAll('.select-dropdown').forEach(el => { if (el.id !== id) el.classList.remove('active'); }); document.getElementById(id).classList.toggle('active'); }
 
     // INITIALIZATION
     initTheme();
