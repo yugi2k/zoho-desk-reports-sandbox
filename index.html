@@ -541,7 +541,6 @@
             <div class="select-dropdown" id="criticalStatusDropdown"></div>
           </div>
         </div>
-        <!-- NEW: Created Month Filter -->
         <div class="filter-group">
           <label>Created Month</label>
           <div class="custom-select">
@@ -618,7 +617,7 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
-    const CACHE_VER = '_v5'; // V5 enforces new Contact/Account logic and new Critical view rules
+    const CACHE_VER = '_v6'; // FIX: V6 explicitly calls cf_client_name_1 based on new API logic
     
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
@@ -819,16 +818,14 @@
             lastUpdateMs = result.lastUpdated || now;
             
             window.allGlobalTickets = (result.data || []).map(t => {
-              
-              // FIX: Restored the stable Account Name fallback logic since customFields are blocked in bulk APIs
-              let cName = 'Unknown';
-              if (t.contact && t.contact.account && t.contact.account.accountName) {
-                  cName = t.contact.account.accountName;
-              } else if (t.contact) {
-                  cName = (`${t.contact.firstName || ''} ${t.contact.lastName || ''}`).trim();
-              }
-              if (!cName || cName === "") cName = 'Unknown';
+              let cf = t.customFields || t.cf || {};
+              // Explicitly map exactly how Zoho's API structure passes the new fields parameter
+              let cName = t['cf_client_name_1'] || cf['cf_client_name_1'] || 'Unknown';
+              if (!cName || cName.toString().trim() === "") cName = 'Unknown';
 
+              let moduleVal = (t.customFields && t.customFields['Module']) || (t.cf && t.cf['Module']) || (t.customFields && t.customFields['module']) || (t.cf && t.cf['module']) || 'N/A';
+              let classVal = (t.customFields && t.customFields['Classifications']) || (t.cf && t.cf['Classifications']) || (t.customFields && t.customFields['classifications']) || (t.cf && t.cf['classifications']) || 'N/A';
+              
               let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
               return {
@@ -837,7 +834,7 @@
                 assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, fullName: fullName } : null,
                 createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
                 agentRespondedTime: t.agentRespondedTime || t.modifiedTime || t.createdTime, 
-                clientName: cName, module: 'N/A', classification: 'N/A' // Hardcoded N/A for custom fields since API stripped them
+                clientName: cName, module: moduleVal, classification: classVal
               };
             });
             
@@ -1321,7 +1318,6 @@
         const pr = (t.priority || '').toLowerCase();
         const su = (t.subject || '').toLowerCase();
         
-        // FIX: Only Critical tickets based on Priority or Subject
         return pr === 'critical' || su.includes('critical');
       });
       
