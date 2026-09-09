@@ -1584,11 +1584,21 @@
         
         if (result.error) throw new Error(result.error);
         
+        const payload = result.data || {};
+
+        // Handle Chat/Greeting Responses
+        if (payload.isConversational) {
+           tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--accent); font-weight: 600; font-size: 1.05rem;">💬 ${payload.message}</td></tr>`;
+           tableCont.style.display = 'block';
+           return;
+        }
+
         tbody.innerHTML = '';
-        if (!result.data || result.data.length === 0) {
+        const tickets = payload.data || [];
+        if (tickets.length === 0) {
            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 40px;">No tickets match your query.</td></tr>';
         } else {
-           result.data.forEach(t => {
+           tickets.forEach(t => {
              const rsp = t.lastUpdated ? tableDateFmt.format(new Date(t.lastUpdated)) : '-';
              const crt = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
              
