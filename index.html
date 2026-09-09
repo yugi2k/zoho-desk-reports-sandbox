@@ -1637,12 +1637,22 @@
     
     document.getElementById('submitPinBtn').addEventListener('click', () => { 
       const p = document.getElementById('pinInput').value; 
+      const currentAction = pendingAction; // Save the action before the modal clears it!
       closePinModal(); 
-      if (pendingAction === 'ai-search') {
+      
+      if (currentAction === 'ai-search') {
          if (p === '48268') navigateTo('ai-search');
          else alert("Incorrect Password.");
       } else {
          fetchGlobalData(true, p); 
+      }
+    });
+
+    // Add Enter key support so you can just press Enter after typing the PIN
+    document.getElementById('pinInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('submitPinBtn').click();
       }
     });
     
