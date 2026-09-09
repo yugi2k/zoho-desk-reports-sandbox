@@ -597,7 +597,7 @@
 
     <!-- 7. AI SEARCH VIEW -->
     <div id="view-ai-search" class="app-subview" style="display:none; text-align: center; padding-top: 50px;">
-       <h2 class="animate-in" style="font-size: 2.2rem; margin-bottom: 40px; font-weight: 700; letter-spacing: -0.02em;">Ask your data anything.</h2>
+       <h2 class="animate-in" style="font-size: 2.2rem; margin-bottom: 40px; font-weight: 700; letter-spacing: -0.02em;">Tell me what you’re looking for</h2>
        <div class="animate-in delay-1" style="max-width: 650px; margin: 0 auto; display: flex; gap: 15px;">
          <input type="text" id="aiSearchInput" class="filter-input" placeholder="e.g. Pull tickets related to security submitted this year..." style="flex:1; padding: 18px 24px; font-size: 1.1rem; border-radius: 12px; box-shadow: var(--glass-shadow);">
          <button class="btn-action btn-export" onclick="runAiSearch()" id="aiSearchBtn" style="padding: 0 35px; font-size: 1.1rem; border-radius: 12px; box-shadow: var(--glass-shadow);">Search</button>
@@ -809,7 +809,7 @@
       if(viewName === 'tickets') { initTicketsView(filterType, filterValue); }
       if(viewName === 'critical') { titleEl.textContent = 'Critical Reports'; initCriticalView(); }
       if(viewName === 'admin') { titleEl.textContent = 'Admin Console'; renderAdminView(); }
-      if(viewName === 'ai-search') { titleEl.textContent = 'Gemini AI Search'; document.getElementById('aiSearchInput').focus(); }
+      if(viewName === 'ai-search') { titleEl.textContent = 'AI Search'; document.getElementById('aiSearchInput').focus(); }
     }
 
     // ==========================================
