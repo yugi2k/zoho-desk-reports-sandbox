@@ -203,8 +203,8 @@
       <div style="width: 56px; height: 56px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
         <svg width="28" height="28" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
       </div>
-      <h3>Admin Access</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px;">Enter security PIN to force live data sync</p>
+      <h3 id="pinModalTitle">Admin Access</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px;" id="pinModalDesc">Enter security PIN</p>
       <input type="password" id="pinInput" class="pin-input" placeholder="•••••" maxlength="5" autocomplete="off">
       <div style="display: flex; gap: 15px; justify-content: center;">
         <button class="btn-action btn-clear" onclick="closePinModal()">Cancel</button>
@@ -595,6 +595,28 @@
       </div>
     </div>
 
+    <!-- 7. AI SEARCH VIEW -->
+    <div id="view-ai-search" class="app-subview" style="display:none; text-align: center; padding-top: 50px;">
+       <h2 class="animate-in" style="font-size: 2.2rem; margin-bottom: 40px; font-weight: 700; letter-spacing: -0.02em;">Ask your data anything.</h2>
+       <div class="animate-in delay-1" style="max-width: 650px; margin: 0 auto; display: flex; gap: 15px;">
+         <input type="text" id="aiSearchInput" class="filter-input" placeholder="e.g. Pull tickets related to security submitted this year..." style="flex:1; padding: 18px 24px; font-size: 1.1rem; border-radius: 12px; box-shadow: var(--glass-shadow);">
+         <button class="btn-action btn-export" onclick="runAiSearch()" id="aiSearchBtn" style="padding: 0 35px; font-size: 1.1rem; border-radius: 12px; box-shadow: var(--glass-shadow);">Search</button>
+       </div>
+       
+       <div id="aiSearchLoader" style="display:none; margin-top: 50px; font-weight: 500; font-size: 1.1rem; color: var(--accent);">
+         <span class="loading-spinner" style="width: 20px; height: 20px; margin-right: 10px; margin-left: 0; vertical-align: middle;"></span> Analyzing query & searching live Zoho database...
+       </div>
+       
+       <div class="table-container glass-panel" id="aiSearchTableContainer" style="margin-top: 50px; display: none; text-align: left;">
+          <table>
+             <thead>
+               <tr><th>Ticket #</th><th>Subject</th><th>Client Name</th><th>Department</th><th>Assignee</th><th>Status</th><th>Created Date</th><th>Last Updated</th></tr>
+             </thead>
+             <tbody id="aiSearchTableBody"></tbody>
+          </table>
+       </div>
+    </div>
+
   </div> <!-- END SECURE APP WRAPPER -->
 
   <footer>Powered by NovaForge AI | &copy; 2026 Mindmatrix | v1.2.0</footer>
@@ -617,7 +639,7 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
-    const CACHE_VER = '_v7'; // FIX: Cache bumped to _v7 to pull new exact fields JSON structure
+    const CACHE_VER = '_v7'; 
     
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
@@ -626,6 +648,7 @@
     
     window.allGlobalTickets = [];
     window.exactStatsData = null;
+    let pendingAction = null; // Tracks which secure page to load after PIN
     
     const state = {
       reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All', currentFiltered: [] },
@@ -753,7 +776,7 @@
       document.getElementById('view-secure-app').classList.add('active');
       
       let initialView = window.location.hash.replace('#', '');
-      if (!['reports', 'agents', 'tickets', 'critical', 'admin'].includes(initialView)) {
+      if (!['reports', 'agents', 'tickets', 'critical', 'admin', 'ai-search'].includes(initialView)) {
           initialView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
       }
       
@@ -786,6 +809,7 @@
       if(viewName === 'tickets') { initTicketsView(filterType, filterValue); }
       if(viewName === 'critical') { titleEl.textContent = 'Critical Reports'; initCriticalView(); }
       if(viewName === 'admin') { titleEl.textContent = 'Admin Console'; renderAdminView(); }
+      if(viewName === 'ai-search') { titleEl.textContent = 'Gemini AI Search'; document.getElementById('aiSearchInput').focus(); }
     }
 
     // ==========================================
@@ -819,7 +843,6 @@
             
             window.allGlobalTickets = (result.data || []).map(t => {
               
-              // FIX: Now reading precisely from the new fields dictionary payload
               let cName = (t.cf && t.cf['cf_client_name_1']) ? t.cf['cf_client_name_1'] : 'Unknown';
               if (!cName || cName.toString().trim() === "") cName = 'Unknown';
 
@@ -831,7 +854,7 @@
                 assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, fullName: fullName } : null,
                 createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
                 agentRespondedTime: t.customerResponseTime || t.agentRespondedTime || t.modifiedTime || t.createdTime, 
-                clientName: cName, module: 'N/A', classification: 'N/A' // Hardcoded N/A since bulk API strips other custom fields
+                clientName: cName, module: 'N/A', classification: 'N/A' 
               };
             });
             
@@ -1535,11 +1558,93 @@
     }
 
     // ==========================================
+    // VIEW 7: AI SEARCH
+    // ==========================================
+    async function runAiSearch() {
+      const inputEl = document.getElementById('aiSearchInput');
+      const btnEl = document.getElementById('aiSearchBtn');
+      const loader = document.getElementById('aiSearchLoader');
+      const tableCont = document.getElementById('aiSearchTableContainer');
+      const tbody = document.getElementById('aiSearchTableBody');
+      
+      const query = inputEl.value.trim();
+      if(!query) return;
+
+      btnEl.disabled = true;
+      inputEl.disabled = true;
+      tableCont.style.display = 'none';
+      loader.style.display = 'block';
+
+      try {
+        const res = await fetch(PROXY_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'aiSearch', query: query })
+        });
+        const result = await res.json();
+        
+        if (result.error) throw new Error(result.error);
+        
+        tbody.innerHTML = '';
+        if (!result.data || result.data.length === 0) {
+           tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 40px;">No tickets match your query.</td></tr>';
+        } else {
+           result.data.forEach(t => {
+             const rsp = t.lastUpdated ? tableDateFmt.format(new Date(t.lastUpdated)) : '-';
+             const crt = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
+             
+             let bg='#94a3b8', tc='#fff', pl=(t.status||'').toLowerCase();
+             if(pl.includes('open')){bg='#38bdf8';tc='#0f172a';} else if(pl.includes('clos')){bg='#94a3b8';}
+             
+             const tr = document.createElement('tr');
+             tr.innerHTML = `
+               <td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td>
+               <td><strong>${t.subject}</strong></td>
+               <td>${t.clientName}</td>
+               <td><span class="dept-badge">${t.department}</span></td>
+               <td>${t.assignee}</td>
+               <td><span class="priority-badge" style="background-color:${bg};color:${tc}">${t.status || '-'}</span></td>
+               <td>${crt}</td>
+               <td>${rsp}</td>
+             `;
+             tbody.appendChild(tr);
+           });
+        }
+        tableCont.style.display = 'block';
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color:#ef4444; text-align:center; padding: 40px;">Error: ${err.message}</td></tr>`;
+        tableCont.style.display = 'block';
+      } finally {
+        loader.style.display = 'none';
+        btnEl.disabled = false;
+        inputEl.disabled = false;
+        inputEl.focus();
+      }
+    }
+
+    // ==========================================
     // UTILS & BINDINGS
     // ==========================================
-    function showPinModal() { document.getElementById('pinModal').style.display = 'flex'; document.getElementById('pinInput').value = ''; setTimeout(()=>document.getElementById('pinInput').focus(), 100); }
-    function closePinModal() { document.getElementById('pinModal').style.display = 'none'; }
-    document.getElementById('submitPinBtn').addEventListener('click', () => { const p = document.getElementById('pinInput').value; closePinModal(); fetchGlobalData(true, p); });
+    function showPinModal(action) { 
+      pendingAction = action;
+      document.getElementById('pinModalTitle').innerText = action === 'ai-search' ? 'AI Deep Search' : 'Admin Access';
+      document.getElementById('pinModalDesc').innerText = action === 'ai-search' ? 'Enter PIN to access Gemini AI' : 'Enter PIN to force live data sync';
+      document.getElementById('pinModal').style.display = 'flex'; 
+      document.getElementById('pinInput').value = ''; 
+      setTimeout(()=>document.getElementById('pinInput').focus(), 100); 
+    }
+    
+    function closePinModal() { document.getElementById('pinModal').style.display = 'none'; pendingAction = null; }
+    
+    document.getElementById('submitPinBtn').addEventListener('click', () => { 
+      const p = document.getElementById('pinInput').value; 
+      closePinModal(); 
+      if (pendingAction === 'ai-search') {
+         if (p === '48268') navigateTo('ai-search');
+         else alert("Incorrect Password.");
+      } else {
+         fetchGlobalData(true, p); 
+      }
+    });
     
     async function openStatsModal() {
       document.getElementById('statsModal').style.display = 'flex';
@@ -1597,7 +1702,7 @@
       if (e.altKey && (e.key === 'r' || e.key === 'R')) { 
         e.preventDefault(); 
         const ae = localStorage.getItem('sandbox_auth_expiry'); 
-        if(ae && Date.now()<parseInt(ae)) showPinModal(); 
+        if(ae && Date.now()<parseInt(ae)) showPinModal('refresh'); 
       }
       
       if (e.altKey && (e.key === 'c' || e.key === 'C')) { 
@@ -1614,6 +1719,18 @@
         } else if (pwd !== null) {
            alert("Incorrect Password.");
         }
+      }
+
+      // NEW AI Search Shortcut (Alt + S)
+      if (e.altKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        const ae = localStorage.getItem('sandbox_auth_expiry'); 
+        if(ae && Date.now()<parseInt(ae)) showPinModal('ai-search'); 
+      }
+      
+      // Trigger AI search on Enter
+      if (e.key === 'Enter' && document.activeElement.id === 'aiSearchInput') {
+         runAiSearch();
       }
     });
 
