@@ -329,7 +329,7 @@
     <!-- 2. REPORTS VIEW -->
     <div id="view-reports" class="app-subview" style="display:none;">
       <div class="controls-container animate-in delay-1">
-        <div class="filters-group">
+<div class="filters-group">
           <div class="custom-select" style="width: 200px;">
             <div class="select-btn filter-input" onclick="toggleDropdown('reportsDeptDropdown')">
               <span id="reportsDeptLabel">All Departments</span> ▼
@@ -359,6 +359,14 @@
               <label onclick="setReportsFilter('timeframe', '60', 'No Updates > 60 Days')">No Updates > 60 Days</label>
             </div>
           </div>
+          
+          <!-- NEW: Total Tickets Badge -->
+          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase;">
+            Total Tickets: <span id="reportsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
+          </div>
+          
+        </div>
+
         </div>
         <div class="toggle-wrapper">
           <span>90-Day History</span>
