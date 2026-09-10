@@ -1110,7 +1110,11 @@
         tableData = tableData.filter(t => { const pt = t.priority ? t.priority.toLowerCase() : 'none'; return state.reports.activePriority === "None" ? pt === 'none' : pt.includes(state.reports.activePriority.toLowerCase()); });
       } else { document.getElementById('reportsFilterSubtext').innerText = ""; }
 
+      // NEW: Update the live count badge
+      document.getElementById('reportsTotalCount').innerText = tableData.length;
+
       document.getElementById('reportsTableHeader').innerHTML = state.reports.isHistoryMode ? `<tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Agent Responded Time</th><th>Created Date</th><th>Closed Date</th><th>Resolution (Hrs)</th></tr>` : `<tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Agent Responded Time</th><th>Created Date</th></tr>`;
+
       
       const tb = document.getElementById('reportsTableBody'); tb.innerHTML = '';
       if(tableData.length === 0) { tb.innerHTML = `<tr><td colspan="${state.reports.isHistoryMode?9:7}" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
