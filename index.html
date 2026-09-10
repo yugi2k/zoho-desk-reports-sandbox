@@ -503,7 +503,7 @@
       <div class="table-container glass-panel animate-in delay-1">
         <table>
           <thead>
-            <tr><th>Ticket #</th><th>Subject</th><th>Client Name</th><th>Priority</th><th>Department</th><th>Assignee</th><th>Status</th><th>Created Date</th><th>Action</th></tr>
+            <tr><th>Ticket #</th><th>Subject</th><th>Client Name</th><th>Priority</th><th>Department</th><th>Assignee</th><th>Status</th><th>Created Date</th></tr>
           </thead>
           <tbody id="ticketsTableBody"></tbody>
         </table>
@@ -639,16 +639,19 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
-    const CACHE_VER = '_v7'; 
+    const CACHE_VER = '_v8'; // V8 explicitly forces cache clear for Client Names
     
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
+      'hariharan.iyer@mindmatrix.net',
+      'vedonia.Ingram@mindmatrix.net',
+      'sageer.shaikh@mindmatrix.net',
       'admin@mindmatrix.net'
     ];
     
     window.allGlobalTickets = [];
     window.exactStatsData = null;
-    let pendingAction = null; // Tracks which secure page to load after PIN
+    let pendingAction = null; 
     
     const state = {
       reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All', currentFiltered: [] },
@@ -790,7 +793,11 @@
       if (!skipHistory) {
         const newHash = viewName === 'dashboard' ? '' : `#${viewName}`;
         if (window.location.hash !== newHash) {
-            window.history.pushState(null, null, newHash || window.location.pathname + window.location.search);
+            if(newHash === '') {
+                window.history.pushState('', document.title, window.location.pathname + window.location.search);
+            } else {
+                window.history.pushState(null, null, newHash);
+            }
         }
       }
       
@@ -843,8 +850,9 @@
             
             window.allGlobalTickets = (result.data || []).map(t => {
               
-              let cName = (t.cf && t.cf['cf_client_name_1']) ? t.cf['cf_client_name_1'] : 'Unknown';
-              if (!cName || cName.toString().trim() === "") cName = 'Unknown';
+              var cf = t.customFields || t.cf || {};
+              var cName = (t['cf_client_name_1'] || cf['cf_client_name_1'] || '').toString();
+              if (!cName || cName.trim() === "") cName = 'Unknown';
 
               let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
@@ -1249,8 +1257,16 @@
       
       let baseT = window.allGlobalTickets.filter(t => !((t.status||'').toLowerCase().includes('clos')));
       
-      if (filterType === 'priority') baseT = baseT.filter(t => t.priority === decodeURIComponent(filterValue));
-      else if (filterType === 'department') baseT = baseT.filter(t => (t.department?t.department.name:'General') === decodeURIComponent(filterValue));
+      if (filterType === 'priority') {
+          const val = decodeURIComponent(filterValue);
+          baseT = baseT.filter(t => t.priority === val);
+          document.getElementById('headerTitleText').textContent = `${val} Tickets`;
+      }
+      else if (filterType === 'department') {
+          const val = decodeURIComponent(filterValue);
+          baseT = baseT.filter(t => (t.department?t.department.name:'General') === val);
+          document.getElementById('headerTitleText').textContent = `${val} Tickets`;
+      }
       else if (filterType === 'timeframe') {
         const today = getETMidnightForOffset(0); const yesterday = getETMidnightForOffset(-1); const last7 = getETMidnightForOffset(-7); const last30 = getETMidnightForOffset(-30);
         const cwOff = -{ 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 }[new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' }).format(new Date())];
@@ -1299,13 +1315,13 @@
     
     function renderTicketsTable() {
       const tb = document.getElementById('ticketsTableBody'); tb.innerHTML = '';
-      if(state.tickets.currentFiltered.length===0) { tb.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 60px;">No tickets match.</td></tr>`; return; }
+      if(state.tickets.currentFiltered.length===0) { tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 60px;">No tickets match.</td></tr>`; return; }
       state.tickets.currentFiltered.forEach((t, i) => {
         const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
         const p = t.priority||'-'; const pl = p.toLowerCase(); let bg='#94a3b8'; let tc='#fff';
         if(pl.includes('low')){bg='#86efac';tc='#0f172a';} else if(pl.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pl.includes('high')){bg='#f97316';} else if(pl.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
         const tr = document.createElement('tr'); tr.className='animate-in'; tr.style.animationDelay=`${0.1+(i*0.02)}s`;
-        tr.innerHTML = `<td><strong>#${t.ticketNumber}</strong></td><td><strong>${t.subject}</strong></td><td>${t.clientName||'-'}</td><td><span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span></td><td><span class="dept-badge">${t.department?t.department.name:'General'}</span></td><td>${asn}</td><td>${t.status||'-'}</td><td>${t.createdTime?csvDateFmt.format(new Date(t.createdTime)):'-'}</td><td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">Open ↗</a></td>`;
+        tr.innerHTML = `<td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td><td><strong>${t.subject}</strong></td><td>${t.clientName||'-'}</td><td><span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span></td><td><span class="dept-badge">${t.department?t.department.name:'General'}</span></td><td>${asn}</td><td>${t.status||'-'}</td><td>${t.createdTime?csvDateFmt.format(new Date(t.createdTime)):'-'}</td>`;
         tb.appendChild(tr);
       });
     }
@@ -1741,14 +1757,12 @@
         }
       }
 
-      // NEW AI Search Shortcut (Alt + S)
       if (e.altKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
         const ae = localStorage.getItem('sandbox_auth_expiry'); 
         if(ae && Date.now()<parseInt(ae)) showPinModal('ai-search'); 
       }
       
-      // Trigger AI search on Enter
       if (e.key === 'Enter' && document.activeElement.id === 'aiSearchInput') {
          runAiSearch();
       }
