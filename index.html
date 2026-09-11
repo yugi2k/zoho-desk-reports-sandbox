@@ -360,7 +360,6 @@
             </div>
           </div>
           
-          <!-- NEW: Total Tickets Badge -->
           <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase;">
             Total Tickets: <span id="reportsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
           </div>
@@ -397,9 +396,25 @@
             <div class="select-dropdown" id="reportsStatusDropdown"></div>
           </div>
         </div>
+        <!-- NEW: Classification Filter -->
+        <div class="filter-group">
+          <label>Classification</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsClassDropdown')"><span id="reportsClassLabel">All Classes</span> ▼</div>
+            <div class="select-dropdown" id="reportsClassDropdown"></div>
+          </div>
+        </div>
+        <!-- NEW: Dynamic Column Select -->
+        <div class="filter-group">
+          <label>Columns</label>
+          <div class="custom-select" style="width: 160px;">
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsColsDropdown')"><span id="reportsColsLabel">Cols</span> ▼</div>
+            <div class="select-dropdown" id="reportsColsDropdown"></div>
+          </div>
+        </div>
         <div class="btn-group" style="margin-left: auto;">
           <button class="btn-action btn-danger" onclick="navigateTo('critical')" data-tooltip="Critical Reports">Critical Reports</button>
-          <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear Filters</button>
+          <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear</button>
           <button class="btn-action btn-export" onclick="exportReportsToCSV()">Export</button>
         </div>
       </div>
@@ -455,13 +470,29 @@
               <div class="select-dropdown" id="agentPriorityDropdown"></div>
             </div>
           </div>
+          <!-- NEW: Classification Filter -->
+          <div class="filter-group">
+            <label>Classification</label>
+            <div class="custom-select">
+              <div class="select-btn filter-input" onclick="toggleDropdown('agentClassDropdown')"><span id="agentClassLabel">All Classes</span> ▼</div>
+              <div class="select-dropdown" id="agentClassDropdown"></div>
+            </div>
+          </div>
+          <!-- NEW: Dynamic Column Select -->
+          <div class="filter-group">
+            <label>Columns</label>
+            <div class="custom-select" style="width: 160px;">
+              <div class="select-btn filter-input" onclick="toggleDropdown('agentsColsDropdown')"><span id="agentsColsLabel">Cols</span> ▼</div>
+              <div class="select-dropdown" id="agentsColsDropdown"></div>
+            </div>
+          </div>
           <div class="btn-group" style="margin-left: auto;">
-            <button class="btn-action btn-clear" onclick="clearAgentFilters()">Clear Filters</button>
+            <button class="btn-action btn-clear" onclick="clearAgentFilters()">Clear</button>
           </div>
         </div>
         <div class="table-container glass-panel">
           <table>
-            <thead><tr><th>Ticket #</th><th>Subject</th><th>Account / Client</th><th>Priority</th><th>Status</th><th>Created</th><th>Last Updated</th><th>Closed Date</th></tr></thead>
+            <thead id="agentsTableHeader"></thead>
             <tbody id="agentTicketsTableBody"></tbody>
           </table>
         </div>
@@ -501,6 +532,22 @@
             <div class="select-dropdown" id="ticketsStatusDropdown"></div>
           </div>
         </div>
+        <!-- NEW: Classification Filter -->
+        <div class="filter-group">
+          <label>Classification</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('ticketsClassDropdown')"><span id="ticketsClassLabel">All Classes</span> ▼</div>
+            <div class="select-dropdown" id="ticketsClassDropdown"></div>
+          </div>
+        </div>
+        <!-- NEW: Dynamic Column Select -->
+        <div class="filter-group">
+          <label>Columns</label>
+          <div class="custom-select" style="width: 160px;">
+            <div class="select-btn filter-input" onclick="toggleDropdown('ticketsColsDropdown')"><span id="ticketsColsLabel">Cols</span> ▼</div>
+            <div class="select-dropdown" id="ticketsColsDropdown"></div>
+          </div>
+        </div>
         <div class="btn-group" style="margin-left: auto;">
           <button class="btn-action btn-clear" onclick="clearTicketsFilters()" data-tooltip="Reset all filters">Clear</button>
           <button class="btn-action btn-export" onclick="exportTicketsToCSV()" data-tooltip="Download current view">Export</button>
@@ -508,9 +555,7 @@
       </div>
       <div class="table-container glass-panel animate-in delay-1">
         <table>
-          <thead>
-            <tr><th>Ticket #</th><th>Subject</th><th>Client Name</th><th>Priority</th><th>Department</th><th>Assignee</th><th>Status</th><th>Created Date</th></tr>
-          </thead>
+          <thead id="ticketsTableHeader"></thead>
           <tbody id="ticketsTableBody"></tbody>
         </table>
       </div>
@@ -554,17 +599,26 @@
             <div class="select-dropdown" id="criticalMonthDropdown"></div>
           </div>
         </div>
+        <!-- NEW: Classification Filter -->
         <div class="filter-group">
-          <label>Select Columns</label>
-          <div class="custom-select" style="width: 250px;">
-            <div class="select-btn filter-input" onclick="toggleDropdown('criticalColsDropdown')"><span id="criticalColsLabel">7 Columns Selected</span> ▼</div>
+          <label>Classification</label>
+          <div class="custom-select">
+            <div class="select-btn filter-input" onclick="toggleDropdown('criticalClassDropdown')"><span id="criticalClassLabel">All Classes</span> ▼</div>
+            <div class="select-dropdown" id="criticalClassDropdown"></div>
+          </div>
+        </div>
+        <!-- Unified Columns Dropdown -->
+        <div class="filter-group">
+          <label>Columns</label>
+          <div class="custom-select" style="width: 160px;">
+            <div class="select-btn filter-input" onclick="toggleDropdown('criticalColsDropdown')"><span id="criticalColsLabel">Cols</span> ▼</div>
             <div class="select-dropdown" id="criticalColsDropdown"></div>
           </div>
         </div>
         
         <div class="btn-group" style="margin-left: auto;">
-          <button class="btn-action btn-clear" onclick="clearCriticalFilters()">Clear Filters</button>
-          <button class="btn-action btn-export" onclick="exportCriticalToCSV()">Export Data</button>
+          <button class="btn-action btn-clear" onclick="clearCriticalFilters()">Clear</button>
+          <button class="btn-action btn-export" onclick="exportCriticalToCSV()">Export</button>
         </div>
       </div>
       
@@ -613,11 +667,23 @@
          <span class="loading-spinner" style="width: 20px; height: 20px; margin-right: 10px; margin-left: 0; vertical-align: middle;"></span> Analyzing query & searching live Zoho database...
        </div>
        
-       <div class="table-container glass-panel" id="aiSearchTableContainer" style="margin-top: 50px; display: none; text-align: left;">
+       <!-- NEW: AI Search Controls (Columns & Export) -->
+       <div class="controls-panel glass-panel" id="aiSearchControls" style="display:none; margin-top: 30px; margin-bottom: 20px; text-align: left;">
+          <div class="filter-group">
+            <label>Columns</label>
+            <div class="custom-select" style="width: 200px;">
+              <div class="select-btn filter-input" onclick="toggleDropdown('aiColsDropdown')"><span id="aiColsLabel">Cols</span> ▼</div>
+              <div class="select-dropdown" id="aiColsDropdown"></div>
+            </div>
+          </div>
+          <div class="btn-group" style="margin-left: auto;">
+            <button class="btn-action btn-export" onclick="exportAiToCSV()">Export Data</button>
+          </div>
+       </div>
+
+       <div class="table-container glass-panel" id="aiSearchTableContainer" style="display: none; text-align: left;">
           <table>
-             <thead>
-               <tr><th>Ticket #</th><th>Subject</th><th>Client Name</th><th>Department</th><th>Assignee</th><th>Status</th><th>Created Date</th><th>Last Updated</th></tr>
-             </thead>
+             <thead id="aiSearchTableHeader"></thead>
              <tbody id="aiSearchTableBody"></tbody>
           </table>
        </div>
@@ -645,7 +711,7 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
-    const CACHE_VER = '_v8'; 
+    const CACHE_VER = '_v9'; // V9: Unified Columns & Classification Architecture
     
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
@@ -660,26 +726,30 @@
     let pendingAction = null; 
     
     const state = {
-      reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All', currentFiltered: [] },
-      agents: { map: {}, currentId: null, currentTickets: [], filteredTickets: [] },
-      tickets: { activeTickets: [], currentFiltered: [], filterType: null, filterValue: null },
-      critical: { selectedCols: [], baseData: [], filteredData: [] }
+      reports: { isHistoryMode: false, activePriority: null, historyData: [], departmentFilter: 'All', timeframeFilter: 'All', currentFiltered: [], selectedCols: [] },
+      agents: { map: {}, currentId: null, currentTickets: [], filteredTickets: [], selectedCols: [] },
+      tickets: { activeTickets: [], currentFiltered: [], filterType: null, filterValue: null, selectedCols: [] },
+      critical: { baseData: [], filteredData: [], selectedCols: [] },
+      ai: { data: [], selectedCols: [] }
     };
 
-    const CRITICAL_COLS = [
-        { id: 'col_created', name: 'Created Date (Ticket)' },
-        { id: 'col_client', name: 'Client Name' },
-        { id: 'col_id', name: 'Ticket Id' },
-        { id: 'col_subject', name: 'Subject' },
-        { id: 'col_status', name: 'Status' },
-        { id: 'col_priority', name: 'Priority' },
-        { id: 'col_resolved', name: 'Issue Resolved Time' },
-        { id: 'col_closed', name: 'Ticket Closed Time' },
-        { id: 'col_module', name: 'Module' },
-        { id: 'col_class', name: 'Classifications' },
-        { id: 'col_responded', name: 'Agent Responded Time' },
-        { id: 'col_dept', name: 'Department Name (Ticket)' }
-    ];
+    // UNIVERSAL COLUMN DEFINITIONS
+    const ALL_COLS = {
+        col_id: 'Ticket #',
+        col_subject: 'Subject',
+        col_client: 'Client Name',
+        col_classification: 'Classification',
+        col_priority: 'Priority',
+        col_dept: 'Department',
+        col_status: 'Status',
+        col_assignee: 'Assignee',
+        col_created: 'Created Date',
+        col_updated: 'Last Updated',
+        col_closed: 'Closed Date',
+        col_responded: 'Agent Responded',
+        col_resolution: 'Resolution (Hrs)',
+        col_resolved: 'Issue Resolved Time'
+    };
 
     const tableDateFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' });
     const csvDateFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'numeric', day: 'numeric', year: 'numeric' });
@@ -695,6 +765,116 @@
       const y = parseInt(parts.find(p=>p.type==='year').value, 10); const m = parseInt(parts.find(p=>p.type==='month').value, 10) - 1; const d = parseInt(parts.find(p=>p.type==='day').value, 10);
       const dummy = new Date(Date.UTC(y, m, d + daysOffset));
       return getMidnightET(dummy.getUTCFullYear(), dummy.getUTCMonth() + 1, dummy.getUTCDate());
+    }
+
+    // ==========================================
+    // UNIFIED TABLE ENGINE
+    // ==========================================
+    function initColumns(viewPrefix, defaultCols) {
+        let savedCols = JSON.parse(localStorage.getItem(`sandbox_${viewPrefix}_columns_v2`));
+        if (!savedCols) {
+            savedCols = defaultCols;
+            localStorage.setItem(`sandbox_${viewPrefix}_columns_v2`, JSON.stringify(savedCols));
+        }
+        state[viewPrefix].selectedCols = savedCols;
+        
+        const drop = document.getElementById(`${viewPrefix}ColsDropdown`);
+        if(drop) {
+            drop.innerHTML = '';
+            Object.keys(ALL_COLS).forEach(cId => {
+                const isChecked = savedCols.includes(cId) ? 'checked' : '';
+                drop.innerHTML += `<label><input type="checkbox" value="${cId}" ${isChecked} onchange="updateCols('${viewPrefix}')"> ${ALL_COLS[cId]}</label>`;
+            });
+            document.getElementById(`${viewPrefix}ColsLabel`).innerText = `${savedCols.length} Columns`;
+        }
+    }
+
+    function initAllColumns() {
+       initColumns('reports', ['col_id', 'col_subject', 'col_priority', 'col_status', 'col_assignee', 'col_responded', 'col_created', 'col_classification']);
+       initColumns('agents', ['col_id', 'col_subject', 'col_client', 'col_priority', 'col_status', 'col_created', 'col_updated', 'col_closed', 'col_classification']);
+       initColumns('tickets', ['col_id', 'col_subject', 'col_client', 'col_priority', 'col_dept', 'col_assignee', 'col_status', 'col_created', 'col_classification']);
+       initColumns('critical', ['col_created', 'col_client', 'col_id', 'col_subject', 'col_status', 'col_priority', 'col_resolved', 'col_responded', 'col_classification']);
+       initColumns('ai', ['col_id', 'col_subject', 'col_client', 'col_dept', 'col_assignee', 'col_status', 'col_created', 'col_updated', 'col_classification']);
+    }
+
+    function updateCols(viewPrefix) {
+        const checked = Array.from(document.querySelectorAll(`#${viewPrefix}ColsDropdown input:checked`)).map(c => c.value);
+        if(checked.length === 0) { alert("Please select at least one column."); return; }
+        localStorage.setItem(`sandbox_${viewPrefix}_columns_v2`, JSON.stringify(checked));
+        state[viewPrefix].selectedCols = checked;
+        document.getElementById(`${viewPrefix}ColsLabel`).innerText = `${checked.length} Columns`;
+        
+        if(viewPrefix === 'reports') renderReportsView();
+        if(viewPrefix === 'agents') renderAgentTable();
+        if(viewPrefix === 'tickets') renderTicketsTable();
+        if(viewPrefix === 'critical') renderCriticalView();
+        if(viewPrefix === 'ai') renderAiTable(); 
+    }
+
+    function renderColHeader(c) { return `<th>${ALL_COLS[c]}</th>`; }
+    function renderColData(c, t) {
+      let val = '-';
+      switch(c) {
+        case 'col_id': val = `<a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a>`; break;
+        case 'col_subject': val = `<strong>${t.subject}</strong>`; break;
+        case 'col_client': val = t.clientName; break;
+        case 'col_dept': val = `<span class="dept-badge">${t.department ? (t.department.name || t.department) : 'General'}</span>`; break;
+        case 'col_assignee': val = t.assignee ? (t.assignee.fullName || t.assignee) : 'Unassigned'; break;
+        case 'col_priority': 
+            const p = t.priority||'-'; const pl = p.toLowerCase(); let bg='#94a3b8'; let tc='#fff';
+            if(pl.includes('low')){bg='#86efac';tc='#0f172a';} else if(pl.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pl.includes('high')){bg='#f97316';} else if(pl.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
+            val = p !== '-' ? `<span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span>` : '-'; break;
+        case 'col_status': val = t.status||'-'; break;
+        case 'col_created': val = t.createdTime?tableDateFmt.format(new Date(t.createdTime)):'-'; break;
+        case 'col_updated': val = t.modifiedTime?tableDateFmt.format(new Date(t.modifiedTime)):'-'; break;
+        case 'col_closed': val = t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'; break;
+        case 'col_responded': 
+             const rspData = t.customerResponseTime || t.agentRespondedTime || t.modifiedTime || t.createdTime;
+             val = rspData?tableDateFmt.format(new Date(rspData)):'-'; break;
+        case 'col_resolution': val = `<strong>${t.resolutionTime||'-'}</strong>`; break;
+        case 'col_classification': val = t.classification||'-'; break;
+        case 'col_resolved': 
+             let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
+             val = customResolvedTimes[t.id] || '-'; break;
+      }
+      return `<td>${val}</td>`;
+    }
+
+    function getCsvVal(c, t) {
+      switch(c) {
+        case 'col_id': return t.ticketNumber||'';
+        case 'col_subject': return `"${(t.subject||"").replace(/"/g,'""')}"`;
+        case 'col_client': return `"${(t.clientName||"").replace(/"/g,'""')}"`;
+        case 'col_dept': return t.department ? (t.department.name || t.department) : 'General';
+        case 'col_assignee': return t.assignee ? (t.assignee.fullName || t.assignee) : 'Unassigned';
+        case 'col_priority': return t.priority || '-';
+        case 'col_status': return t.status || '-';
+        case 'col_created': return t.createdTime?csvDateFmt.format(new Date(t.createdTime)):'-';
+        case 'col_updated': return t.modifiedTime?csvDateFmt.format(new Date(t.modifiedTime)):'-';
+        case 'col_closed': return t.closedTime?csvDateFmt.format(new Date(t.closedTime)):'-';
+        case 'col_responded': 
+             const rspData = t.customerResponseTime || t.agentRespondedTime || t.modifiedTime || t.createdTime;
+             return rspData?csvDateFmt.format(new Date(rspData)):'-';
+        case 'col_resolution': return t.resolutionTime || '-';
+        case 'col_classification': return `"${(t.classification||"").replace(/"/g,'""')}"`;
+        case 'col_resolved': 
+             let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
+             return `"${(customResolvedTimes[t.id] || '-').replace(/"/g,'""')}"`;
+      }
+      return '-';
+    }
+
+    function unifiedExportCSV(filename, data, cols) {
+       let csv = "\uFEFF" + cols.map(c => ALL_COLS[c]).join(",") + "\n";
+       data.forEach(t => {
+           let row = [];
+           cols.forEach(c => row.push(getCsvVal(c, t)));
+           csv += row.join(",") + "\n";
+       });
+       const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); 
+       const u = URL.createObjectURL(b); 
+       const l = document.createElement("a"); l.href = u; l.download = filename; 
+       document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); 
     }
 
     // ==========================================
@@ -855,10 +1035,13 @@
             lastUpdateMs = result.lastUpdated || now;
             
             window.allGlobalTickets = (result.data || []).map(t => {
-              
               var cf = t.customFields || t.cf || {};
               var cName = (t['cf_client_name_1'] || cf['cf_client_name_1'] || '').toString();
               if (!cName || cName.trim() === "") cName = 'Unknown';
+              
+              // Extract Classification
+              var clsName = (t['classification'] || t['cf_classification'] || cf['classification'] || cf['cf_classification'] || '').toString();
+              if (!clsName || clsName.trim() === "") clsName = 'N/A';
 
               let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
@@ -868,12 +1051,12 @@
                 assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, fullName: fullName } : null,
                 createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
                 agentRespondedTime: t.customerResponseTime || t.agentRespondedTime || t.modifiedTime || t.createdTime, 
-                clientName: cName, module: 'N/A', classification: 'N/A' 
+                clientName: cName, classification: clsName, module: 'N/A' 
               };
             });
             
             Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('sandbox_zoho_') && !key.endsWith(CACHE_VER)) {
+                if (key.startsWith('sandbox_zoho_') && !key.endsWith(CACHE_VER) && !key.includes('_columns')) {
                     localStorage.removeItem(key);
                 }
             });
@@ -888,12 +1071,17 @@
           lastUpdatedEl.innerHTML = `⏱️ Last updated: ${formatter.format(new Date(lastUpdateMs))} ET`;
         }
         
+        // Initialize dynamic columns before rendering views
+        initAllColumns();
+
         const currentView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
         if(currentView === 'dashboard') renderMainDashboard();
         if(currentView === 'reports') initReportsView();
         if(currentView === 'agents') showAgentsList();
+        if(currentView === 'tickets') initTicketsView(state.tickets.filterType, state.tickets.filterValue);
         if(currentView === 'critical') initCriticalView();
         if(currentView === 'admin') renderAdminView();
+        if(currentView === 'ai-search') { /* Just wait for user input */ }
         
       } catch (err) {
         if(forceLive) { alert(err.message); return; }
@@ -980,16 +1168,19 @@
     }
 
     function populateReportsDropdowns(baseData) {
-      const ag = new Set(); const st = new Set();
+      const ag = new Set(); const st = new Set(); const clss = new Set();
       baseData.forEach(t => { 
         ag.add(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned'); 
         st.add(t.status || '-'); 
+        clss.add(t.classification || '-');
       });
-      const fill = (id, set) => { 
+      const fill = (id, set, fn) => { 
         const el = document.getElementById(id); el.innerHTML = ''; 
-        Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="renderReportsView()"> ${v}</label>`; }); 
+        Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="${fn}()"> ${v}</label>`; }); 
       };
-      fill('reportsAssigneeDropdown', ag); fill('reportsStatusDropdown', st);
+      fill('reportsAssigneeDropdown', ag, 'renderReportsView'); 
+      fill('reportsStatusDropdown', st, 'renderReportsView');
+      fill('reportsClassDropdown', clss, 'renderReportsView');
     }
 
     async function fetchHistoricalData() {
@@ -1004,7 +1195,7 @@
         state.reports.historyData = data.table.rows.map(row => ({
           id: getV(row, 0), ticketNumber: getV(row, 1), subject: getV(row, 2), department: { name: getV(row, 3) }, 
           assignee: { fullName: getV(row, 4), firstName: '', lastName: '' }, 
-          status: getV(row, 5), priority: getV(row, 6), createdTime: getV(row, 7), closedTime: getV(row, 8), resolutionTime: getV(row, 9), modifiedTime: getV(row, 10)
+          status: getV(row, 5), priority: getV(row, 6), createdTime: getV(row, 7), closedTime: getV(row, 8), resolutionTime: getV(row, 9), modifiedTime: getV(row, 10), classification: getV(row, 12) || 'N/A'
         }));
       } catch (err) { alert("Failed to load historical data."); }
       finally { document.getElementById('reportsLoadingIndicator').style.display = 'none'; }
@@ -1044,7 +1235,7 @@
       document.getElementById('reportsSearchText').value = '';
       document.getElementById('reportsDateStart')._flatpickr.clear();
       document.getElementById('reportsDateEnd')._flatpickr.clear();
-      document.querySelectorAll('#reportsAssigneeDropdown input, #reportsStatusDropdown input').forEach(c=>c.checked=false);
+      document.querySelectorAll('#reportsAssigneeDropdown input, #reportsStatusDropdown input, #reportsClassDropdown input').forEach(c=>c.checked=false);
       renderReportsView();
     }
     
@@ -1063,8 +1254,11 @@
 
       const sA = Array.from(document.querySelectorAll('#reportsAssigneeDropdown input:checked')).map(c=>c.value);
       const sS = Array.from(document.querySelectorAll('#reportsStatusDropdown input:checked')).map(c=>c.value);
+      const sC = Array.from(document.querySelectorAll('#reportsClassDropdown input:checked')).map(c=>c.value);
+      
       document.getElementById('reportsAssigneeLabel').innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
       document.getElementById('reportsStatusLabel').innerText = sS.length ? `${sS.length} Selected` : 'All Statuses';
+      document.getElementById('reportsClassLabel').innerText = sC.length ? `${sC.length} Selected` : 'All Classes';
       
       const searchTxt = (document.getElementById('reportsSearchText').value || '').toLowerCase();
       const dS = document.getElementById('reportsDateStart').value;
@@ -1073,6 +1267,7 @@
       cData = cData.filter(t => {
         const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
         const stat = t.status || '-';
+        const cls = t.classification || '-';
         const subj = (t.subject || '').toLowerCase();
         const tNum = (t.ticketNumber || '').toLowerCase();
         const cD = new Date(t.createdTime);
@@ -1083,7 +1278,8 @@
 
         return (searchTxt === '' || subj.includes(searchTxt) || tNum.includes(searchTxt)) &&
                (sA.length === 0 || sA.includes(asn)) &&
-               (sS.length === 0 || sS.includes(stat)) && pD;
+               (sS.length === 0 || sS.includes(stat)) &&
+               (sC.length === 0 || sC.includes(cls)) && pD;
       });
 
       state.reports.currentFiltered = cData;
@@ -1108,50 +1304,29 @@
         tableData = tableData.filter(t => { const pt = t.priority ? t.priority.toLowerCase() : 'none'; return state.reports.activePriority === "None" ? pt === 'none' : pt.includes(state.reports.activePriority.toLowerCase()); });
       } else { document.getElementById('reportsFilterSubtext').innerText = ""; }
 
-      // NEW: Update the live count badge
       document.getElementById('reportsTotalCount').innerText = tableData.length;
 
-      document.getElementById('reportsTableHeader').innerHTML = state.reports.isHistoryMode ? `<tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Agent Responded Time</th><th>Created Date</th><th>Closed Date</th><th>Resolution (Hrs)</th></tr>` : `<tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Agent Responded Time</th><th>Created Date</th></tr>`;
+      const colsToRender = state.reports.isHistoryMode ? state.reports.selectedCols : state.reports.selectedCols.filter(c => c !== 'col_closed' && c !== 'col_resolution');
+      
+      document.getElementById('reportsTableHeader').innerHTML = `<tr>${colsToRender.map(c => renderColHeader(c)).join('')}</tr>`;
       
       const tb = document.getElementById('reportsTableBody'); tb.innerHTML = '';
-      if(tableData.length === 0) { tb.innerHTML = `<tr><td colspan="${state.reports.isHistoryMode?9:7}" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
+      if(tableData.length === 0) { tb.innerHTML = `<tr><td colspan="${colsToRender.length}" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
       
       tableData.forEach(t => {
-        const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
-        const crt = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
-        const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
-        const rsp = rspData ? tableDateFmt.format(new Date(rspData)) : '-';
-        
-        let bg = '#94a3b8'; let tc = '#ffffff'; const pL = pr.toLowerCase();
-        if(pL.includes('low')){bg='#86efac';tc='#0f172a';} else if(pL.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pL.includes('high')){bg='#f97316';} else if(pL.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pL.includes('critical')){bg='#ef4444';}
-        const bHTML = pr !== '-' ? `<span class="priority-badge" style="background-color:${bg}; color:${tc};">${pr}</span>` : pr;
-
-        let rHtml = `<td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td><td><strong>${t.subject}</strong></td><td>${bHTML}</td><td>${t.status||'-'}</td><td>${asgn}</td><td>${rsp}</td><td>${crt}</td>`;
-        if (state.reports.isHistoryMode) rHtml += `<td>${t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'}</td><td><strong>${t.resolutionTime||'-'}</strong></td>`;
-        const tr = document.createElement('tr'); tr.innerHTML = rHtml; tb.appendChild(tr);
+        const tr = document.createElement('tr');
+        tr.innerHTML = colsToRender.map(c => renderColData(c, t)).join('');
+        tb.appendChild(tr);
       });
     }
 
     function exportReportsToCSV() {
-      let csv = "\uFEFFTicket #,Subject,Priority,Status,Assignee,Agent Responded Time,Created Date" + (state.reports.isHistoryMode ? ",Closed Date,Resolution (Hrs)" : "") + ",Ticket Link\n";
-      
       let exportData = state.reports.currentFiltered;
       if (state.reports.activePriority) {
         exportData = exportData.filter(t => { const pt = t.priority ? t.priority.toLowerCase() : 'none'; return state.reports.activePriority === "None" ? pt === 'none' : pt.includes(state.reports.activePriority.toLowerCase()); });
       }
-
-      exportData.forEach(t => {
-        const pr = t.priority || '-'; const asgn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
-        const crt = t.createdTime ? csvDateFmt.format(new Date(t.createdTime)) : '-';
-        const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
-        const rsp = rspData ? csvDateFmt.format(new Date(rspData)) : '-';
-        
-        let row = `${t.ticketNumber||""},"${(t.subject||"").replace(/"/g,'""')}",${pr},${t.status||""},${asgn},${rsp},${crt}`;
-        if (state.reports.isHistoryMode) { row += `,${t.closedTime ? csvDateFmt.format(new Date(t.closedTime)) : '-'},${t.resolutionTime||'-'}`; }
-        row += `,https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}\n`;
-        csv += row;
-      });
-      const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `Reports_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); 
+      const colsToRender = state.reports.isHistoryMode ? state.reports.selectedCols : state.reports.selectedCols.filter(c => c !== 'col_closed' && c !== 'col_resolution');
+      unifiedExportCSV(`Reports_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`, exportData, colsToRender);
     }
 
     // ==========================================
@@ -1219,17 +1394,20 @@
     }
     
     function populateAgentDropdowns() {
-      const st = new Set(); const pr = new Set();
-      state.agents.currentTickets.forEach(t => { st.add(t.status || '-'); pr.add(t.priority || '-'); });
+      const st = new Set(); const pr = new Set(); const clss = new Set();
+      state.agents.currentTickets.forEach(t => { st.add(t.status || '-'); pr.add(t.priority || '-'); clss.add(t.classification || '-'); });
       const fill = (id, set) => { const el = document.getElementById(id); el.innerHTML = ''; Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyAgentFilters()"> ${v}</label>`; }); };
-      fill('agentStatusDropdown', st); fill('agentPriorityDropdown', pr);
+      fill('agentStatusDropdown', st); fill('agentPriorityDropdown', pr); fill('agentClassDropdown', clss);
     }
     
     function applyAgentFilters() {
       const sS = Array.from(document.querySelectorAll('#agentStatusDropdown input:checked')).map(c=>c.value);
       const sP = Array.from(document.querySelectorAll('#agentPriorityDropdown input:checked')).map(c=>c.value);
+      const sC = Array.from(document.querySelectorAll('#agentClassDropdown input:checked')).map(c=>c.value);
+      
       document.getElementById('agentStatusLabel').innerText = sS.length ? `${sS.length} Selected` : 'All Statuses';
       document.getElementById('agentPriorityLabel').innerText = sP.length ? `${sP.length} Selected` : 'All Priorities';
+      document.getElementById('agentClassLabel').innerText = sC.length ? `${sC.length} Selected` : 'All Classes';
       
       const txt = document.getElementById('agentSearchText').value.toLowerCase();
       const dS = document.getElementById('agentDateStart').value; const dE = document.getElementById('agentDateEnd').value;
@@ -1238,22 +1416,21 @@
         const cD = new Date(t.createdTime); let pD = true;
         if(dS){ const [y,m,d]=dS.split('-'); pD = pD && (cD >= getMidnightET(y,m,d)); }
         if(dE){ const [y,m,d]=dE.split('-'); pD = pD && (cD <= new Date(getMidnightET(y,m,d).getTime()+86399999)); }
-        return (sS.length===0 || sS.includes(t.status||'-')) && (sP.length===0 || sP.includes(t.priority||'-')) && (txt==='' || (t.subject||'').toLowerCase().includes(txt) || (t.ticketNumber||'').toLowerCase().includes(txt)) && pD;
+        return (sS.length===0 || sS.includes(t.status||'-')) && (sP.length===0 || sP.includes(t.priority||'-')) && (sC.length===0 || sC.includes(t.classification||'-')) && (txt==='' || (t.subject||'').toLowerCase().includes(txt) || (t.ticketNumber||'').toLowerCase().includes(txt)) && pD;
       });
       renderAgentTable();
     }
     
-    function clearAgentFilters() { document.getElementById('agentSearchText').value = ''; document.getElementById('agentDateStart')._flatpickr.clear(); document.getElementById('agentDateEnd')._flatpickr.clear(); document.querySelectorAll('#agentStatusDropdown input, #agentPriorityDropdown input').forEach(c=>c.checked=false); applyAgentFilters(); }
+    function clearAgentFilters() { document.getElementById('agentSearchText').value = ''; document.getElementById('agentDateStart')._flatpickr.clear(); document.getElementById('agentDateEnd')._flatpickr.clear(); document.querySelectorAll('#agentStatusDropdown input, #agentPriorityDropdown input, #agentClassDropdown input').forEach(c=>c.checked=false); applyAgentFilters(); }
     
     function renderAgentTable() {
+      document.getElementById('agentsTableHeader').innerHTML = `<tr>${state.agents.selectedCols.map(c => renderColHeader(c)).join('')}</tr>`;
       const tb = document.getElementById('agentTicketsTableBody'); tb.innerHTML = '';
-      if(state.agents.filteredTickets.length===0) { tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
-      state.agents.filteredTickets.forEach(t => {
-        const p = t.priority||'-'; const pl = p.toLowerCase(); let bg='#94a3b8'; let tc='#fff';
-        if(pl.includes('low')){bg='#86efac';tc='#0f172a';} else if(pl.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pl.includes('high')){bg='#f97316';} else if(pl.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
-        const tbHTML = document.createElement('tr');
-        tbHTML.innerHTML = `<td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td><td><strong>${t.subject}</strong></td><td>${t.clientName||'-'}</td><td><span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span></td><td><span class="dept-badge">${t.status}</span></td><td>${t.createdTime?tableDateFmt.format(new Date(t.createdTime)):'-'}</td><td>${t.modifiedTime?tableDateFmt.format(new Date(t.modifiedTime)):'-'}</td><td>${t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'}</td>`;
-        tb.appendChild(tbHTML);
+      if(state.agents.filteredTickets.length===0) { tb.innerHTML = `<tr><td colspan="${state.agents.selectedCols.length}" style="text-align:center; padding:40px;">No tickets match.</td></tr>`; return; }
+      state.agents.filteredTickets.forEach((t, i) => {
+        const tr = document.createElement('tr'); tr.className='animate-in'; tr.style.animationDelay=`${0.05*i}s`;
+        tr.innerHTML = state.agents.selectedCols.map(c => renderColData(c, t)).join('');
+        tb.appendChild(tr);
       });
     }
 
@@ -1299,95 +1476,71 @@
     }
     
     function populateTicketsDropdowns() {
-      const cl = new Set(); const ag = new Set(); const pr = new Set(); const st = new Set();
-      state.tickets.activeTickets.forEach(t => { cl.add(t.clientName||'-'); ag.add(t.assignee? (t.assignee.fullName || 'Unassigned') :'Unassigned'); pr.add(t.priority||'-'); st.add(t.status||'-'); });
+      const cl = new Set(); const ag = new Set(); const pr = new Set(); const st = new Set(); const clss = new Set();
+      state.tickets.activeTickets.forEach(t => { cl.add(t.clientName||'-'); ag.add(t.assignee? (t.assignee.fullName || 'Unassigned') :'Unassigned'); pr.add(t.priority||'-'); st.add(t.status||'-'); clss.add(t.classification||'-'); });
       const fill = (id, set) => { const el = document.getElementById(id); el.innerHTML = ''; Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyTicketsFilters()"> ${v}</label>`; }); };
-      fill('ticketsClientDropdown', cl); fill('ticketsAssigneeDropdown', ag); fill('ticketsPriorityDropdown', pr); fill('ticketsStatusDropdown', st);
+      fill('ticketsClientDropdown', cl); fill('ticketsAssigneeDropdown', ag); fill('ticketsPriorityDropdown', pr); fill('ticketsStatusDropdown', st); fill('ticketsClassDropdown', clss);
     }
     
     function applyTicketsFilters() {
       const sC = Array.from(document.querySelectorAll('#ticketsClientDropdown input:checked')).map(c=>c.value); const sA = Array.from(document.querySelectorAll('#ticketsAssigneeDropdown input:checked')).map(c=>c.value);
       const sP = Array.from(document.querySelectorAll('#ticketsPriorityDropdown input:checked')).map(c=>c.value); const sS = Array.from(document.querySelectorAll('#ticketsStatusDropdown input:checked')).map(c=>c.value);
+      const sCls = Array.from(document.querySelectorAll('#ticketsClassDropdown input:checked')).map(c=>c.value);
+      
       document.getElementById('ticketsClientLabel').innerText = sC.length ? `${sC.length} Selected` : 'All Clients'; document.getElementById('ticketsAssigneeLabel').innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
       document.getElementById('ticketsPriorityLabel').innerText = sP.length ? `${sP.length} Selected` : 'All Priorities'; document.getElementById('ticketsStatusLabel').innerText = sS.length ? `${sS.length} Selected` : 'All Statuses';
+      document.getElementById('ticketsClassLabel').innerText = sCls.length ? `${sCls.length} Selected` : 'All Classes';
+      
       const dS = document.getElementById('ticketsDateStart').value; const dE = document.getElementById('ticketsDateEnd').value;
       
       state.tickets.currentFiltered = state.tickets.activeTickets.filter(t => {
         const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned'; const cD = new Date(t.createdTime); let pD = true;
         if(dS){ const [y,m,d]=dS.split('-'); pD = pD && (cD >= getMidnightET(y,m,d)); }
         if(dE){ const [y,m,d]=dE.split('-'); pD = pD && (cD <= new Date(getMidnightET(y,m,d).getTime()+86399999)); }
-        return (sC.length===0 || sC.includes(t.clientName||'-')) && (sA.length===0 || sA.includes(asn)) && (sP.length===0 || sP.includes(t.priority||'-')) && (sS.length===0 || sS.includes(t.status||'-')) && pD;
+        return (sC.length===0 || sC.includes(t.clientName||'-')) && (sA.length===0 || sA.includes(asn)) && (sP.length===0 || sP.includes(t.priority||'-')) && (sS.length===0 || sS.includes(t.status||'-')) && (sCls.length===0 || sCls.includes(t.classification||'-')) && pD;
       });
       renderTicketsTable();
     }
     function clearTicketsFilters() { document.getElementById('ticketsDateStart')._flatpickr.clear(); document.getElementById('ticketsDateEnd')._flatpickr.clear(); document.querySelectorAll('#view-tickets .select-dropdown input').forEach(c=>c.checked=false); applyTicketsFilters(); }
     
     function renderTicketsTable() {
+      document.getElementById('ticketsTableHeader').innerHTML = `<tr>${state.tickets.selectedCols.map(c => renderColHeader(c)).join('')}</tr>`;
       const tb = document.getElementById('ticketsTableBody'); tb.innerHTML = '';
-      if(state.tickets.currentFiltered.length===0) { tb.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 60px;">No tickets match.</td></tr>`; return; }
+      if(state.tickets.currentFiltered.length===0) { tb.innerHTML = `<tr><td colspan="${state.tickets.selectedCols.length}" style="text-align:center; padding: 60px;">No tickets match.</td></tr>`; return; }
       state.tickets.currentFiltered.forEach((t, i) => {
-        const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
-        const p = t.priority||'-'; const pl = p.toLowerCase(); let bg='#94a3b8'; let tc='#fff';
-        if(pl.includes('low')){bg='#86efac';tc='#0f172a';} else if(pl.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pl.includes('high')){bg='#f97316';} else if(pl.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
         const tr = document.createElement('tr'); tr.className='animate-in'; tr.style.animationDelay=`${0.1+(i*0.02)}s`;
-        tr.innerHTML = `<td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td><td><strong>${t.subject}</strong></td><td>${t.clientName||'-'}</td><td><span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span></td><td><span class="dept-badge">${t.department?t.department.name:'General'}</span></td><td>${asn}</td><td>${t.status||'-'}</td><td>${t.createdTime?csvDateFmt.format(new Date(t.createdTime)):'-'}</td>`;
+        tr.innerHTML = state.tickets.selectedCols.map(c => renderColData(c, t)).join('');
         tb.appendChild(tr);
       });
     }
 
     function exportTicketsToCSV() {
-      let csv = "\uFEFFTicket #,Subject,Client Name,Priority,Department,Assignee,Status,Created Date,Ticket Link\n";
-      state.tickets.currentFiltered.forEach(t => {
-        csv += `${t.ticketNumber||""},"${(t.subject||"").replace(/"/g,'""')}","${(t.clientName||"").replace(/"/g,'""')}",${t.priority||"-"},${t.department?t.department.name:"General"},${t.assignee ? (t.assignee.fullName || 'Unassigned') : "Unassigned"},${t.status||""},${t.createdTime?csvDateFmt.format(new Date(t.createdTime)):""},https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}\n`;
-      });
-      const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `Tickets_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); 
+      unifiedExportCSV(`Tickets_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`, state.tickets.currentFiltered, state.tickets.selectedCols);
     }
 
     // ==========================================
     // VIEW 5: CRITICAL REPORTS VIEW
     // ==========================================
     function initCriticalView() {
-      let savedCols = JSON.parse(localStorage.getItem('sandbox_critical_columns'));
-      if (!savedCols) {
-          savedCols = CRITICAL_COLS.slice(0, 6).map(c => c.id);
-          localStorage.setItem('sandbox_critical_columns', JSON.stringify(savedCols));
-      }
-      state.critical.selectedCols = savedCols;
-      
       const jan1 = new Date('2026-01-01T00:00:00');
-      
       state.critical.baseData = window.allGlobalTickets.filter(t => {
         const cD = new Date(t.createdTime);
         if (cD < jan1) return false;
-        
         const pr = (t.priority || '').toLowerCase();
         const su = (t.subject || '').toLowerCase();
-        
         return pr === 'critical' || su.includes('critical');
       });
       
       state.critical.filteredData = [...state.critical.baseData];
       populateCriticalDropdowns();
-      
-      const drop = document.getElementById('criticalColsDropdown');
-      drop.innerHTML = '';
-      CRITICAL_COLS.forEach(c => {
-          const isChecked = savedCols.includes(c.id) ? 'checked' : '';
-          drop.innerHTML += `<label><input type="checkbox" value="${c.id}" ${isChecked} onchange="updateCriticalCols()"> ${c.name}</label>`;
-      });
-      document.getElementById('criticalColsLabel').innerText = `${savedCols.length} Columns Selected`;
-      
       renderCriticalView();
     }
     
     function populateCriticalDropdowns() {
-      const cl = new Set(), pr = new Set(), dp = new Set(), st = new Set(), mo = new Set();
+      const cl = new Set(), pr = new Set(), dp = new Set(), st = new Set(), mo = new Set(), clss = new Set();
       state.critical.baseData.forEach(t => {
-        cl.add(t.clientName || '-');
-        pr.add(t.priority || '-');
-        dp.add(t.department ? t.department.name : 'General');
-        st.add(t.status || '-');
-        
+        cl.add(t.clientName || '-'); pr.add(t.priority || '-'); dp.add(t.department ? t.department.name : 'General');
+        st.add(t.status || '-'); clss.add(t.classification || '-');
         if (t.createdTime) {
           const d = new Date(t.createdTime);
           const monthStr = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
@@ -1400,11 +1553,8 @@
         Array.from(set).sort().forEach(v => { el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyCriticalFilters()"> ${v}</label>`; });
       };
       
-      fill('criticalClientDropdown', cl);
-      fill('criticalPriorityDropdown', pr);
-      fill('criticalDeptDropdown', dp);
-      fill('criticalStatusDropdown', st);
-      fill('criticalMonthDropdown', mo);
+      fill('criticalClientDropdown', cl); fill('criticalPriorityDropdown', pr); fill('criticalDeptDropdown', dp);
+      fill('criticalStatusDropdown', st); fill('criticalMonthDropdown', mo); fill('criticalClassDropdown', clss);
     }
     
     function applyCriticalFilters() {
@@ -1413,18 +1563,18 @@
       const sD = Array.from(document.querySelectorAll('#criticalDeptDropdown input:checked')).map(c=>c.value);
       const sS = Array.from(document.querySelectorAll('#criticalStatusDropdown input:checked')).map(c=>c.value);
       const sM = Array.from(document.querySelectorAll('#criticalMonthDropdown input:checked')).map(c=>c.value);
+      const sCls = Array.from(document.querySelectorAll('#criticalClassDropdown input:checked')).map(c=>c.value);
 
       document.getElementById('criticalClientLabel').innerText = sC.length ? `${sC.length} Selected` : 'All Clients';
       document.getElementById('criticalPriorityLabel').innerText = sP.length ? `${sP.length} Selected` : 'All Priorities';
       document.getElementById('criticalDeptLabel').innerText = sD.length ? `${sD.length} Selected` : 'All Departments';
       document.getElementById('criticalStatusLabel').innerText = sS.length ? `${sS.length} Selected` : 'All Statuses';
       document.getElementById('criticalMonthLabel').innerText = sM.length ? `${sM.length} Selected` : 'All Months';
+      document.getElementById('criticalClassLabel').innerText = sCls.length ? `${sCls.length} Selected` : 'All Classes';
 
       state.critical.filteredData = state.critical.baseData.filter(t => {
-        const cName = t.clientName || '-';
-        const prio = t.priority || '-';
-        const dept = t.department ? t.department.name : 'General';
-        const stat = t.status || '-';
+        const cName = t.clientName || '-'; const prio = t.priority || '-'; const dept = t.department ? t.department.name : 'General';
+        const stat = t.status || '-'; const cls = t.classification || '-';
         
         let monthMatch = true;
         if (sM.length > 0 && t.createdTime) {
@@ -1435,69 +1585,22 @@
             monthMatch = false;
         }
 
-        return (sC.length===0 || sC.includes(cName)) &&
-               (sP.length===0 || sP.includes(prio)) &&
-               (sD.length===0 || sD.includes(dept)) &&
-               (sS.length===0 || sS.includes(stat)) &&
-               monthMatch;
+        return (sC.length===0 || sC.includes(cName)) && (sP.length===0 || sP.includes(prio)) && (sD.length===0 || sD.includes(dept)) &&
+               (sS.length===0 || sS.includes(stat)) && (sCls.length===0 || sCls.includes(cls)) && monthMatch;
       });
       renderCriticalView();
     }
     
-    function clearCriticalFilters() {
-      document.querySelectorAll('#view-critical .select-dropdown input').forEach(c=>c.checked=false);
-      applyCriticalFilters();
-    }
-
-    function updateCriticalCols() {
-        const checked = Array.from(document.querySelectorAll('#criticalColsDropdown input:checked')).map(c => c.value);
-        if(checked.length === 0) { alert("Please select at least one column."); return; }
-        localStorage.setItem('sandbox_critical_columns', JSON.stringify(checked));
-        state.critical.selectedCols = checked;
-        document.getElementById('criticalColsLabel').innerText = `${checked.length} Columns Selected`;
-        renderCriticalView();
-    }
+    function clearCriticalFilters() { document.querySelectorAll('#view-critical .select-dropdown input').forEach(c=>c.checked=false); applyCriticalFilters(); }
 
     function renderCriticalView() {
-      let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
-      const th = document.getElementById('criticalTableHeader');
-      const tb = document.getElementById('criticalTableBody');
-      th.innerHTML = ''; tb.innerHTML = '';
-      
-      const colsToRender = CRITICAL_COLS.filter(c => state.critical.selectedCols.includes(c.id));
-      
-      let headerHtml = '<tr>';
-      colsToRender.forEach(c => headerHtml += `<th>${c.name}</th>`);
-      headerHtml += '</tr>';
-      th.innerHTML = headerHtml;
-      
-      if(state.critical.filteredData.length === 0) { tb.innerHTML = `<tr><td colspan="${colsToRender.length}" style="text-align:center; padding:40px;">No matching critical tickets found.</td></tr>`; return; }
+      document.getElementById('criticalTableHeader').innerHTML = `<tr>${state.critical.selectedCols.map(c => renderColHeader(c)).join('')}</tr>`;
+      const tb = document.getElementById('criticalTableBody'); tb.innerHTML = '';
+      if(state.critical.filteredData.length === 0) { tb.innerHTML = `<tr><td colspan="${state.critical.selectedCols.length}" style="text-align:center; padding:40px;">No matching critical tickets found.</td></tr>`; return; }
       
       state.critical.filteredData.forEach(t => {
         const tr = document.createElement('tr');
-        let rowHtml = '';
-        colsToRender.forEach(c => {
-          let val = '-';
-          if(c.id === 'col_created') val = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
-          else if(c.id === 'col_client') val = t.clientName;
-          else if(c.id === 'col_id') val = `<a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a>`;
-          else if(c.id === 'col_subject') val = `<strong>${t.subject}</strong>`;
-          else if(c.id === 'col_status') val = t.status || '-';
-          else if(c.id === 'col_priority') {
-             let bg='#94a3b8', tc='#fff', pl=(t.priority||'').toLowerCase();
-             if(pl.includes('urgent')) {bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
-             val = t.priority ? `<span class="priority-badge" style="background-color:${bg};color:${tc}">${t.priority}</span>` : '-';
-          }
-          else if(c.id === 'col_resolved') val = customResolvedTimes[t.id] || '-';
-          else if(c.id === 'col_closed') val = t.closedTime ? tableDateFmt.format(new Date(t.closedTime)) : '-';
-          else if(c.id === 'col_module') val = t.module;
-          else if(c.id === 'col_class') val = t.classification;
-          else if(c.id === 'col_responded') val = t.agentRespondedTime ? tableDateFmt.format(new Date(t.agentRespondedTime)) : '-';
-          else if(c.id === 'col_dept') val = t.department ? t.department.name : 'General';
-          
-          rowHtml += `<td>${val}</td>`;
-        });
-        tr.innerHTML = rowHtml;
+        tr.innerHTML = state.critical.selectedCols.map(c => renderColData(c, t)).join('');
         tb.appendChild(tr);
       });
 
@@ -1506,7 +1609,6 @@
         const dummy = document.getElementById('criticalTopScrollDummy');
         const tableCont = document.getElementById('criticalTableContainer');
         const table = tableCont.querySelector('table');
-
         if(table && dummy) {
             dummy.style.width = table.offsetWidth + 'px';
             topScroll.onscroll = () => { tableCont.scrollLeft = topScroll.scrollLeft; };
@@ -1516,33 +1618,7 @@
     }
 
     function exportCriticalToCSV() {
-      const colsToRender = CRITICAL_COLS.filter(c => state.critical.selectedCols.includes(c.id));
-      let csv = "\uFEFF" + colsToRender.map(c => c.name).join(",") + "\n";
-      
-      let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
-
-      state.critical.filteredData.forEach(t => {
-        let row = [];
-        colsToRender.forEach(c => {
-          let val = '-';
-          if(c.id === 'col_created') val = t.createdTime ? csvDateFmt.format(new Date(t.createdTime)) : '-';
-          else if(c.id === 'col_client') val = t.clientName;
-          else if(c.id === 'col_id') val = t.ticketNumber;
-          else if(c.id === 'col_subject') val = t.subject;
-          else if(c.id === 'col_status') val = t.status || '-';
-          else if(c.id === 'col_priority') val = t.priority || '-';
-          else if(c.id === 'col_resolved') val = customResolvedTimes[t.id] || '-';
-          else if(c.id === 'col_closed') val = t.closedTime ? csvDateFmt.format(new Date(t.closedTime)) : '-';
-          else if(c.id === 'col_module') val = t.module;
-          else if(c.id === 'col_class') val = t.classification;
-          else if(c.id === 'col_responded') val = t.agentRespondedTime ? csvDateFmt.format(new Date(t.agentRespondedTime)) : '-';
-          else if(c.id === 'col_dept') val = t.department ? t.department.name : 'General';
-          
-          row.push(`"${(val||"").replace(/"/g,'""')}"`);
-        });
-        csv += row.join(",") + "\n";
-      });
-      const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const u = URL.createObjectURL(b); const l = document.createElement("a"); l.href = u; l.download = `Critical_Tickets_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); 
+      unifiedExportCSV(`Critical_Tickets_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`, state.critical.filteredData, state.critical.selectedCols);
     }
 
     // ==========================================
@@ -1557,7 +1633,6 @@
     function renderAdminView() {
       const jan1 = new Date('2026-01-01T00:00:00');
       let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
-      
       let cData = window.allGlobalTickets.filter(t => {
         const cD = new Date(t.createdTime);
         if (cD < jan1) return false;
@@ -1565,19 +1640,14 @@
         const su = (t.subject || '').toLowerCase();
         return pr === 'critical' || su.includes('critical');
       });
-      
       const tb = document.getElementById('adminTableBody'); tb.innerHTML = '';
       if(cData.length === 0) { tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:40px;">No critical tickets found since Jan 1, 2026.</td></tr>`; return; }
       
       cData.forEach(t => {
         const val = customResolvedTimes[t.id] || '';
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>#${t.ticketNumber}</strong></td>
-          <td>${t.subject}</td>
-          <td>${t.priority || '-'} / ${t.status || '-'}</td>
-          <td><input type="text" class="filter-input" placeholder="e.g. Aug 15, 2026 10:30 AM" value="${val}" onchange="saveResolvedTime('${t.id}', this.value)" style="width:100%; max-width:300px;"></td>
-        `;
+        tr.innerHTML = `<td><strong>#${t.ticketNumber}</strong></td><td>${t.subject}</td><td>${t.priority || '-'} / ${t.status || '-'}</td>
+          <td><input type="text" class="filter-input" placeholder="e.g. Aug 15, 2026 10:30 AM" value="${val}" onchange="saveResolvedTime('${t.id}', this.value)" style="width:100%; max-width:300px;"></td>`;
         tb.appendChild(tr);
       });
     }
@@ -1585,75 +1655,60 @@
     // ==========================================
     // VIEW 7: AI SEARCH
     // ==========================================
-    async function runAiSearch() {
+    async function runAiSearch(isReRender = false) {
       const inputEl = document.getElementById('aiSearchInput');
       const btnEl = document.getElementById('aiSearchBtn');
       const loader = document.getElementById('aiSearchLoader');
       const tableCont = document.getElementById('aiSearchTableContainer');
+      const controls = document.getElementById('aiSearchControls');
       const tbody = document.getElementById('aiSearchTableBody');
+
+      if (isReRender) {
+          renderAiTable();
+          return;
+      }
       
       const query = inputEl.value.trim();
       if(!query) return;
 
-      btnEl.disabled = true;
-      inputEl.disabled = true;
-      tableCont.style.display = 'none';
-      loader.style.display = 'block';
+      btnEl.disabled = true; inputEl.disabled = true; tableCont.style.display = 'none'; controls.style.display = 'none'; loader.style.display = 'block';
 
       try {
-        const res = await fetch(PROXY_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'aiSearch', query: query })
-        });
+        const res = await fetch(PROXY_URL, { method: 'POST', body: JSON.stringify({ action: 'aiSearch', query: query }) });
         const result = await res.json();
-        
         if (result.error) throw new Error(result.error);
         
         const payload = result.data || {};
-
-        // Handle Chat/Greeting Responses
         if (payload.isConversational) {
-           tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 40px; color: var(--accent); font-weight: 600; font-size: 1.05rem;">💬 ${payload.message}</td></tr>`;
+           tbody.innerHTML = `<tr><td colspan="${state.ai.selectedCols.length}" style="text-align:center; padding: 40px; color: var(--accent); font-weight: 600; font-size: 1.05rem;">💬 ${payload.message}</td></tr>`;
            tableCont.style.display = 'block';
            return;
         }
 
-        tbody.innerHTML = '';
-        const tickets = payload.data || [];
-        if (tickets.length === 0) {
-           tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 40px;">No tickets match your query.</td></tr>';
-        } else {
-           tickets.forEach(t => {
-             const rsp = t.lastUpdated ? tableDateFmt.format(new Date(t.lastUpdated)) : '-';
-             const crt = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
-             
-             let bg='#94a3b8', tc='#fff', pl=(t.status||'').toLowerCase();
-             if(pl.includes('open')){bg='#38bdf8';tc='#0f172a';} else if(pl.includes('clos')){bg='#94a3b8';}
-             
-             const tr = document.createElement('tr');
-             tr.innerHTML = `
-               <td><a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td>
-               <td><strong>${t.subject}</strong></td>
-               <td>${t.clientName}</td>
-               <td><span class="dept-badge">${t.department}</span></td>
-               <td>${t.assignee}</td>
-               <td><span class="priority-badge" style="background-color:${bg};color:${tc}">${t.status || '-'}</span></td>
-               <td>${crt}</td>
-               <td>${rsp}</td>
-             `;
-             tbody.appendChild(tr);
-           });
-        }
-        tableCont.style.display = 'block';
+        state.ai.data = payload.data || [];
+        renderAiTable();
+        controls.style.display = 'flex'; tableCont.style.display = 'block';
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="8" style="color:#ef4444; text-align:center; padding: 40px;">Error: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${state.ai.selectedCols.length}" style="color:#ef4444; text-align:center; padding: 40px;">Error: ${err.message}</td></tr>`;
         tableCont.style.display = 'block';
       } finally {
-        loader.style.display = 'none';
-        btnEl.disabled = false;
-        inputEl.disabled = false;
-        inputEl.focus();
+        loader.style.display = 'none'; btnEl.disabled = false; inputEl.disabled = false; inputEl.focus();
       }
+    }
+
+    function renderAiTable() {
+       document.getElementById('aiSearchTableHeader').innerHTML = `<tr>${state.ai.selectedCols.map(c => renderColHeader(c)).join('')}</tr>`;
+       const tb = document.getElementById('aiSearchTableBody'); tb.innerHTML = '';
+       if(state.ai.data.length === 0) { tb.innerHTML = `<tr><td colspan="${state.ai.selectedCols.length}" style="text-align:center; padding: 40px;">No tickets match your query.</td></tr>`; return; }
+       state.ai.data.forEach(t => {
+           const tr = document.createElement('tr');
+           tr.innerHTML = state.ai.selectedCols.map(c => renderColData(c, t)).join('');
+           tb.appendChild(tr);
+       });
+    }
+
+    function exportAiToCSV() {
+       unifiedExportCSV(`AI_Search_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`, state.ai.data, state.ai.selectedCols);
     }
 
     // ==========================================
@@ -1672,7 +1727,7 @@
     
     document.getElementById('submitPinBtn').addEventListener('click', () => { 
       const p = document.getElementById('pinInput').value; 
-      const currentAction = pendingAction; // Save the action before the modal clears it!
+      const currentAction = pendingAction; 
       closePinModal(); 
       
       if (currentAction === 'ai-search') {
@@ -1683,12 +1738,8 @@
       }
     });
 
-    // Add Enter key support so you can just press Enter after typing the PIN
-    document.getElementById('pinInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('submitPinBtn').click();
-      }
+    document.getElementById('pinInput').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') { document.getElementById('submitPinBtn').click(); }
     });
     
     async function openStatsModal() {
@@ -1749,29 +1800,22 @@
         const ae = localStorage.getItem('sandbox_auth_expiry'); 
         if(ae && Date.now()<parseInt(ae)) showPinModal('refresh'); 
       }
-      
       if (e.altKey && (e.key === 'c' || e.key === 'C')) { 
         e.preventDefault(); 
         const ae = localStorage.getItem('sandbox_auth_expiry'); 
         if(ae && Date.now()<parseInt(ae)) openStatsModal(); 
       }
-
       if (e.altKey && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault();
         const pwd = prompt("Enter Admin Password:");
-        if (pwd === '48268') {
-           navigateTo('admin');
-        } else if (pwd !== null) {
-           alert("Incorrect Password.");
-        }
+        if (pwd === '48268') navigateTo('admin');
+        else if (pwd !== null) alert("Incorrect Password.");
       }
-
       if (e.altKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
         const ae = localStorage.getItem('sandbox_auth_expiry'); 
         if(ae && Date.now()<parseInt(ae)) showPinModal('ai-search'); 
       }
-      
       if (e.key === 'Enter' && document.activeElement.id === 'aiSearchInput') {
          runAiSearch();
       }
