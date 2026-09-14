@@ -408,9 +408,14 @@
         <div class="filter-group">
           <label>Columns</label>
           <div class="custom-select" style="width: 160px;">
-            <div class="select-btn filter-input" onclick="toggleDropdown('reportsColsDropdown')"><span id="reportsColsLabel">Cols</span> ▼</div>
-            <div class="select-dropdown" id="reportsColsDropdown"></div>
+            <div class="select-btn filter-input" onclick="toggleDropdown('ticketsColsDropdown')"><span id="ticketsColsLabel">Cols</span> ▼</div>
+            <div class="select-dropdown" id="ticketsColsDropdown"></div>
           </div>
+        </div>
+
+        <!-- NEW: Live Ticket Counter Badge -->
+        <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase;">
+          Total Tickets: <span id="ticketsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
         </div>
           <div class="btn-group" style="margin-left: auto;">
             <button class="btn-action" style="background-color: #f59e0b;" onclick="navigateTo('tickets', 'missingFields', 'all')" data-tooltip="View tickets missing Priority or Classification">Missing Fields</button>
@@ -1516,6 +1521,9 @@
     function clearTicketsFilters() { document.getElementById('ticketsDateStart')._flatpickr.clear(); document.getElementById('ticketsDateEnd')._flatpickr.clear(); document.querySelectorAll('#view-tickets .select-dropdown input').forEach(c=>c.checked=false); applyTicketsFilters(); }
     
     function renderTicketsTable() {
+      // Update the live ticket count badge
+      document.getElementById('ticketsTotalCount').innerText = state.tickets.currentFiltered.length;
+
       document.getElementById('ticketsTableHeader').innerHTML = `<tr>${state.tickets.selectedCols.map(c => renderColHeader(c)).join('')}</tr>`;
       const tb = document.getElementById('ticketsTableBody'); tb.innerHTML = '';
       if(state.tickets.currentFiltered.length===0) { tb.innerHTML = `<tr><td colspan="${state.tickets.selectedCols.length}" style="text-align:center; padding: 60px;">No tickets match.</td></tr>`; return; }
