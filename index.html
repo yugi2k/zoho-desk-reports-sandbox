@@ -412,11 +412,12 @@
             <div class="select-dropdown" id="reportsColsDropdown"></div>
           </div>
         </div>
-        <div class="btn-group" style="margin-left: auto;">
-          <button class="btn-action btn-danger" onclick="navigateTo('critical')" data-tooltip="Critical Reports">Critical Reports</button>
-          <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear</button>
-          <button class="btn-action btn-export" onclick="exportReportsToCSV()">Export</button>
-        </div>
+          <div class="btn-group" style="margin-left: auto;">
+            <button class="btn-action" style="background-color: #f59e0b;" onclick="navigateTo('tickets', 'missingFields', 'all')" data-tooltip="View tickets missing Priority or Classification">Missing Fields</button>
+            <button class="btn-action btn-danger" onclick="navigateTo('critical')" data-tooltip="Critical Reports">Critical Reports</button>
+            <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear</button>
+            <button class="btn-action btn-export" onclick="exportReportsToCSV()">Export</button>
+          </div>
       </div>
 
       <div class="section-title animate-in delay-1" id="reportsCardsTitle">Global Priority Distribution (Open Tickets)</div>
@@ -1443,7 +1444,18 @@
       
       let baseT = window.allGlobalTickets.filter(t => !((t.status||'').toLowerCase().includes('clos')));
       
-      if (filterType === 'priority') {
+      if (filterType === 'missingFields') {
+          baseT = baseT.filter(t => {
+              const p = (t.priority || '').toLowerCase().trim();
+              const c = (t.classification || '').toLowerCase().trim();
+              // Check if either field is essentially blank or marked as None/N/A
+              const missingPriority = (p === '' || p === 'none' || p === '-' || p === 'null');
+              const missingClass = (c === '' || c === 'n/a' || c === '-' || c === 'null');
+              return missingPriority || missingClass;
+          });
+          document.getElementById('headerTitleText').textContent = `Missing Mandatory Fields`;
+      }
+      else if (filterType === 'priority') {
           const val = decodeURIComponent(filterValue);
           baseT = baseT.filter(t => t.priority === val);
           document.getElementById('headerTitleText').textContent = `${val} Tickets`;
