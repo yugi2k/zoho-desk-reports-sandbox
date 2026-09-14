@@ -328,12 +328,10 @@
 
     <!-- 2. REPORTS VIEW -->
     <div id="view-reports" class="app-subview" style="display:none;">
-      <div class="controls-container animate-in delay-1">
+<div class="controls-container animate-in delay-1">
         <div class="filters-group">
           <div class="custom-select" style="width: 200px;">
-            <div class="select-btn filter-input" onclick="toggleDropdown('reportsDeptDropdown')">
-              <span id="reportsDeptLabel">All Departments</span> ▼
-            </div>
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsDeptDropdown')"><span id="reportsDeptLabel">All Departments</span> ▼</div>
             <div class="select-dropdown" id="reportsDeptDropdown">
               <label onclick="setReportsFilter('department', 'All', 'All Departments')">All Departments</label>
               <label onclick="setReportsFilter('department', 'Support', 'Support')">Support</label>
@@ -349,9 +347,7 @@
             </div>
           </div>
           <div class="custom-select" style="width: 210px;">
-            <div class="select-btn filter-input" onclick="toggleDropdown('reportsTimeDropdown')">
-              <span id="reportsTimeLabel">Any Update Time</span> ▼
-            </div>
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsTimeDropdown')"><span id="reportsTimeLabel">Any Update Time</span> ▼</div>
             <div class="select-dropdown" id="reportsTimeDropdown">
               <label onclick="setReportsFilter('timeframe', 'All', 'Any Update Time')">Any Update Time</label>
               <label onclick="setReportsFilter('timeframe', '14', 'No Updates > 2 Weeks')">No Updates > 2 Weeks</label>
@@ -359,11 +355,6 @@
               <label onclick="setReportsFilter('timeframe', '60', 'No Updates > 60 Days')">No Updates > 60 Days</label>
             </div>
           </div>
-          
-          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase;">
-            Total Tickets: <span id="reportsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
-          </div>
-          
         </div>
         <div class="toggle-wrapper">
           <span>90-Day History</span>
@@ -396,7 +387,6 @@
             <div class="select-dropdown" id="reportsStatusDropdown"></div>
           </div>
         </div>
-        <!-- NEW: Classification Filter -->
         <div class="filter-group">
           <label>Classification</label>
           <div class="custom-select">
@@ -404,25 +394,24 @@
             <div class="select-dropdown" id="reportsClassDropdown"></div>
           </div>
         </div>
-        <!-- NEW: Dynamic Column Select -->
         <div class="filter-group">
           <label>Columns</label>
           <div class="custom-select" style="width: 160px;">
-            <div class="select-btn filter-input" onclick="toggleDropdown('ticketsColsDropdown')"><span id="ticketsColsLabel">Cols</span> ▼</div>
-            <div class="select-dropdown" id="ticketsColsDropdown"></div>
+            <div class="select-btn filter-input" onclick="toggleDropdown('reportsColsDropdown')"><span id="reportsColsLabel">Cols</span> ▼</div>
+            <div class="select-dropdown" id="reportsColsDropdown"></div>
           </div>
         </div>
 
-        <!-- NEW: Live Ticket Counter Badge -->
-        <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase;">
-          Total Tickets: <span id="ticketsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
-        </div>
-          <div class="btn-group" style="margin-left: auto;">
-            <button class="btn-action" style="background-color: #f59e0b;" onclick="navigateTo('tickets', 'missingFields', 'all')" data-tooltip="View tickets missing Priority or Classification">Missing Fields</button>
-            <button class="btn-action btn-danger" onclick="navigateTo('critical')" data-tooltip="Critical Reports">Critical Reports</button>
-            <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear</button>
-            <button class="btn-action btn-export" onclick="exportReportsToCSV()">Export</button>
+        <div class="btn-group" style="margin-left: auto; align-items: center;">
+          <!-- CORRECT REPORTS COUNTER -->
+          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-right: 10px;">
+            Total Tickets: <span id="reportsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
           </div>
+          <button class="btn-action" style="background-color: #f59e0b;" onclick="navigateTo('tickets', 'missingFields', 'all')" data-tooltip="View tickets missing Priority or Classification">Missing Fields</button>
+          <button class="btn-action btn-danger" onclick="navigateTo('critical')" data-tooltip="Critical Reports">Critical Reports</button>
+          <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear</button>
+          <button class="btn-action btn-export" onclick="exportReportsToCSV()">Export</button>
+        </div>
       </div>
 
       <div class="section-title animate-in delay-1" id="reportsCardsTitle">Global Priority Distribution (Open Tickets)</div>
@@ -538,7 +527,6 @@
             <div class="select-dropdown" id="ticketsStatusDropdown"></div>
           </div>
         </div>
-        <!-- NEW: Classification Filter -->
         <div class="filter-group">
           <label>Classification</label>
           <div class="custom-select">
@@ -546,7 +534,6 @@
             <div class="select-dropdown" id="ticketsClassDropdown"></div>
           </div>
         </div>
-        <!-- NEW: Dynamic Column Select -->
         <div class="filter-group">
           <label>Columns</label>
           <div class="custom-select" style="width: 160px;">
@@ -554,7 +541,12 @@
             <div class="select-dropdown" id="ticketsColsDropdown"></div>
           </div>
         </div>
-        <div class="btn-group" style="margin-left: auto;">
+
+        <div class="btn-group" style="margin-left: auto; align-items: center;">
+          <!-- CORRECT TICKETS COUNTER -->
+          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-right: 10px;">
+            Total Tickets: <span id="ticketsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
+          </div>
           <button class="btn-action btn-clear" onclick="clearTicketsFilters()" data-tooltip="Reset all filters">Clear</button>
           <button class="btn-action btn-export" onclick="exportTicketsToCSV()" data-tooltip="Download current view">Export</button>
         </div>
