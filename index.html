@@ -356,14 +356,7 @@
             </div>
           </div>
         </div>
-        <div class="toggle-wrapper">
-          <span>90-Day History</span>
-          <label class="switch">
-            <input type="checkbox" id="reportsHistoryToggle" onchange="handleReportsToggle()">
-            <span class="slider"></span>
-          </label>
-          <span id="reportsLoadingIndicator" style="display:none;" class="loading-spinner"></span>
-        </div>
+
       </div>
       
       <div class="controls-panel glass-panel animate-in delay-1" style="margin-bottom: 20px;">
@@ -1031,25 +1024,32 @@
             
             window.exactStatsData = result.exactStats;
             lastUpdateMs = result.lastUpdated || now;
-            
             window.allGlobalTickets = (result.data || []).map(t => {
               var cf = t.customFields || t.cf || {};
               var cName = (t['cf_client_name_1'] || cf['cf_client_name_1'] || '').toString();
               if (!cName || cName.trim() === "") cName = 'Unknown';
               
-              // Extract Classification
               var clsName = (t['classification'] || t['cf_classification'] || cf['classification'] || cf['cf_classification'] || '').toString();
               if (!clsName || clsName.trim() === "") clsName = 'N/A';
 
               let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
               return {
-                id: t.id, ticketNumber: t.ticketNumber, subject: t.subject, status: t.status, priority: t.priority,
+                id: t.id, 
+                ticketNumber: t.ticketNumber, 
+                subject: t.subject, 
+                description: t.description || '', // NEW: Capturing the raw description for Anomalies engine
+                status: t.status, 
+                priority: t.priority,
                 department: t.department ? { name: t.department.name } : null,
                 assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, fullName: fullName } : null,
-                createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
+                createdTime: t.createdTime, 
+                closedTime: t.closedTime, 
+                modifiedTime: t.modifiedTime, 
                 agentRespondedTime: t.customerResponseTime || t.agentRespondedTime || t.modifiedTime || t.createdTime, 
-                clientName: cName, classification: clsName, module: 'N/A' 
+                clientName: cName, 
+                classification: clsName, 
+                module: 'N/A' 
               };
             });
             
