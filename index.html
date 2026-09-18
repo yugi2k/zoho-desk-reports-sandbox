@@ -1038,7 +1038,7 @@
                 id: t.id, 
                 ticketNumber: t.ticketNumber, 
                 subject: t.subject, 
-                description: t.description || '', // NEW: Capturing the raw description for Anomalies engine
+                description: t.description || '', // <--- NEW: Raw description for Anomalies & AI
                 status: t.status, 
                 priority: t.priority,
                 department: t.department ? { name: t.department.name } : null,
