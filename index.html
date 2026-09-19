@@ -1017,7 +1017,7 @@
       document.getElementById('view-secure-app').classList.add('active');
       
       let initialView = window.location.hash.replace('#', '');
-      if (!['reports', 'agents', 'tickets', 'critical', 'admin', 'ai-search'].includes(initialView)) {
+      if (!['reports', 'agents', 'tickets', 'critical', 'admin', 'ai-search', 'anomaly'].includes(initialView)) {
           initialView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
       }
       
@@ -1037,7 +1037,6 @@
                 window.history.pushState(null, null, newHash);
             }
         }
-        if(viewName === 'anomaly') { titleEl.textContent = 'Anomaly Detection Module'; initAnomalyView(); }
       }
       
       document.querySelectorAll('.app-subview').forEach(el => el.style.display = 'none');
@@ -1056,6 +1055,7 @@
       if(viewName === 'critical') { titleEl.textContent = 'Critical Reports'; initCriticalView(); }
       if(viewName === 'admin') { titleEl.textContent = 'Admin Console'; renderAdminView(); }
       if(viewName === 'ai-search') { titleEl.textContent = 'AI Search'; document.getElementById('aiSearchInput').focus(); }
+      if(viewName === 'anomaly') { titleEl.textContent = 'Anomaly Engine'; initAnomalyView(); } // <--- Render trigger moved here to the correct spot
     }
 
     // ==========================================
@@ -1142,6 +1142,7 @@
         if(currentView === 'critical') initCriticalView();
         if(currentView === 'admin') renderAdminView();
         if(currentView === 'ai-search') { /* Just wait for user input */ }
+        if(currentView === 'anomaly') initAnomalyView();
         
       } catch (err) {
         if(forceLive) { alert(err.message); return; }
