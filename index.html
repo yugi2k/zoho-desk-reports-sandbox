@@ -2037,7 +2037,7 @@
       renderExecutiveView();
     }
 
-    function renderExecutiveView() {
+     function renderExecutiveView() {
       const deptFilter = state.executive.currentDept;
       
       let baseData = window.allGlobalTickets;
@@ -2055,7 +2055,7 @@
       
       let totalActive = 0;
       let deptCounts = {};
-      let last7Active = 0, last7Closed = 0;
+      let last7Created = 0, last7Active = 0, last7Closed = 0;
       let moduleCounts = {};
       let statusCounts = {};
       
@@ -2074,9 +2074,15 @@
           // ----------------------------------------------------
           // 1. LAST 7 DAYS METRICS
           // ----------------------------------------------------
-          // Active tickets CREATED in the last 7 days
-          if (!isClosed && cDate >= last7DaysDate) {
-              last7Active++;
+          
+          // All tickets CREATED in the last 7 days
+          if (cDate >= last7DaysDate) {
+              last7Created++;
+              
+              // Still open from those created last 7 days
+              if (!isClosed) {
+                  last7Active++;
+              }
           }
           
           // Tickets CLOSED in the last 7 days (regardless of when created)
@@ -2086,11 +2092,9 @@
 
           // Module & Critical Metrics (All tickets submitted in last 7 days, Open or Closed)
           if (cDate >= last7DaysDate) {
-             // Module tracking
              const mName = t.module && t.module !== 'N/A' ? t.module : 'General';
              moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
 
-             // Critical Tickets
              const pr = (t.priority || '').toLowerCase();
              const su = (t.subject || '').toLowerCase();
              if (pr === 'critical' || su.includes('critical')) {
@@ -2130,12 +2134,12 @@
           });
       }
 
-      // 2. Module Tickets (Strictly Top 5) -> Now on the LEFT
+      // 2. Module Tickets (Strictly Top 5, Left Side)
       const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count).slice(0, 5);
       let modHTML = modArray.map(m => `<tr><td>${m.mod}</td><td><strong>${m.count}</strong></td></tr>`).join('');
       if(!modHTML) modHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No module activity</td></tr>`;
 
-      // 3. Critical Tickets -> Now on the RIGHT
+      // 3. Critical Tickets (Right Side)
       let critHTML = critTickets.map(t => `<tr><td>#${t.ticketNumber || t.id}</td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
       if(!critHTML) critHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets in timeframe</td></tr>`;
 
@@ -2150,11 +2154,13 @@
       }).join('');
       if(!secHTML) secHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No active security tickets</td></tr>`;
 
-      // --- SPREADSHEET PAYLOAD ARRAY BUILDER (Syncs Layout to Google Sheets) ---
+      // --- SPREADSHEET PAYLOAD ARRAY BUILDER ---
       let payload = [];
       payload.push(["Department", deptFilter, "", "", ""]);
       payload.push(["", "", "", "", ""]);
-      payload.push(["Total Active Tickets", totalActive, "", `Last 7 Days (${dateRangeStr})`, last7Active + last7Closed]);
+      
+      // Fixed: Passing last7Created for the top-level metric
+      payload.push(["Total Active Tickets", totalActive, "", `Last 7 Days (${dateRangeStr})`, last7Created]);
       
       const maxTopRows = Math.max(deptList.length, 2);
       for(let i=0; i<maxTopRows; i++) {
@@ -2170,7 +2176,6 @@
       payload.push([`Last 7 days Metrics (${dateRangeStr})`, "", "", "", ""]);
       payload.push(["", "", "", "", ""]);
       
-      // Flipped Module (Left) and Critical (Right) for spreadsheet
       payload.push(["Module wise tickets reported", "(Issue/Bug)", "", "Critical Tickets", ""]);
       payload.push(["Module", "No. of Tickets", "", "Tickets", "Resolution Time"]);
       
@@ -2215,7 +2220,9 @@
             </div>
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
                <table>
-                  <thead style="background:var(--th-bg);"><tr><th>Last 7 Days <span style="font-weight:normal; font-size:0.8rem;">(${dateRangeStr})</span></th><th style="font-size:1.2rem; color:var(--accent);">${last7Active + last7Closed}</th></tr></thead>
+                  <thead style="background:var(--th-bg);">
+                     <tr><th>Last 7 Days <span style="font-weight:normal; font-size:0.8rem;">(${dateRangeStr})</span></th><th style="font-size:1.2rem; color:var(--accent);">${last7Created}</th></tr>
+                  </thead>
                   <tbody>
                      <tr><td>Active</td><td><strong>${last7Active}</strong></td></tr>
                      <tr><td>Closed</td><td><strong>${last7Closed}</strong></td></tr>
@@ -2259,7 +2266,7 @@
          </div>
       `;
     }
-
+    
     async function exportExecutiveToSheet() {
       const btn = document.getElementById('btnSyncExec');
       btn.innerText = "Syncing...";
