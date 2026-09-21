@@ -2037,7 +2037,7 @@
       renderExecutiveView();
     }
 
-function renderExecutiveView() {
+    function renderExecutiveView() {
       const deptFilter = state.executive.currentDept;
       
       let baseData = window.allGlobalTickets;
@@ -2045,7 +2045,7 @@ function renderExecutiveView() {
           baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
       }
 
-      // Time Boundaries (Last 7 Days = exactly midnight 7 days ago, matching the rest of the app)
+      // Time Boundaries (Last 7 Days = exactly midnight 7 days ago)
       const last7DaysDate = getETMidnightForOffset(-7);
       
       let totalActive = 0;
@@ -2066,7 +2066,7 @@ function renderExecutiveView() {
           const stat = t.status || 'Open';
           
           // ----------------------------------------------------
-          // 1. LAST 7 DAYS METRICS (All tickets submitted in last 7 days)
+          // 1. LAST 7 DAYS METRICS (All tickets submitted in last 7 days, Open or Closed)
           // ----------------------------------------------------
           if (cDate >= last7DaysDate) {
              // Total Active/Closed inside 7 days
@@ -2091,7 +2091,7 @@ function renderExecutiveView() {
              totalActive++;
              deptCounts[dName] = (deptCounts[dName] || 0) + 1;
              
-             // Status Tracking (Explicitly excluding specific closed statuses)
+             // Status Tracking (Explicitly excluding closed statuses)
              if (stat !== 'Closed/Resolved' && stat !== 'Closed/Unresolved') {
                  statusCounts[stat] = (statusCounts[stat] || 0) + 1;
              }
@@ -2103,9 +2103,9 @@ function renderExecutiveView() {
           }
       });
 
-      // --- PAYLOAD & HTML GENERATION ---
+      // --- HTML GENERATION ---
 
-      // 1. Top Section (Active Departments)
+      // 1. Dynamic Departments
       const deptList = Object.entries(deptCounts).sort((a,b)=>b[1]-a[1]);
       let deptHTML = '';
       if (deptList.length === 0) {
@@ -2118,7 +2118,7 @@ function renderExecutiveView() {
 
       // 2. Critical Tickets
       let critHTML = critTickets.map(t => `<tr><td>#${t.ticketNumber || t.id}</td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
-      if(!critHTML) critHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets</td></tr>`;
+      if(!critHTML) critHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets in last 7 days</td></tr>`;
       
       // 3. Module Tickets (Strictly Top 5)
       const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count).slice(0, 5);
