@@ -2045,8 +2045,13 @@
           baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
       }
 
-      // Time Boundaries (Last 7 Days = exactly midnight 7 days ago)
+      // Time Boundaries
+      const today = new Date();
       const last7DaysDate = getETMidnightForOffset(-7);
+      
+      // Format dates for UI labels (e.g., "Sep 15 - Sep 22")
+      const dateFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+      const dateRangeStr = `${dateFmt.format(last7DaysDate)} - ${dateFmt.format(today)}`;
       
       let totalActive = 0;
       let deptCounts = {};
@@ -2063,15 +2068,24 @@
           const isClosed = (t.status || '').toLowerCase().includes('clos');
           const dName = t.department ? t.department.name : 'General';
           const cDate = new Date(t.createdTime);
+          const closedDate = t.closedTime ? new Date(t.closedTime) : null;
           const stat = t.status || 'Open';
           
           // ----------------------------------------------------
-          // 1. LAST 7 DAYS METRICS (All tickets submitted in last 7 days, Open or Closed)
+          // 1. LAST 7 DAYS METRICS
           // ----------------------------------------------------
+          // Active tickets CREATED in the last 7 days
+          if (!isClosed && cDate >= last7DaysDate) {
+              last7Active++;
+          }
+          
+          // Tickets CLOSED in the last 7 days (regardless of when created)
+          if (isClosed && closedDate && closedDate >= last7DaysDate) {
+              last7Closed++;
+          }
+
+          // Module & Critical Metrics (All tickets submitted in last 7 days, Open or Closed)
           if (cDate >= last7DaysDate) {
-             // Total Active/Closed inside 7 days
-             if (isClosed) last7Closed++; else last7Active++;
-             
              // Module tracking
              const mName = t.module && t.module !== 'N/A' ? t.module : 'General';
              moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
@@ -2085,7 +2099,7 @@
           }
 
           // ----------------------------------------------------
-          // 2. ACTIVE TICKETS METRICS (Rest of the widgets)
+          // 2. ALL ACTIVE TICKETS METRICS (Regardless of date)
           // ----------------------------------------------------
           if (!isClosed) {
              totalActive++;
@@ -2116,14 +2130,14 @@
           });
       }
 
-      // 2. Critical Tickets
-      let critHTML = critTickets.map(t => `<tr><td>#${t.ticketNumber || t.id}</td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
-      if(!critHTML) critHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets in last 7 days</td></tr>`;
-      
-      // 3. Module Tickets (Strictly Top 5)
+      // 2. Module Tickets (Strictly Top 5) -> Now on the LEFT
       const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count).slice(0, 5);
       let modHTML = modArray.map(m => `<tr><td>${m.mod}</td><td><strong>${m.count}</strong></td></tr>`).join('');
       if(!modHTML) modHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No module activity</td></tr>`;
+
+      // 3. Critical Tickets -> Now on the RIGHT
+      let critHTML = critTickets.map(t => `<tr><td>#${t.ticketNumber || t.id}</td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
+      if(!critHTML) critHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets in timeframe</td></tr>`;
 
       // 4. Status Counts
       let statHTML = Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
@@ -2136,11 +2150,11 @@
       }).join('');
       if(!secHTML) secHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No active security tickets</td></tr>`;
 
-      // --- SPREADSHEET PAYLOAD ARRAY BUILDER ---
+      // --- SPREADSHEET PAYLOAD ARRAY BUILDER (Syncs Layout to Google Sheets) ---
       let payload = [];
       payload.push(["Department", deptFilter, "", "", ""]);
       payload.push(["", "", "", "", ""]);
-      payload.push(["Total Active Tickets", totalActive, "", "Last 7 Days", last7Active + last7Closed]);
+      payload.push(["Total Active Tickets", totalActive, "", `Last 7 Days (${dateRangeStr})`, last7Active + last7Closed]);
       
       const maxTopRows = Math.max(deptList.length, 2);
       for(let i=0; i<maxTopRows; i++) {
@@ -2153,20 +2167,25 @@
       }
       
       payload.push(["", "", "", "", ""]);
-      payload.push(["Last 7 days Metrics", "", "", "", ""]);
+      payload.push([`Last 7 days Metrics (${dateRangeStr})`, "", "", "", ""]);
       payload.push(["", "", "", "", ""]);
-      payload.push(["Critical Tickets", "", "", "Module wise tickets reported", "(Issue/Bug)"]);
-      payload.push(["Tickets", "Resolution Time", "", "Module", "No. of Tickets"]);
+      
+      // Flipped Module (Left) and Critical (Right) for spreadsheet
+      payload.push(["Module wise tickets reported", "(Issue/Bug)", "", "Critical Tickets", ""]);
+      payload.push(["Module", "No. of Tickets", "", "Tickets", "Resolution Time"]);
       
       const maxMetricRows = Math.max(critTickets.length, modArray.length);
       for(let i=0; i<maxMetricRows; i++) {
-         const tStr = critTickets[i] ? (critTickets[i].ticketNumber || critTickets[i].id) : "";
-         const rStr = critTickets[i] ? (customResolvedTimes[critTickets[i].id] || "-") : "";
          const mStr = modArray[i] ? modArray[i].mod : "";
          const cStr = modArray[i] ? modArray[i].count : "";
-         payload.push([tStr, rStr, "", mStr, cStr]);
+         const tStr = critTickets[i] ? (critTickets[i].ticketNumber || critTickets[i].id) : "";
+         const rStr = critTickets[i] ? (customResolvedTimes[critTickets[i].id] || "-") : "";
+         
+         payload.push([mStr, cStr, "", tStr, rStr]);
       }
       
+      payload.push(["", "", "", "", ""]);
+      payload.push(["Active Ticket Metrics (All Time)", "", "", "", ""]);
       payload.push(["", "", "", "", ""]);
       payload.push(["Status wise count", "", "", "", ""]);
       Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).forEach(([st, c]) => {
@@ -2196,7 +2215,7 @@
             </div>
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
                <table>
-                  <thead style="background:var(--th-bg);"><tr><th>Last 7 Days</th><th style="font-size:1.2rem; color:var(--accent);">${last7Active + last7Closed}</th></tr></thead>
+                  <thead style="background:var(--th-bg);"><tr><th>Last 7 Days <span style="font-weight:normal; font-size:0.8rem;">(${dateRangeStr})</span></th><th style="font-size:1.2rem; color:var(--accent);">${last7Active + last7Closed}</th></tr></thead>
                   <tbody>
                      <tr><td>Active</td><td><strong>${last7Active}</strong></td></tr>
                      <tr><td>Closed</td><td><strong>${last7Closed}</strong></td></tr>
@@ -2205,22 +2224,24 @@
             </div>
          </div>
          
-         <div class="section-title">Last 7 days Metrics</div>
+         <div class="section-title">Last 7 Days Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(${dateRangeStr})</span></div>
          <div class="exec-grid-container">
-            <div class="glass-panel exec-table-panel">
-               <table>
-                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Critical Tickets</th></tr><tr><th>Tickets</th><th>Resolution Time</th></tr></thead>
-                  <tbody>${critHTML}</tbody>
-               </table>
-            </div>
             <div class="glass-panel exec-table-panel">
                <table>
                   <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Module wise tickets reported (Issue/Bug)</th></tr><tr><th>Module</th><th>No. of Tickets</th></tr></thead>
                   <tbody>${modHTML}</tbody>
                </table>
             </div>
+            <div class="glass-panel exec-table-panel">
+               <table>
+                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Critical Tickets</th></tr><tr><th>Tickets</th><th>Resolution Time</th></tr></thead>
+                  <tbody>${critHTML}</tbody>
+               </table>
+            </div>
          </div>
 
+         <div class="section-title" style="margin-top: 40px;">Active Ticket Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(All Time)</span></div>
+         
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
                <table>
