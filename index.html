@@ -196,12 +196,13 @@
     .anomaly-sidebar { flex: 0 0 320px; display: flex; flex-direction: column; gap: 25px; }
     .anomaly-main { flex: 1; min-width: 600px; }
     .anomaly-overview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-    .anomaly-card { padding: 20px; border-radius: 12px; text-align: left; display: flex; flex-direction: column; justify-content: center; }
+    .anomaly-card { padding: 20px; border-radius: 12px; text-align: left; display: flex; flex-direction: column; justify-content: center; transition: all 0.3s ease; }
+    .anomaly-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     .anomaly-card h3 { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; margin: 0 0 8px 0; color: var(--text-main); opacity: 0.8; }
     .anomaly-card p { font-size: 2.2rem; font-weight: 700; margin: 0; color: var(--text-main); }
-    .anomaly-card.bg-green { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); }
-    .anomaly-card.bg-orange { background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.4); }
-    .anomaly-card.bg-red { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); }
+    .anomaly-card.bg-green { background: rgba(16, 185, 129, 0.2); border: 2px solid rgba(16, 185, 129, 0.4); }
+    .anomaly-card.bg-orange { background: rgba(249, 115, 22, 0.2); border: 2px solid rgba(249, 115, 22, 0.4); }
+    .anomaly-card.bg-red { background: rgba(239, 68, 68, 0.2); border: 2px solid rgba(239, 68, 68, 0.4); }
     
     .flag-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
     .flag-critical { background: #ef4444; color: #fff; }
@@ -692,10 +693,10 @@
        </div>
 
        <div class="table-container glass-panel" id="aiSearchTableContainer" style="display: none; text-align: left;">
-          <table>
+         <table>
              <thead id="aiSearchTableHeader"></thead>
              <tbody id="aiSearchTableBody"></tbody>
-          </table>
+         </table>
        </div>
     </div>
 
@@ -703,6 +704,22 @@
 
   <!-- 8. ANOMALY DETECTION VIEW -->
     <div id="view-anomaly" class="app-subview" style="display:none;">
+      
+      <!-- New Filters & Export Controls -->
+      <div class="controls-panel glass-panel animate-in delay-1" style="display: flex; justify-content: space-between;">
+        <div class="filter-group">
+          <label>Department</label>
+          <div class="custom-select" style="width: 220px;">
+            <div class="select-btn filter-input" onclick="toggleDropdown('anomalyDeptDropdown')"><span id="anomalyDeptLabel">All Departments</span> ▼</div>
+            <div class="select-dropdown" id="anomalyDeptDropdown"></div>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn-action btn-clear" onclick="clearAnomalyFilters()">Clear</button>
+          <button class="btn-action btn-export" onclick="exportAnomalyToCSV()">Export Data</button>
+        </div>
+      </div>
+
       <div class="anomaly-layout">
         
         <!-- LEFT SIDEBAR -->
@@ -782,7 +799,8 @@
       agents: { map: {}, currentId: null, currentTickets: [], filteredTickets: [], selectedCols: [] },
       tickets: { activeTickets: [], currentFiltered: [], filterType: null, filterValue: null, selectedCols: [] },
       critical: { baseData: [], filteredData: [], selectedCols: [] },
-      ai: { data: [], selectedCols: [] }
+      ai: { data: [], selectedCols: [] },
+      anomaly: { data: [], currentFiltered: [], filterType: 'All' } // Added Anomaly state
     };
 
     // UNIVERSAL COLUMN DEFINITIONS
@@ -812,11 +830,29 @@
       const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false });
       return (fmt.format(t4) === '24' || fmt.format(t4) === '0' || fmt.format(t4) === '00') ? t4 : t5;
     }
+    
     function getETMidnightForOffset(daysOffset) {
       const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit'}).formatToParts(new Date());
       const y = parseInt(parts.find(p=>p.type==='year').value, 10); const m = parseInt(parts.find(p=>p.type==='month').value, 10) - 1; const d = parseInt(parts.find(p=>p.type==='day').value, 10);
       const dummy = new Date(Date.UTC(y, m, d + daysOffset));
       return getMidnightET(dummy.getUTCFullYear(), dummy.getUTCMonth() + 1, dummy.getUTCDate());
+    }
+
+    // BUSINESS DAYS CALCULATOR FOR ANOMALIES
+    function getBusinessDaysSince(dateStamp) {
+        let start = new Date(dateStamp);
+        let end = new Date();
+        let bDays = 0;
+        // Move day by day until we hit 'end'
+        while (start < end) {
+            start.setDate(start.getDate() + 1);
+            let dayOfWeek = start.getDay();
+            // Exclude Sunday (0) and Saturday (6)
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                bDays++;
+            }
+        }
+        return bDays;
     }
 
     // ==========================================
@@ -1055,7 +1091,7 @@
       if(viewName === 'critical') { titleEl.textContent = 'Critical Reports'; initCriticalView(); }
       if(viewName === 'admin') { titleEl.textContent = 'Admin Console'; renderAdminView(); }
       if(viewName === 'ai-search') { titleEl.textContent = 'AI Search'; document.getElementById('aiSearchInput').focus(); }
-      if(viewName === 'anomaly') { titleEl.textContent = 'Anomaly Engine'; initAnomalyView(); } // <--- Render trigger moved here to the correct spot
+      if(viewName === 'anomaly') { titleEl.textContent = 'Anomaly Engine'; initAnomalyView(); } 
     }
 
     // ==========================================
@@ -1100,7 +1136,7 @@
                 id: t.id, 
                 ticketNumber: t.ticketNumber, 
                 subject: t.subject, 
-                description: t.description || '', // <--- NEW: Raw description for Anomalies & AI
+                description: t.description || '', 
                 status: t.status, 
                 priority: t.priority,
                 department: t.department ? { name: t.department.name } : null,
@@ -1131,7 +1167,6 @@
           lastUpdatedEl.innerHTML = `⏱️ Last updated: ${formatter.format(new Date(lastUpdateMs))} ET`;
         }
         
-        // Initialize dynamic columns before rendering views
         initAllColumns();
 
         const currentView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
@@ -1508,7 +1543,6 @@
           baseT = baseT.filter(t => {
               const p = (t.priority || '').toLowerCase().trim();
               const c = (t.classification || '').toLowerCase().trim();
-              // Check if either field is essentially blank or marked as None/N/A
               const missingPriority = (p === '' || p === 'none' || p === '-' || p === 'null');
               const missingClass = (c === '' || c === 'n/a' || c === '-' || c === 'null');
               return missingPriority || missingClass;
@@ -1576,7 +1610,6 @@
     function clearTicketsFilters() { document.getElementById('ticketsDateStart')._flatpickr.clear(); document.getElementById('ticketsDateEnd')._flatpickr.clear(); document.querySelectorAll('#view-tickets .select-dropdown input').forEach(c=>c.checked=false); applyTicketsFilters(); }
     
     function renderTicketsTable() {
-      // Update the live ticket count badge
       document.getElementById('ticketsTotalCount').innerText = state.tickets.currentFiltered.length;
 
       document.getElementById('ticketsTableHeader').innerHTML = `<tr>${state.tickets.selectedCols.map(c => renderColHeader(c)).join('')}</tr>`;
@@ -1903,16 +1936,15 @@
     // VIEW 8: ANOMALY DETECTION ENGINE
     // ==========================================
     function initAnomalyView() {
-      const tbody = document.getElementById('anomalyTableBody');
-      const widgetContainer = document.getElementById('anomalyWidgetContainer');
-      const spikeContainer = document.getElementById('anomalySpikeContainer');
+      state.anomaly.data = [];
+      state.anomaly.filterType = 'All'; // Default
       
       const now = Date.now();
-      const anomalies = [];
       const clientTicketCounts24h = {};
       let totalTicketsLast2h = 0;
       
-      const criticalKeywords = ['system down', 'outage', 'payment failed', 'urgent', 'critical'];
+      // Strict keyword net
+      const criticalKeywords = ['system down', 'outage', 'emergency', 'payment failed'];
 
       // 1. ENGINE RUN
       window.allGlobalTickets.forEach(t => {
@@ -1922,7 +1954,8 @@
           
           const subjDesc = ((t.subject || '') + ' ' + (t.description || '')).toLowerCase();
           const prio = (t.priority || '').toLowerCase();
-          const isClosed = (t.status || '').toLowerCase().includes('clos');
+          const statusLower = (t.status || '').toLowerCase();
+          const isClosed = statusLower.includes('clos');
 
           // Volume Tracking
           if (now - created < 24 * 60 * 60 * 1000) {
@@ -1936,22 +1969,34 @@
           // Active Ticket Anomalies
           if (!isClosed) {
               // Rule 1: Priority Mismatch
-              const hasKeyword = criticalKeywords.some(kw => subjDesc.includes(kw));
+              // Look mostly at Subject for exact match to reduce noise
+              const hasKeyword = criticalKeywords.some(kw => (t.subject || '').toLowerCase().includes(kw));
               if (hasKeyword && (prio === 'low' || prio === 'medium' || prio === 'normal' || prio === '-' || prio === 'none' || !prio)) {
-                  anomalies.push({ ticket: t, type: 'Priority Mismatch', reason: 'High-urgency keywords detected in low-priority ticket', level: 'critical' });
+                  state.anomaly.data.push({ ticket: t, type: 'Priority Mismatch', reason: 'High-urgency keywords detected in low-priority ticket', level: 'critical' });
               }
 
-              // Rule 2: Neglected High Priority (> 24h)
-              if (prio === 'high' || prio === 'critical') {
-                  const hrsSinceUpdate = (now - modified) / (1000 * 60 * 60);
-                  if (hrsSinceUpdate > 24) {
-                      anomalies.push({ ticket: t, type: 'Neglected Ticket', reason: `> ${Math.floor(hrsSinceUpdate)}h since last activity`, level: 'high' });
-                  }
+              // Rule 2: Neglected Tickets (Business Days logic)
+              const bDaysSinceUpdate = getBusinessDaysSince(t.modifiedTime || t.createdTime);
+              let isNeglected = false;
+              let neglectedReason = '';
+
+              if (statusLower.includes('on-hold') || statusLower.includes('on hold')) {
+                  if (bDaysSinceUpdate > 30) { isNeglected = true; neglectedReason = `> 30 business days since activity (On-Hold)`; }
+              } else if (statusLower.includes('pending')) {
+                  if (bDaysSinceUpdate > 14) { isNeglected = true; neglectedReason = `> 14 business days since activity (Pending)`; }
+              } else if (statusLower.includes('review')) {
+                  if (bDaysSinceUpdate > 3) { isNeglected = true; neglectedReason = `> 3 business days since activity (Review)`; }
+              } else {
+                  // Open, Working on it, etc.
+                  if (bDaysSinceUpdate > 2) { isNeglected = true; neglectedReason = `> 2 business days since activity (${t.status || 'Open'})`; }
+              }
+
+              if (isNeglected) {
+                  state.anomaly.data.push({ ticket: t, type: 'Neglected Ticket', reason: neglectedReason, level: 'high' });
               }
           }
 
           // Rule 3: Unassigned Critical Timeout (10 mins SLA Breach)
-          // Look at tickets from the last 7 days to keep the board actionable
           if (now - created < 7 * 24 * 60 * 60 * 1000) {
               const isCriticalTicket = (prio === 'critical' || criticalKeywords.some(kw => subjDesc.includes(kw)));
               if (isCriticalTicket) {
@@ -1959,7 +2004,7 @@
                   const currentlyUnassigned = !t.assignee || t.assignee.fullName === 'Unassigned';
                   
                   if (timeToResponseMins > 10) {
-                       anomalies.push({ ticket: t, type: 'SLA Breach (Critical)', reason: currentlyUnassigned ? 'Unassigned > 10m' : 'Assigned after 10m SLA breach', level: 'critical' });
+                       state.anomaly.data.push({ ticket: t, type: 'SLA Breach (Critical)', reason: currentlyUnassigned ? 'Unassigned > 10m' : 'Assigned after 10m SLA breach', level: 'critical' });
                   }
               }
           }
@@ -1969,34 +2014,95 @@
       let spikeHtml = '';
       Object.entries(clientTicketCounts24h).sort((a,b)=>b[1]-a[1]).forEach(([client, count]) => {
            if (count >= 5) {
-                anomalies.push({ ticket: { id: 'N/A', ticketNumber: '-', subject: `Account Volume Spike` }, type: 'Ticket Volume Spike', reason: `${count} new tickets in 24h from ${client}`, level: 'warning' });
+                state.anomaly.data.push({ ticket: { id: 'N/A', ticketNumber: '-', subject: `Account Volume Spike` }, type: 'Ticket Volume Spike', reason: `${count} new tickets in 24h from ${client}`, level: 'warning' });
                 spikeHtml += `<div style="display:flex; justify-content:space-between; padding: 10px; background: var(--input-bg); border-radius: 8px;"><span>${client}</span><span style="font-weight:700; color:var(--accent);">${count} tickets</span></div>`;
            }
       });
       if (totalTicketsLast2h >= 10) {
-           anomalies.push({ ticket: { id: 'N/A', ticketNumber: '-', subject: `Global Volume Spike` }, type: 'Global System Spike', reason: `${totalTicketsLast2h} total tickets created in last 2h`, level: 'critical' });
+           state.anomaly.data.push({ ticket: { id: 'N/A', ticketNumber: '-', subject: `Global Volume Spike` }, type: 'Global System Spike', reason: `${totalTicketsLast2h} total tickets created in last 2h`, level: 'critical' });
       }
 
-      // 2. RENDER WIDGETS
-      const mismatchCount = anomalies.filter(a => a.type === 'Priority Mismatch').length;
-      const neglectedCount = anomalies.filter(a => a.type === 'Neglected Ticket').length;
-      
-      widgetContainer.innerHTML = `
-        <div class="anomaly-card bg-green" style="grid-column: 1 / -1; align-items: center; text-align: center;">
-            <h3>Active Anomalies</h3><p>${anomalies.length}</p>
-        </div>
-        <div class="anomaly-card bg-orange"><h3>Mismatches</h3><p>${mismatchCount}</p></div>
-        <div class="anomaly-card bg-red"><h3>Neglected</h3><p>${neglectedCount}</p></div>
-      `;
+      const spikeContainer = document.getElementById('anomalySpikeContainer');
       spikeContainer.innerHTML = spikeHtml || `<div style="padding:15px; color:var(--text-muted); text-align:center;">No recent spikes detected.</div>`;
 
-      // 3. RENDER TABLE
+      populateAnomalyDropdowns();
+      applyAnomalyFilters();
+    }
+
+    function populateAnomalyDropdowns() {
+        const dp = new Set();
+        state.anomaly.data.forEach(a => {
+            if (a.ticket.id !== 'N/A') dp.add(a.ticket.department ? a.ticket.department.name : 'General');
+        });
+        
+        const el = document.getElementById('anomalyDeptDropdown');
+        el.innerHTML = '';
+        Array.from(dp).sort().forEach(v => {
+            el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="applyAnomalyFilters()"> ${v}</label>`;
+        });
+    }
+
+    function setAnomalyFilter(type) {
+        state.anomaly.filterType = type;
+        applyAnomalyFilters();
+    }
+
+    function applyAnomalyFilters() {
+        const sD = Array.from(document.querySelectorAll('#anomalyDeptDropdown input:checked')).map(c=>c.value);
+        document.getElementById('anomalyDeptLabel').innerText = sD.length ? `${sD.length} Selected` : 'All Departments';
+
+        // 1. Dept Filter First
+        let deptFiltered = state.anomaly.data.filter(a => {
+            if (a.ticket.id === 'N/A') return true; // Keep static system spikes visible
+            const dept = a.ticket.department ? a.ticket.department.name : 'General';
+            return sD.length === 0 || sD.includes(dept);
+        });
+
+        // 2. Widget Engine
+        const mismatchCount = deptFiltered.filter(a => a.type === 'Priority Mismatch').length;
+        const neglectedCount = deptFiltered.filter(a => a.type === 'Neglected Ticket').length;
+
+        const actAll = state.anomaly.filterType === 'All' ? 'border-color: var(--accent);' : '';
+        const actMis = state.anomaly.filterType === 'Priority Mismatch' ? 'border-color: var(--accent);' : '';
+        const actNeg = state.anomaly.filterType === 'Neglected Ticket' ? 'border-color: var(--accent);' : '';
+
+        document.getElementById('anomalyWidgetContainer').innerHTML = `
+          <div class="anomaly-card bg-green" style="grid-column: 1 / -1; align-items: center; text-align: center; cursor: pointer; ${actAll}" onclick="setAnomalyFilter('All')">
+              <h3>Active Anomalies</h3><p>${deptFiltered.length}</p>
+          </div>
+          <div class="anomaly-card bg-orange" style="cursor: pointer; ${actMis}" onclick="setAnomalyFilter('Priority Mismatch')">
+              <h3>Mismatches</h3><p>${mismatchCount}</p>
+          </div>
+          <div class="anomaly-card bg-red" style="cursor: pointer; ${actNeg}" onclick="setAnomalyFilter('Neglected Ticket')">
+              <h3>Neglected</h3><p>${neglectedCount}</p>
+          </div>
+        `;
+
+        // 3. Render Final Table Set
+        state.anomaly.currentFiltered = deptFiltered.filter(a => {
+            if (state.anomaly.filterType === 'All') return true;
+            return a.type === state.anomaly.filterType;
+        });
+
+        renderAnomalyTable();
+    }
+
+    function clearAnomalyFilters() {
+        document.querySelectorAll('#anomalyDeptDropdown input').forEach(c=>c.checked=false);
+        state.anomaly.filterType = 'All';
+        applyAnomalyFilters();
+    }
+
+    function renderAnomalyTable() {
+      const tbody = document.getElementById('anomalyTableBody');
       tbody.innerHTML = '';
-      if(anomalies.length === 0) { 
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 60px; color: #10b981; font-weight: 600;">✅ System healthy. No anomalies detected.</td></tr>`; return; 
+
+      if(state.anomaly.currentFiltered.length === 0) { 
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 60px; color: #10b981; font-weight: 600;">✅ System healthy. No anomalies match filter.</td></tr>`; 
+          return; 
       }
       
-      anomalies.forEach((a, i) => {
+      state.anomaly.currentFiltered.forEach((a, i) => {
           const t = a.ticket;
           let flagClass = a.level === 'critical' ? 'flag-critical' : (a.level === 'high' ? 'flag-high' : 'flag-warning');
           let icon = a.level === 'critical' ? '🚩' : (a.level === 'high' ? '⏫' : '⚠️');
@@ -2017,6 +2123,25 @@
           `;
           tbody.appendChild(tr);
       });
+    }
+
+    function exportAnomalyToCSV() {
+        if(state.anomaly.currentFiltered.length === 0) { alert("No data to export."); return; }
+        
+        let csv = "\uFEFFTicket #,Subject,Detected Anomaly,Detected Reason,Flag Level\n";
+        state.anomaly.currentFiltered.forEach(a => {
+            const tNum = a.ticket.ticketNumber || '-';
+            const subj = `"${(a.ticket.subject || '').replace(/"/g,'""')}"`;
+            const type = `"${a.type}"`;
+            const reason = `"${a.reason}"`;
+            const level = a.level.toUpperCase();
+            csv += `${tNum},${subj},${type},${reason},${level}\n`;
+        });
+        
+        const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const u = URL.createObjectURL(b);
+        const l = document.createElement("a"); l.href = u; l.download = `Anomaly_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`;
+        document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u);
     }
     
     // INITIALIZATION
