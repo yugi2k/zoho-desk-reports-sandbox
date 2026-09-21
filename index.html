@@ -2037,7 +2037,7 @@
       renderExecutiveView();
     }
 
-    function renderExecutiveView() {
+function renderExecutiveView() {
       const deptFilter = state.executive.currentDept;
       
       let baseData = window.allGlobalTickets;
@@ -2045,84 +2045,121 @@
           baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
       }
 
-      // Time Boundaries
-      const today = new Date();
-      const last7DaysDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000));
+      // Time Boundaries (Last 7 Days = exactly midnight 7 days ago, matching the rest of the app)
+      const last7DaysDate = getETMidnightForOffset(-7);
       
-      // Calculate Metrics
-      let totalActive = 0, supp = 0, serv = 0, dev = 0, prod = 0;
+      let totalActive = 0;
+      let deptCounts = {};
       let last7Active = 0, last7Closed = 0;
       let moduleCounts = {};
-      let statusCounts = { 'Open': 0, 'In Progress': 0, 'Review': 0, 'Pending': 0, 'On-Hold': 0 };
+      let statusCounts = {};
+      
+      let critTickets = [];
+      let secTickets = [];
+
+      let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
       
       baseData.forEach(t => {
           const isClosed = (t.status || '').toLowerCase().includes('clos');
           const dName = t.department ? t.department.name : 'General';
           const cDate = new Date(t.createdTime);
-          const closedDate = t.closedTime ? new Date(t.closedTime) : null;
+          const stat = t.status || 'Open';
           
-          if (!isClosed) {
-             totalActive++;
-             if (dName.toLowerCase().includes('support')) supp++;
-             else if (dName.toLowerCase().includes('service')) serv++;
-             else if (dName.toLowerCase().includes('dev')) dev++;
-             else if (dName.toLowerCase().includes('prod')) prod++;
-             
-             if (cDate >= last7DaysDate) last7Active++;
-
-             // Status Tracking
-             const stat = t.status || 'Open';
-             statusCounts[stat] = (statusCounts[stat] || 0) + 1;
-          }
-          if (isClosed && closedDate && closedDate >= last7DaysDate) {
-             last7Closed++;
-          }
-          
-          // Module tracking (last 7 days logic mapped per wireframe layout requirement context)
+          // ----------------------------------------------------
+          // 1. LAST 7 DAYS METRICS (All tickets submitted in last 7 days)
+          // ----------------------------------------------------
           if (cDate >= last7DaysDate) {
+             // Total Active/Closed inside 7 days
+             if (isClosed) last7Closed++; else last7Active++;
+             
+             // Module tracking
              const mName = t.module && t.module !== 'N/A' ? t.module : 'General';
              moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
+
+             // Critical Tickets
+             const pr = (t.priority || '').toLowerCase();
+             const su = (t.subject || '').toLowerCase();
+             if (pr === 'critical' || su.includes('critical')) {
+                 critTickets.push(t);
+             }
+          }
+
+          // ----------------------------------------------------
+          // 2. ACTIVE TICKETS METRICS (Rest of the widgets)
+          // ----------------------------------------------------
+          if (!isClosed) {
+             totalActive++;
+             deptCounts[dName] = (deptCounts[dName] || 0) + 1;
+             
+             // Status Tracking (Explicitly excluding specific closed statuses)
+             if (stat !== 'Closed/Resolved' && stat !== 'Closed/Unresolved') {
+                 statusCounts[stat] = (statusCounts[stat] || 0) + 1;
+             }
+
+             // Security Tickets
+             if ((t.module || '').toLowerCase().includes('security')) {
+                 secTickets.push(t);
+             }
           }
       });
 
-      // Critical Tickets (Since Jan 1, 2026 per earlier requirements)
-      const jan1 = new Date('2026-01-01T00:00:00');
-      let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
-      let critTickets = window.allGlobalTickets.filter(t => {
-         if (new Date(t.createdTime) < jan1) return false;
-         if (deptFilter !== 'All' && (t.department ? t.department.name : 'General') !== deptFilter) return false;
-         const pr = (t.priority || '').toLowerCase();
-         const su = (t.subject || '').toLowerCase();
-         return pr === 'critical' || su.includes('critical');
-      });
+      // --- PAYLOAD & HTML GENERATION ---
 
-      // Security Tickets (Module includes 'security')
-      let secTickets = window.allGlobalTickets.filter(t => {
-         if (deptFilter !== 'All' && (t.department ? t.department.name : 'General') !== deptFilter) return false;
-         const isClosed = (t.status || '').toLowerCase().includes('clos');
-         if (isClosed) return false;
-         return (t.module || '').toLowerCase().includes('security');
-      });
+      // 1. Top Section (Active Departments)
+      const deptList = Object.entries(deptCounts).sort((a,b)=>b[1]-a[1]);
+      let deptHTML = '';
+      if (deptList.length === 0) {
+          deptHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No active tickets</td></tr>`;
+      } else {
+          deptList.forEach(([d, c]) => {
+              deptHTML += `<tr><td>${d}</td><td><strong>${c}</strong></td></tr>`;
+          });
+      }
 
-      // Build 2D Array for Sheet Export (Maps directly to wireframe)
+      // 2. Critical Tickets
+      let critHTML = critTickets.map(t => `<tr><td>#${t.ticketNumber || t.id}</td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
+      if(!critHTML) critHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets</td></tr>`;
+      
+      // 3. Module Tickets (Strictly Top 5)
+      const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count).slice(0, 5);
+      let modHTML = modArray.map(m => `<tr><td>${m.mod}</td><td><strong>${m.count}</strong></td></tr>`).join('');
+      if(!modHTML) modHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No module activity</td></tr>`;
+
+      // 4. Status Counts
+      let statHTML = Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
+      if(!statHTML) statHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No status data</td></tr>`;
+
+      // 5. Security Tickets
+      let secHTML = secTickets.map(t => {
+         const ageD = Math.floor((new Date() - new Date(t.createdTime)) / (1000 * 60 * 60 * 24));
+         return `<tr><td>#${t.ticketNumber || t.id}</td><td><strong>${t.subject}</strong></td><td><span class="priority-badge" style="background:#ef4444;">${ageD} days</span></td><td>${t.clientName}</td></tr>`;
+      }).join('');
+      if(!secHTML) secHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No active security tickets</td></tr>`;
+
+      // --- SPREADSHEET PAYLOAD ARRAY BUILDER ---
       let payload = [];
       payload.push(["Department", deptFilter, "", "", ""]);
       payload.push(["", "", "", "", ""]);
       payload.push(["Total Active Tickets", totalActive, "", "Last 7 Days", last7Active + last7Closed]);
-      payload.push(["Support", supp, "", "Active", last7Active]);
-      payload.push(["Services", serv, "", "Closed", last7Closed]);
-      payload.push(["Development", dev, "", "", ""]);
-      payload.push(["Production", prod, "", "", ""]);
+      
+      const maxTopRows = Math.max(deptList.length, 2);
+      for(let i=0; i<maxTopRows; i++) {
+         const dName = deptList[i] ? deptList[i][0] : "";
+         const dCount = deptList[i] ? deptList[i][1] : "";
+         let rName = "", rCount = "";
+         if (i === 0) { rName = "Active"; rCount = last7Active; }
+         else if (i === 1) { rName = "Closed"; rCount = last7Closed; }
+         payload.push([dName, dCount, "", rName, rCount]);
+      }
+      
       payload.push(["", "", "", "", ""]);
       payload.push(["Last 7 days Metrics", "", "", "", ""]);
       payload.push(["", "", "", "", ""]);
       payload.push(["Critical Tickets", "", "", "Module wise tickets reported", "(Issue/Bug)"]);
       payload.push(["Tickets", "Resolution Time", "", "Module", "No. of Tickets"]);
       
-      const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count);
-      const maxRows = Math.max(critTickets.length, modArray.length);
-      
-      for(let i=0; i<maxRows; i++) {
+      const maxMetricRows = Math.max(critTickets.length, modArray.length);
+      for(let i=0; i<maxMetricRows; i++) {
          const tStr = critTickets[i] ? (critTickets[i].ticketNumber || critTickets[i].id) : "";
          const rStr = critTickets[i] ? (customResolvedTimes[critTickets[i].id] || "-") : "";
          const mStr = modArray[i] ? modArray[i].mod : "";
@@ -2132,8 +2169,8 @@
       
       payload.push(["", "", "", "", ""]);
       payload.push(["Status wise count", "", "", "", ""]);
-      Object.entries(statusCounts).forEach(([st, c]) => {
-         if (c > 0) payload.push([st, c, "", "", ""]);
+      Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).forEach(([st, c]) => {
+         payload.push([st, c, "", "", ""]);
       });
       
       payload.push(["", "", "", "", ""]);
@@ -2147,34 +2184,14 @@
 
       state.executive.payloadArray = payload;
 
-      // Render Visual DOM layout based on wireframe
+      // --- INJECT HTML ---
       const cont = document.getElementById('execWidgetsContainer');
-      
-      const statHTML = Object.entries(statusCounts).filter(([k,v])=>v>0).map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
-      
-      let critHTML = critTickets.map(t => `<tr><td>#${t.ticketNumber}</td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
-      if(!critHTML) critHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets</td></tr>`;
-      
-      let modHTML = modArray.map(m => `<tr><td>${m.mod}</td><td><strong>${m.count}</strong></td></tr>`).join('');
-      if(!modHTML) modHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No module activity</td></tr>`;
-
-      let secHTML = secTickets.map(t => {
-         const ageD = Math.floor((new Date() - new Date(t.createdTime)) / (1000 * 60 * 60 * 24));
-         return `<tr><td>#${t.ticketNumber}</td><td><strong>${t.subject}</strong></td><td><span class="priority-badge" style="background:#ef4444;">${ageD} days</span></td><td>${t.clientName}</td></tr>`;
-      }).join('');
-      if(!secHTML) secHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No active security tickets</td></tr>`;
-
       cont.innerHTML = `
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel">
                <table>
                   <thead style="background:var(--th-bg);"><tr><th>Total Active Tickets</th><th style="font-size:1.2rem; color:var(--accent);">${totalActive}</th></tr></thead>
-                  <tbody>
-                     <tr><td>Support</td><td><strong>${supp}</strong></td></tr>
-                     <tr><td>Services</td><td><strong>${serv}</strong></td></tr>
-                     <tr><td>Development</td><td><strong>${dev}</strong></td></tr>
-                     <tr><td>Production</td><td><strong>${prod}</strong></td></tr>
-                  </tbody>
+                  <tbody>${deptHTML}</tbody>
                </table>
             </div>
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
