@@ -2240,21 +2240,21 @@
       // --- INJECT HTML ---
       const cont = document.getElementById('execWidgetsContainer');
       cont.innerHTML = `
-         <div class="exec-grid-container">
-            <div class="glass-panel exec-table-panel">
-               <table>
-                  <thead style="background:var(--th-bg);"><tr><th>Total Active Tickets</th><th style="font-size:1.2rem; color:var(--accent);">${totalActive}</th></tr></thead>
-                  <tbody>${deptHTML}</tbody>
-               </table>
-            </div>
-
-            <div class="glass-panel exec-table-panel" style="height:fit-content;">
-               <table>
-                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Priority wise count</th></tr></thead>
-                  <tbody>${priorityHTML}</tbody>
-               </table>
-            </div>
+         <!-- 1. Department Box -->
+         <div class="glass-panel exec-table-panel" style="margin-bottom: 25px;">
+            <table>
+               <thead style="background:var(--th-bg);"><tr><th colspan="2">Department Breakdown</th></tr></thead>
+               <tbody>${deptHTML}</tbody>
+            </table>
          </div>
+
+         <!-- 2. Total Active | Last 7 Days -->
+         <div class="exec-grid-container">
+            <div class="glass-panel exec-table-panel" style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px 20px;">
+               <div style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 10px;">Total Active Tickets</div>
+               <div style="font-size: 4rem; font-weight: 700; color: var(--accent); line-height: 1;">${totalActive}</div>
+            </div>
+            
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
                <table>
                   <thead style="background:var(--th-bg);">
@@ -2268,7 +2268,8 @@
             </div>
          </div>
          
-         <div class="section-title">Last 7 Days Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(${dateRangeStr})</span></div>
+         <!-- 3. Last 7 Days Metrics -->
+         <div class="section-title" style="margin-top: 35px;">Last 7 Days Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(${dateRangeStr})</span></div>
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel">
                <table>
@@ -2284,8 +2285,8 @@
             </div>
          </div>
 
-         <div class="section-title" style="margin-top: 40px;">Active Ticket Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(All Time)</span></div>
-         
+         <!-- 4. Active Ticket Metrics (All Time) -->
+         <div class="section-title" style="margin-top: 35px;">Active Ticket Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(All Time)</span></div>
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
                <table>
@@ -2293,9 +2294,16 @@
                   <tbody>${statHTML}</tbody>
                </table>
             </div>
+            <div class="glass-panel exec-table-panel" style="height:fit-content;">
+               <table>
+                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Priority wise count</th></tr></thead>
+                  <tbody>${priorityHTML}</tbody>
+               </table>
+            </div>
          </div>
 
-         <div class="glass-panel exec-table-panel">
+         <!-- 5. Active Security Tickets -->
+         <div class="glass-panel exec-table-panel" style="margin-top: 20px;">
             <table>
                <thead style="background:var(--th-bg);"><tr><th colspan="4" style="text-align:center;">Active Security Tickets</th></tr><tr><th>Ticket #</th><th>Subject</th><th>Age</th><th>Client Name</th></tr></thead>
                <tbody>${secHTML}</tbody>
@@ -2335,30 +2343,46 @@
     // ==========================================
     function showPinModal(action) { 
       pendingAction = action;
-      document.getElementById('pinModalTitle').innerText = action === 'ai-search' ? 'AI Deep Search' : 'Admin Access';
-      document.getElementById('pinModalDesc').innerText = action === 'ai-search' ? 'Enter PIN to access Gemini AI' : 'Enter PIN to force live data sync';
+      
+      let title = 'Admin Access';
+      let desc = 'Enter PIN to force live data sync';
+      
+      if (action === 'ai-search') { title = 'AI Deep Search'; desc = 'Enter PIN to access Gemini AI'; }
+      else if (action === 'admin' || action === 'executive') { desc = 'Enter PIN to access secured dashboard'; }
+      
+      document.getElementById('pinModalTitle').innerText = title;
+      document.getElementById('pinModalDesc').innerText = desc;
       document.getElementById('pinModal').style.display = 'flex'; 
       document.getElementById('pinInput').value = ''; 
       setTimeout(()=>document.getElementById('pinInput').focus(), 100); 
     }
     
     function closePinModal() { document.getElementById('pinModal').style.display = 'none'; pendingAction = null; }
-    
+
+    let pendingAction = null; // Ensure this variable exists at the top of your scripts if not already there
+
     document.getElementById('submitPinBtn').addEventListener('click', () => { 
       const p = document.getElementById('pinInput').value; 
       const currentAction = pendingAction; 
       closePinModal(); 
       
       if (currentAction === 'ai-search') {
-         if (p === '48268') navigateTo('ai-search');
-         else alert("Incorrect Password.");
+         if (p === '48268') navigateTo('ai-search'); else alert("Incorrect Password.");
+      } else if (currentAction === 'admin') {
+         if (p === '48268') navigateTo('admin'); else alert("Incorrect Password.");
+      } else if (currentAction === 'executive') {
+         if (p === '48268') navigateTo('executive'); else alert("Incorrect Password.");
       } else {
          fetchGlobalData(true, p); 
       }
     });
 
-    document.getElementById('pinInput').addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') { document.getElementById('submitPinBtn').click(); }
+    // Enter key support
+    document.getElementById('pinInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('submitPinBtn').click();
+      }
     });
     
     async function openStatsModal() {
@@ -2426,9 +2450,7 @@
       }
       if (e.altKey && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault();
-        const pwd = prompt("Enter Admin Password:");
-        if (pwd === '48268') navigateTo('admin');
-        else if (pwd !== null) alert("Incorrect Password.");
+        showPinModal('admin');
       }
       if (e.altKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
@@ -2437,9 +2459,7 @@
       }
       if (e.altKey && (e.key === 'e' || e.key === 'E')) {
         e.preventDefault();
-        const pwd = prompt("Enter Admin Password:");
-        if (pwd === '48268') navigateTo('executive');
-        else if (pwd !== null) alert("Incorrect Password.");
+        showPinModal('executive');
       }
       if (e.key === 'Enter' && document.activeElement.id === 'aiSearchInput') {
          runAiSearch();
