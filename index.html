@@ -382,6 +382,14 @@
             </div>
           </div>
         </div>
+        <div class="toggle-wrapper">
+          <span>90-Day History</span>
+          <label class="switch">
+            <input type="checkbox" id="reportsHistoryToggle" onchange="handleReportsToggle()">
+            <span class="slider"></span>
+          </label>
+          <span id="reportsLoadingIndicator" style="display:none;" class="loading-spinner"></span>
+        </div>
       </div>
       
       <div class="controls-panel glass-panel animate-in delay-1" style="margin-bottom: 20px;">
@@ -741,7 +749,7 @@
             <div class="custom-select" style="width: 220px;">
               <div class="select-btn filter-input" onclick="toggleDropdown('execDeptDropdown')"><span id="execDeptLabel">All Departments</span> ▼</div>
               <div class="select-dropdown" id="execDeptDropdown">
-                 <label><input type="checkbox" value="All" onchange="applyExecFilters()" checked> All Departments</label>
+                 <label><input type="radio" name="execDept" value="All" onchange="applyExecFilters()" checked> All Departments</label>
                  <!-- Injected via JS -->
               </div>
             </div>
@@ -784,7 +792,7 @@
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
       'hariharan.iyer@mindmatrix.net',
-      'vedonia.Ingram@mindmatrix.net',
+      'vedonia.ingram@mindmatrix.net',
       'sageer.shaikh@mindmatrix.net',
       'admin@mindmatrix.net'
     ];
@@ -997,18 +1005,15 @@
     }
     function handleGoogleLogin(response) {
       try {
-        // 1. Safely decode Google's Base64Url format
         let base64Url = response.credential.split('.')[1];
         let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         
-        // 2. Convert to properly encoded JSON string
         let jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
         
         const payload = JSON.parse(jsonPayload);
         
-        // 3. Verify against allowed emails
         if (ALLOWED_EMAILS.includes(payload.email.toLowerCase())) {
             loadSecureApp();
         } else { 
@@ -1130,10 +1135,8 @@
             
             let result;
             try {
-                // Try to parse it as JSON
                 result = JSON.parse(rawText);
             } catch (parseError) {
-                // If it fails, Google sent an HTML error page. Catch it gracefully!
                 console.error("Google Server Error Payload:", rawText.substring(0, 200));
                 throw new Error("Google's servers are temporarily busy. Please wait 10 seconds and click refresh.");
             }
@@ -2045,7 +2048,6 @@
     // VIEW 9: EXECUTIVE REPORTS
     // ==========================================
     function initExecutiveView() {
-      // 1. Populate Department Dropdown
       const dp = new Set();
       window.allGlobalTickets.forEach(t => { dp.add(t.department ? t.department.name : 'General'); });
       const dropEl = document.getElementById('execDeptDropdown');
@@ -2065,7 +2067,7 @@
       renderExecutiveView();
     }
 
-     function renderExecutiveView() {
+    function renderExecutiveView() {
       const deptFilter = state.executive.currentDept;
       
       let baseData = window.allGlobalTickets;
@@ -2073,11 +2075,9 @@
           baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
       }
 
-      // Time Boundaries
       const today = new Date();
       const last7DaysDate = getETMidnightForOffset(-7);
       
-      // Format dates for UI labels (e.g., "Sep 15 - Sep 22")
       const dateFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
       const dateRangeStr = `${dateFmt.format(last7DaysDate)} - ${dateFmt.format(today)}`;
       
@@ -2100,26 +2100,17 @@
           const closedDate = t.closedTime ? new Date(t.closedTime) : null;
           const stat = t.status || 'Open';
           
-          // ----------------------------------------------------
-          // 1. LAST 7 DAYS METRICS
-          // ----------------------------------------------------
-          
-          // All tickets CREATED in the last 7 days
           if (cDate >= last7DaysDate) {
               last7Created++;
-              
-              // Still open from those created last 7 days
               if (!isClosed) {
                   last7Active++;
               }
           }
           
-          // Tickets CLOSED in the last 7 days (regardless of when created)
           if (isClosed && closedDate && closedDate >= last7DaysDate) {
               last7Closed++;
           }
 
-          // Module & Critical Metrics (All tickets submitted in last 7 days, Open or Closed)
           if (cDate >= last7DaysDate) {
              const mName = t.module && t.module !== 'N/A' ? t.module : 'General';
              moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
@@ -2131,32 +2122,23 @@
              }
           }
 
-          // ----------------------------------------------------
-          // 2. ALL ACTIVE TICKETS METRICS (Regardless of date)
-          // ----------------------------------------------------
           if (!isClosed) {
              totalActive++;
              deptCounts[dName] = (deptCounts[dName] || 0) + 1;
              
-             // Status Tracking (Explicitly excluding closed statuses)
              if (stat !== 'Closed/Resolved' && stat !== 'Closed/Unresolved') {
                  statusCounts[stat] = (statusCounts[stat] || 0) + 1;
              }
 
-            // Priority Tracking (NEW)
              const prio = t.priority || 'Unassigned';
              priorityCounts[prio] = (priorityCounts[prio] || 0) + 1;
 
-             // Security Tickets
              if ((t.module || '').toLowerCase().includes('security')) {
                  secTickets.push(t);
              }
           }
       });
 
-      // --- HTML GENERATION ---
-
-      // 1. Dynamic Departments
       const deptList = Object.entries(deptCounts).sort((a,b)=>b[1]-a[1]);
       let deptHTML = '';
       if (deptList.length === 0) {
@@ -2167,36 +2149,29 @@
           });
       }
 
-      // 2. Module Tickets (Strictly Top 5, Left Side)
       const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count).slice(0, 5);
       let modHTML = modArray.map(m => `<tr><td>${m.mod}</td><td><strong>${m.count}</strong></td></tr>`).join('');
       if(!modHTML) modHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No module activity</td></tr>`;
 
-      // 3. Critical Tickets (Right Side)
       let critHTML = critTickets.map(t => `<tr><td>#${t.ticketNumber || t.id}</td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
       if(!critHTML) critHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets in timeframe</td></tr>`;
 
-      // 4. Status Counts
       let statHTML = Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
       if(!statHTML) statHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No status data</td></tr>`;
 
-      // 4.5 Priority Counts (NEW)
       let priorityHTML = Object.entries(priorityCounts).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
       if(!priorityHTML) priorityHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No priority data</td></tr>`;
        
-      // 5. Security Tickets
       let secHTML = secTickets.map(t => {
          const ageD = Math.floor((new Date() - new Date(t.createdTime)) / (1000 * 60 * 60 * 24));
          return `<tr><td>#${t.ticketNumber || t.id}</td><td><strong>${t.subject}</strong></td><td><span class="priority-badge" style="background:#ef4444;">${ageD} days</span></td><td>${t.clientName}</td></tr>`;
       }).join('');
       if(!secHTML) secHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No active security tickets</td></tr>`;
 
-      // --- SPREADSHEET PAYLOAD ARRAY BUILDER ---
       let payload = [];
       payload.push(["Department", deptFilter, "", "", ""]);
       payload.push(["", "", "", "", ""]);
       
-      // Fixed: Passing last7Created for the top-level metric
       payload.push(["Total Active Tickets", totalActive, "", `Last 7 Days (${dateRangeStr})`, last7Created]);
       
       const maxTopRows = Math.max(deptList.length, 2);
@@ -2254,10 +2229,8 @@
 
       state.executive.payloadArray = payload;
 
-      // --- INJECT HTML ---
       const cont = document.getElementById('execWidgetsContainer');
       cont.innerHTML = `
-         <!-- 1. Department Box -->
          <div class="glass-panel exec-table-panel" style="margin-bottom: 25px;">
             <table>
                <thead style="background:var(--th-bg);"><tr><th colspan="2">Department Breakdown</th></tr></thead>
@@ -2265,7 +2238,6 @@
             </table>
          </div>
 
-         <!-- 2. Total Active | Last 7 Days -->
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel" style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px 20px;">
                <div style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 10px;">Total Active Tickets</div>
@@ -2285,7 +2257,6 @@
             </div>
          </div>
          
-         <!-- 3. Last 7 Days Metrics -->
          <div class="section-title" style="margin-top: 35px;">Last 7 Days Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(${dateRangeStr})</span></div>
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel">
@@ -2302,7 +2273,6 @@
             </div>
          </div>
 
-         <!-- 4. Active Ticket Metrics (All Time) -->
          <div class="section-title" style="margin-top: 35px;">Active Ticket Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(All Time)</span></div>
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
@@ -2319,7 +2289,6 @@
             </div>
          </div>
 
-         <!-- 5. Active Security Tickets -->
          <div class="glass-panel exec-table-panel" style="margin-top: 20px;">
             <table>
                <thead style="background:var(--th-bg);"><tr><th colspan="4" style="text-align:center;">Active Security Tickets</th></tr><tr><th>Ticket #</th><th>Subject</th><th>Age</th><th>Client Name</th></tr></thead>
@@ -2376,8 +2345,6 @@
     
     function closePinModal() { document.getElementById('pinModal').style.display = 'none'; pendingAction = null; }
 
-    let pendingAction = null; // Ensure this variable exists at the top of your scripts if not already there
-
     document.getElementById('submitPinBtn').addEventListener('click', () => { 
       const p = document.getElementById('pinInput').value; 
       const currentAction = pendingAction; 
@@ -2394,7 +2361,6 @@
       }
     });
 
-    // Enter key support
     document.getElementById('pinInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
