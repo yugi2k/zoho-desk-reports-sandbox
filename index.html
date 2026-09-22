@@ -2069,6 +2069,7 @@
       let last7Created = 0, last7Active = 0, last7Closed = 0;
       let moduleCounts = {};
       let statusCounts = {};
+      let priorityCounts = {};
       
       let critTickets = [];
       let secTickets = [];
@@ -2125,6 +2126,10 @@
                  statusCounts[stat] = (statusCounts[stat] || 0) + 1;
              }
 
+            // Priority Tracking (NEW)
+             const prio = t.priority || 'Unassigned';
+             priorityCounts[prio] = (priorityCounts[prio] || 0) + 1;
+
              // Security Tickets
              if ((t.module || '').toLowerCase().includes('security')) {
                  secTickets.push(t);
@@ -2158,6 +2163,10 @@
       let statHTML = Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
       if(!statHTML) statHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No status data</td></tr>`;
 
+      // 4.5 Priority Counts (NEW)
+      let priorityHTML = Object.entries(priorityCounts).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
+      if(!priorityHTML) priorityHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No priority data</td></tr>`;
+       
       // 5. Security Tickets
       let secHTML = secTickets.map(t => {
          const ageD = Math.floor((new Date() - new Date(t.createdTime)) / (1000 * 60 * 60 * 24));
@@ -2203,10 +2212,19 @@
       payload.push(["", "", "", "", ""]);
       payload.push(["Active Ticket Metrics (All Time)", "", "", "", ""]);
       payload.push(["", "", "", "", ""]);
-      payload.push(["Status wise count", "", "", "", ""]);
-      Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]).forEach(([st, c]) => {
-         payload.push([st, c, "", "", ""]);
-      });
+      payload.push(["Status wise count", "", "", "Priority wise count", ""]);
+      
+      const statArr = Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]);
+      const prioArr = Object.entries(priorityCounts).sort((a,b)=>b[1]-a[1]);
+      const maxStatPrioRows = Math.max(statArr.length, prioArr.length);
+      
+      for(let i=0; i<maxStatPrioRows; i++) {
+         const sName = statArr[i] ? statArr[i][0] : "";
+         const sCount = statArr[i] ? statArr[i][1] : "";
+         const pName = prioArr[i] ? prioArr[i][0] : "";
+         const pCount = prioArr[i] ? prioArr[i][1] : "";
+         payload.push([sName, sCount, "", pName, pCount]);
+      }
       
       payload.push(["", "", "", "", ""]);
       payload.push(["Active Security Tickets", "", "", "", ""]);
@@ -2229,6 +2247,14 @@
                   <tbody>${deptHTML}</tbody>
                </table>
             </div>
+
+            <div class="glass-panel exec-table-panel" style="height:fit-content;">
+               <table>
+                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Priority wise count</th></tr></thead>
+                  <tbody>${priorityHTML}</tbody>
+               </table>
+            </div>
+         </div>
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
                <table>
                   <thead style="background:var(--th-bg);">
