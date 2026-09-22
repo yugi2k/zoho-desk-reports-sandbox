@@ -1109,7 +1109,18 @@
         } else {
             const fetchUrl = forceLive ? `${PROXY_URL}?refresh=true&pin=${encodeURIComponent(pin)}` : PROXY_URL;
             const response = await fetch(fetchUrl, { method: 'GET' });
-            const result = await response.json();
+            const rawText = await response.text();
+            
+            let result;
+            try {
+                // Try to parse it as JSON
+                result = JSON.parse(rawText);
+            } catch (parseError) {
+                // If it fails, Google sent an HTML error page. Catch it gracefully!
+                console.error("Google Server Error Payload:", rawText.substring(0, 200));
+                throw new Error("Google's servers are temporarily busy. Please wait 10 seconds and click refresh.");
+            }
+            
             if (result.error) throw new Error(result.error);
             
             window.exactStatsData = result.exactStats;
