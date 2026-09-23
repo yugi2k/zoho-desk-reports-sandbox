@@ -743,17 +743,24 @@
 
     <!-- 9. EXECUTIVE REPORTS VIEW -->
     <div id="view-executive" class="app-subview" style="display:none;">
-       <div class="controls-panel glass-panel animate-in delay-1" style="display: flex; justify-content: space-between;">
-          <div class="filter-group">
-            <label>Department</label>
-            <div class="custom-select" style="width: 220px;">
-              <div class="select-btn filter-input" onclick="toggleDropdown('execDeptDropdown')"><span id="execDeptLabel">All Departments</span> ▼</div>
-              <div class="select-dropdown" id="execDeptDropdown">
-                 <label><input type="radio" name="execDept" value="All" onchange="applyExecFilters()" checked> All Departments</label>
-                 <!-- Injected via JS -->
+       <div class="controls-panel glass-panel animate-in delay-1" style="display: flex; justify-content: space-between; align-items: flex-end;">
+          <div style="display: flex; gap: 20px; align-items: flex-end;">
+            <div class="filter-group">
+              <label>Department</label>
+              <div class="custom-select" style="width: 220px;">
+                <div class="select-btn filter-input" onclick="toggleDropdown('execDeptDropdown')"><span id="execDeptLabel">All Departments</span> ▼</div>
+                <div class="select-dropdown" id="execDeptDropdown">
+                   <label><input type="radio" name="execDept" value="All" onchange="applyExecFilters()" checked> All Departments</label>
+                   <!-- Injected via JS -->
+                </div>
               </div>
             </div>
+            
+            <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase;">
+              Total Active: <span id="execTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
+            </div>
           </div>
+
           <div class="btn-group">
             <button class="btn-action btn-export" onclick="exportExecutiveToSheet()" id="btnSyncExec">Sync to Google Sheets</button>
           </div>
@@ -2227,23 +2234,23 @@
          payload.push([t.ticketNumber || t.id, t.subject, `${ageDays} days`, t.clientName, ""]);
       });
 
+      // Update the total count badge
+      document.getElementById('execTotalCount').innerText = totalActive;
+
       state.executive.payloadArray = payload;
 
+      // --- INJECT HTML ---
       const cont = document.getElementById('execWidgetsContainer');
       cont.innerHTML = `
-         <div class="glass-panel exec-table-panel" style="margin-bottom: 25px;">
-            <table>
-               <thead style="background:var(--th-bg);"><tr><th colspan="2">Department Breakdown</th></tr></thead>
-               <tbody>${deptHTML}</tbody>
-            </table>
-         </div>
-
+         <!-- 1. Department Breakdown | Last 7 Days (Side by Side) -->
          <div class="exec-grid-container">
-            <div class="glass-panel exec-table-panel" style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px 20px;">
-               <div style="font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 10px;">Total Active Tickets</div>
-               <div style="font-size: 4rem; font-weight: 700; color: var(--accent); line-height: 1;">${totalActive}</div>
+            <div class="glass-panel exec-table-panel" style="height:fit-content;">
+               <table>
+                  <thead style="background:var(--th-bg);"><tr><th colspan="2">Department Breakdown</th></tr></thead>
+                  <tbody>${deptHTML}</tbody>
+               </table>
             </div>
-            
+
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
                <table>
                   <thead style="background:var(--th-bg);">
@@ -2257,7 +2264,8 @@
             </div>
          </div>
          
-         <div class="section-title" style="margin-top: 35px;">Last 7 Days Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(${dateRangeStr})</span></div>
+         <!-- 2. Last 7 Days Metrics -->
+         <div class="section-title" style="margin-top: 15px;">Last 7 Days Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(${dateRangeStr})</span></div>
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel">
                <table>
@@ -2273,6 +2281,7 @@
             </div>
          </div>
 
+         <!-- 3. Active Ticket Metrics (All Time) -->
          <div class="section-title" style="margin-top: 35px;">Active Ticket Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(All Time)</span></div>
          <div class="exec-grid-container">
             <div class="glass-panel exec-table-panel" style="height:fit-content;">
@@ -2289,6 +2298,7 @@
             </div>
          </div>
 
+         <!-- 4. Active Security Tickets -->
          <div class="glass-panel exec-table-panel" style="margin-top: 20px;">
             <table>
                <thead style="background:var(--th-bg);"><tr><th colspan="4" style="text-align:center;">Active Security Tickets</th></tr><tr><th>Ticket #</th><th>Subject</th><th>Age</th><th>Client Name</th></tr></thead>
