@@ -2094,6 +2094,7 @@
       let moduleCounts = {};
       let statusCounts = {};
       let priorityCounts = {};
+      let last7AssigneeCounts = {};
       
       let critTickets = [];
       let secTickets = [];
@@ -2107,10 +2108,17 @@
           const closedDate = t.closedTime ? new Date(t.closedTime) : null;
           const stat = t.status || 'Open';
           
+         // All tickets CREATED in the last 7 days
           if (cDate >= last7DaysDate) {
               last7Created++;
+              
+              // Still open from those created last 7 days
               if (!isClosed) {
                   last7Active++;
+                  
+                  // NEW: Track Assignees for these active, recent tickets
+                  const aName = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
+                  last7AssigneeCounts[aName] = (last7AssigneeCounts[aName] || 0) + 1;
               }
           }
           
@@ -2155,6 +2163,15 @@
               deptHTML += `<tr><td>${d}</td><td><strong>${c}</strong></td></tr>`;
           });
       }
+
+      
+      // Top 5 Assignees (Last 7 Days Active - Excluding 'Unassigned')
+      const topAssigneesArray = Object.entries(last7AssigneeCounts)
+        .filter(([name, count]) => name !== 'Unassigned')
+        .sort((a,b)=>b[1]-a[1])
+        .slice(0, 5);
+      let assigneesHTML = topAssigneesArray.map(a => `<tr><td>${a[0]}</td><td><strong>${a[1]}</strong></td></tr>`).join('');
+      if(!assigneesHTML) assigneesHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No active assignments in timeframe</td></tr>`;
 
       const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count).slice(0, 5);
       let modHTML = modArray.map(m => `<tr><td>${m.mod}</td><td><strong>${m.count}</strong></td></tr>`).join('');
@@ -2207,6 +2224,12 @@
          
          payload.push([mStr, cStr, "", tStr, rStr]);
       }
+
+      // (Add this right below the Module/Critical loops in the payload builder)
+      payload.push(["", "", "", "", ""]);
+      payload.push(["Top 5 Agents by Active Workload (Last 7 Days)", "", "", "", ""]);
+      payload.push(["Agent Name", "Active Tickets", "", "", ""]);
+      topAssigneesArray.forEach(a => payload.push([a[0], a[1], "", "", ""]));
       
       payload.push(["", "", "", "", ""]);
       payload.push(["Active Ticket Metrics (All Time)", "", "", "", ""]);
@@ -2279,6 +2302,20 @@
                   <tbody>${critHTML}</tbody>
                </table>
             </div>
+         </div>
+
+          <!-- NEW: Top 5 Agents -->
+         <div class="exec-grid-container" style="margin-top: 25px;">
+            <div class="glass-panel exec-table-panel">
+               <table>
+                  <thead style="background:var(--th-bg);">
+                     <tr><th colspan="2" style="text-align:center; color:var(--text-main);">Top 5 Agents by Active Workload (Recent)</th></tr>
+                     <tr><th>Agent Name</th><th>Active Tickets</th></tr>
+                  </thead>
+                  <tbody>${assigneesHTML}</tbody>
+               </table>
+            </div>
+            <div></div> <!-- This empty div forces the table to stay half-width -->
          </div>
 
          <!-- 3. Active Ticket Metrics (All Time) -->
