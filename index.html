@@ -305,6 +305,27 @@
     </div>
   </div>
 
+  <!-- MODULE WISE REPORT MODAL -->
+  <div id="moduleReportModal" class="modal-overlay">
+    <div class="modal-content animate-in" style="max-width: 900px; width: 95vw; background: #ffffff; color: #0f172a; text-align: left; padding: 40px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
+          <div>
+            <h2 style="margin:0; font-weight:700; color:#0f172a; font-size: 1.8rem;">EXECUTIVE SUMMARY</h2>
+            <p id="moduleReportSubtitle" style="color: #64748b; margin-top: 5px; font-weight: 500; font-size: 0.9rem;"></p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+              <button class="btn-action btn-copy" onclick="window.print()" style="background:#10b981;">Print / Save PDF</button>
+              <button class="icon-btn" onclick="document.getElementById('moduleReportModal').style.display='none'" style="border-color:#cbd5e1; color:#0f172a; background: transparent;">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+          </div>
+      </div>
+      <div id="moduleReportContent" style="max-height: 65vh; overflow-y: auto; padding-right: 10px; font-size: 0.95rem;">
+          <!-- JS will inject the report here -->
+      </div>
+    </div>
+  </div>
+
   <!-- SECURE APP WRAPPER -->
   <div id="view-secure-app" class="page-view">
     
@@ -762,7 +783,8 @@
           </div>
 
           <div class="btn-group">
-            <button class="btn-action btn-export" onclick="exportExecutiveToSheet()" id="btnSyncExec">Sync to Google Sheets</button>
+            <button class="btn-action" onclick="generateModuleReport()" style="background-color: #3b82f6;">Module Wise Report</button>
+            <button class="btn-action btn-export" onclick="exportExecutiveToSheet()" id="btnSyncExec">Sync to Google Sheets</button>            
           </div>
        </div>
 
@@ -2462,6 +2484,175 @@
         btn.style.backgroundColor = '#10b981';
         setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = 'var(--accent)'; }, 2000);
       });
+    }
+
+    function generateModuleReport() {
+        // 1. Determine the active department
+        const deptFilter = (state.executive && state.executive.currentDept) ? state.executive.currentDept : 'All';
+        let baseData = window.allGlobalTickets;
+        if (deptFilter !== 'All') {
+            baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
+        }
+
+        // 2. Set up Timeframes & Trackers
+        const startOfThisWeek = getETMidnightForOffset(-7);
+        const startOfLastWeek = getETMidnightForOffset(-14);
+
+        let thisWeekOpen = 0, lastWeekOpen = 0;
+        let thisWeekCompleted = 0, lastWeekCompleted = 0;
+        let releasePendingCount = 0;
+        let moduleCounts = {};
+
+        // 3. Process Data
+        baseData.forEach(t => {
+            const isClosed = (t.status || '').toLowerCase().includes('clos');
+            const stat = t.status || '';
+            const cDate = new Date(t.createdTime);
+            const closedDate = t.closedTime ? new Date(t.closedTime) : null;
+            
+            // This Week Open & Module Distribution
+            if (!isClosed) {
+                thisWeekOpen++;
+                let mName = (t.module && t.module !== 'N/A') ? t.module : 'General';
+                moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
+                
+                if (stat === 'ReleasePending') releasePendingCount++;
+            }
+
+            // Approximate Last Week Open (Created before this week, and either still open OR closed this week)
+            let createdBeforeThisWeek = cDate < startOfThisWeek;
+            let closedThisWeek = isClosed && closedDate && closedDate >= startOfThisWeek;
+            if (createdBeforeThisWeek && (!isClosed || closedThisWeek)) {
+                lastWeekOpen++;
+            }
+
+            // Completed (Closed/Resolved) tracking
+            if (stat === 'Closed/Resolved' && closedDate) {
+                if (closedDate >= startOfThisWeek) thisWeekCompleted++;
+                else if (closedDate >= startOfLastWeek && closedDate < startOfThisWeek) lastWeekCompleted++;
+            }
+        });
+
+        // 4. Perform Adjustments & Math
+        const adjustedActive = thisWeekOpen - releasePendingCount;
+        const lastWeekAdjusted = lastWeekOpen - releasePendingCount; // Using current pending as proxy for last week
+        
+        const openChange = thisWeekOpen - lastWeekOpen;
+        const compChange = thisWeekCompleted - lastWeekCompleted;
+        const adjChange = adjustedActive - lastWeekAdjusted;
+
+        // Math Helpers for UI text
+        const openChangeText = openChange >= 0 ? `(↑ up from ${lastWeekOpen} last week)` : `(↓ down from ${lastWeekOpen} last week)`;
+        const adjChangeText = adjChange >= 0 ? `${adjChange} tickets (from ${lastWeekAdjusted})` : `Decrease: ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})`;
+        const formatChange = (num) => num > 0 ? `+${num}` : num;
+
+        // 5. Sort Modules & Top 10 Math
+        const modArray = Object.entries(moduleCounts).sort((a, b) => b[1] - a[1]);
+        const top10 = modArray.slice(0, 10);
+        const remaining = modArray.slice(10);
+        
+        let top3Sum = 0;
+        let top3Names = [];
+        top10.slice(0, 3).forEach(m => { top3Sum += m[1]; top3Names.push(m[0]); });
+        const top3Percent = thisWeekOpen > 0 ? ((top3Sum / thisWeekOpen) * 100).toFixed(2) : 0;
+
+        // 6. Build the HTML
+        let html = `
+            <div style="margin-bottom: 20px;">
+                <strong>Overall Status:</strong>
+                <ul style="margin-top: 5px;">
+                    <li><strong>Total Open Tickets:</strong> ${thisWeekOpen} ${openChangeText}</li>
+                    <li><strong>Week-over-Week Change:</strong> ${formatChange(openChange)} tickets</li>
+                    <li><strong>Completed Tickets (Closed/Resolved):</strong> ${thisWeekCompleted} tickets</li>
+                    <li><strong>Release Pending:</strong> ${releasePendingCount} tickets</li>
+                </ul>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <strong>Adjusted Active Count</strong>
+                <ul style="margin-top: 5px;">
+                    <li><strong>Active Tickets (excluding Release Pending):</strong> ${adjustedActive}</li>
+                    <li><strong>Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(adjChange)} tickets</li>
+                </ul>
+            </div>
+
+            <strong style="text-transform: uppercase;">KEY METRICS</strong>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 30px; font-size: 0.9rem; text-align: center;">
+                <thead style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                    <tr>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1; text-align: left;">Metric</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">This Week</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Last Week</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Total Open Tickets</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${thisWeekOpen}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekOpen}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(openChange)}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Active Tickets (excl. ReleasePending)</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${adjustedActive}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekAdjusted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(adjChange)}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Completed (Closed/Resolved)</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${thisWeekCompleted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekCompleted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(compChange)}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Release Pending</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${releasePendingCount}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">-</td><td style="padding: 8px; border: 1px solid #cbd5e1;">-</td></tr>
+                </tbody>
+            </table>
+
+            <strong style="text-transform: uppercase;">TOP 10 MODULES WITH MAXIMUM TICKETS:</strong> <span style="color:#64748b; font-size: 0.85rem;">Please review the top affected areas.</span>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 10px; font-size: 0.9rem; text-align: center;">
+                <thead style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                    <tr>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Rank</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Module</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Ticket Count</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Status Indicator</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        if (top10.length === 0) {
+            html += `<tr><td colspan="4" style="padding: 15px; border: 1px solid #cbd5e1; text-align: center;">No active tickets available.</td></tr>`;
+        } else {
+            top10.forEach((m, index) => {
+                const rank = index + 1;
+                let dotColor = '#10b981'; let dotText = 'Normal'; // Green by default (Rank 7-10)
+                if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } // Red (Top 3)
+                else if (rank <= 6) { dotColor = '#eab308'; dotText = 'Medium Priority'; } // Yellow (Rank 4-6)
+
+                html += `
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${rank}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${m[0]}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${m[1]}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;"><span style="color:${dotColor}; font-size: 1.1rem; vertical-align: middle;">●</span> ${dotText}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += `
+                </tbody>
+            </table>
+            <div style="font-size: 0.85rem; margin-bottom: 35px;">
+                <strong>Focus Areas:</strong> The top 3 modules (${top3Names.join(', ')}) account for <strong>${top3Sum} tickets</strong>, approximately <strong>${top3Percent}%</strong> of all open tickets.
+            </div>
+
+            <strong style="text-transform: uppercase;">COMPLETE MODULE BREAKDOWN</strong>
+            <p style="margin-top: 5px; font-weight: bold; font-size: 0.9rem;">Additional Modules with Active Tickets:</p>
+            <ul style="font-size: 0.9rem; margin-top: 5px;">
+        `;
+
+        if (remaining.length === 0) {
+            html += `<li><em>No additional modules with active tickets.</em></li>`;
+        } else {
+            remaining.forEach(m => {
+                html += `<li>${m[0]}: ${m[1]} tickets</li>`;
+            });
+        }
+
+        html += `</ul>`;
+
+        const titleDate = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
+        document.getElementById('moduleReportSubtitle').innerText = `${deptFilter === 'All' ? 'Global' : deptFilter} Department • ${titleDate}`;
+        document.getElementById('moduleReportContent').innerHTML = html;
+        document.getElementById('moduleReportModal').style.display = 'flex';
     }
 
     // ==========================================
