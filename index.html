@@ -314,6 +314,7 @@
             <p id="moduleReportSubtitle" style="color: #64748b; margin-top: 5px; font-weight: 500; font-size: 0.9rem;"></p>
           </div>
           <div style="display: flex; gap: 10px;">
+              <button class="btn-action btn-copy" id="btnSyncModule" onclick="exportModuleToSheet()" style="background:#3b82f6;">Sync to Google Sheets</button>
               <button class="btn-action btn-copy" onclick="window.print()" style="background:#10b981;">Print / Save PDF</button>
               <button class="icon-btn" onclick="document.getElementById('moduleReportModal').style.display='none'" style="border-color:#cbd5e1; color:#0f172a; background: transparent;">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -2367,14 +2368,22 @@
       `;
     }
     
+// Helper to get "Sep 27" format for the tab names
+    function getFormattedDateForTab() {
+        return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date());
+    }
+
     async function exportExecutiveToSheet() {
       const btn = document.getElementById('btnSyncExec');
       btn.innerText = "Syncing...";
       btn.disabled = true;
       try {
+         const deptName = state.executive.currentDept === 'All' ? 'Global' : state.executive.currentDept;
+         const tabStr = `Weekly ${deptName} - ${getFormattedDateForTab()}`;
+
          const res = await fetch(PROXY_URL, { 
              method: 'POST', 
-             body: JSON.stringify({ action: 'syncExecutiveReport', sheetData: state.executive.payloadArray }) 
+             body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.payloadArray }) 
          });
          const result = await res.json();
          if(result.error) throw new Error(result.error);
@@ -2389,6 +2398,35 @@
       setTimeout(() => {
          btn.innerText = "Sync to Google Sheets";
          btn.style.backgroundColor = "var(--accent)";
+         btn.disabled = false;
+      }, 3000);
+    }
+
+    async function exportModuleToSheet() {
+      const btn = document.getElementById('btnSyncModule');
+      btn.innerText = "Syncing...";
+      btn.disabled = true;
+      try {
+         const deptName = state.executive.currentDept === 'All' ? 'Global' : state.executive.currentDept;
+         const tabStr = `Weekly Module ${deptName} - ${getFormattedDateForTab()}`;
+
+         const res = await fetch(PROXY_URL, { 
+             method: 'POST', 
+             body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.modulePayloadArray }) 
+         });
+         const result = await res.json();
+         if(result.error) throw new Error(result.error);
+         
+         btn.innerText = "✅ Synced to Sheets!";
+         btn.style.backgroundColor = "#10b981";
+      } catch(e) {
+         alert("Sync failed: " + e.message);
+         btn.innerText = "Sync Failed";
+         btn.style.backgroundColor = "#ef4444";
+      }
+      setTimeout(() => {
+         btn.innerText = "Sync to Google Sheets";
+         btn.style.backgroundColor = "#3b82f6";
          btn.disabled = false;
       }, 3000);
     }
@@ -2487,14 +2525,12 @@
     }
 
     function generateModuleReport() {
-        // 1. Determine the active department
         const deptFilter = (state.executive && state.executive.currentDept) ? state.executive.currentDept : 'All';
         let baseData = window.allGlobalTickets;
         if (deptFilter !== 'All') {
             baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
         }
 
-        // 2. Set up Timeframes & Trackers
         const startOfThisWeek = getETMidnightForOffset(-7);
         const startOfLastWeek = getETMidnightForOffset(-14);
 
@@ -2503,50 +2539,42 @@
         let releasePendingCount = 0;
         let moduleCounts = {};
 
-        // 3. Process Data
         baseData.forEach(t => {
             const isClosed = (t.status || '').toLowerCase().includes('clos');
             const stat = t.status || '';
             const cDate = new Date(t.createdTime);
             const closedDate = t.closedTime ? new Date(t.closedTime) : null;
             
-            // This Week Open & Module Distribution
             if (!isClosed) {
                 thisWeekOpen++;
                 let mName = (t.module && t.module !== 'N/A') ? t.module : 'General';
                 moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
-                
                 if (stat === 'ReleasePending') releasePendingCount++;
             }
 
-            // Approximate Last Week Open (Created before this week, and either still open OR closed this week)
             let createdBeforeThisWeek = cDate < startOfThisWeek;
             let closedThisWeek = isClosed && closedDate && closedDate >= startOfThisWeek;
             if (createdBeforeThisWeek && (!isClosed || closedThisWeek)) {
                 lastWeekOpen++;
             }
 
-            // Completed (Closed/Resolved) tracking
             if (stat === 'Closed/Resolved' && closedDate) {
                 if (closedDate >= startOfThisWeek) thisWeekCompleted++;
                 else if (closedDate >= startOfLastWeek && closedDate < startOfThisWeek) lastWeekCompleted++;
             }
         });
 
-        // 4. Perform Adjustments & Math
         const adjustedActive = thisWeekOpen - releasePendingCount;
-        const lastWeekAdjusted = lastWeekOpen - releasePendingCount; // Using current pending as proxy for last week
+        const lastWeekAdjusted = lastWeekOpen - releasePendingCount;
         
         const openChange = thisWeekOpen - lastWeekOpen;
         const compChange = thisWeekCompleted - lastWeekCompleted;
         const adjChange = adjustedActive - lastWeekAdjusted;
 
-        // Math Helpers for UI text
         const openChangeText = openChange >= 0 ? `(↑ up from ${lastWeekOpen} last week)` : `(↓ down from ${lastWeekOpen} last week)`;
         const adjChangeText = adjChange >= 0 ? `${adjChange} tickets (from ${lastWeekAdjusted})` : `Decrease: ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})`;
         const formatChange = (num) => num > 0 ? `+${num}` : num;
 
-        // 5. Sort Modules & Top 10 Math
         const modArray = Object.entries(moduleCounts).sort((a, b) => b[1] - a[1]);
         const top10 = modArray.slice(0, 10);
         const remaining = modArray.slice(10);
@@ -2556,7 +2584,26 @@
         top10.slice(0, 3).forEach(m => { top3Sum += m[1]; top3Names.push(m[0]); });
         const top3Percent = thisWeekOpen > 0 ? ((top3Sum / thisWeekOpen) * 100).toFixed(2) : 0;
 
-        // 6. Build the HTML
+        // --- Build Data Array for Google Sheets Sync ---
+        let modPayload = [];
+        modPayload.push(["MODULE WISE REPORT", `${deptFilter === 'All' ? 'Global' : deptFilter} Department`, "Generated on: " + new Date().toLocaleDateString()]);
+        modPayload.push([""]);
+        modPayload.push(["OVERALL STATUS"]);
+        modPayload.push(["Total Open Tickets", thisWeekOpen, openChangeText]);
+        modPayload.push(["Completed (Closed/Resolved)", thisWeekCompleted]);
+        modPayload.push(["Release Pending", releasePendingCount]);
+        modPayload.push(["Adjusted Active Count", adjustedActive, `(Excludes Release Pending)`]);
+        modPayload.push([""]);
+        modPayload.push(["TOP 10 MODULES"]);
+        modPayload.push(["Rank", "Module", "Ticket Count"]);
+        top10.forEach((m, idx) => modPayload.push([idx+1, m[0], m[1]]));
+        modPayload.push([""]);
+        modPayload.push(["ADDITIONAL MODULES"]);
+        remaining.forEach((m) => modPayload.push(["", m[0], m[1]]));
+        
+        state.executive.modulePayloadArray = modPayload;
+
+        // --- Build HTML for the Modal UI ---
         let html = `
             <div style="margin-bottom: 20px;">
                 <strong>Overall Status:</strong>
@@ -2612,9 +2659,9 @@
         } else {
             top10.forEach((m, index) => {
                 const rank = index + 1;
-                let dotColor = '#10b981'; let dotText = 'Normal'; // Green by default (Rank 7-10)
-                if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } // Red (Top 3)
-                else if (rank <= 6) { dotColor = '#eab308'; dotText = 'Medium Priority'; } // Yellow (Rank 4-6)
+                let dotColor = '#10b981'; let dotText = 'Normal'; 
+                if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } 
+                else if (rank <= 6) { dotColor = '#eab308'; dotText = 'Medium Priority'; } 
 
                 html += `
                     <tr>
