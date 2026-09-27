@@ -2586,20 +2586,40 @@
 
         // --- Build Data Array for Google Sheets Sync ---
         let modPayload = [];
-        modPayload.push(["MODULE WISE REPORT", `${deptFilter === 'All' ? 'Global' : deptFilter} Department`, "Generated on: " + new Date().toLocaleDateString()]);
-        modPayload.push(["", "", ""]);
-        modPayload.push(["OVERALL STATUS", "", ""]);
-        modPayload.push(["Total Open Tickets", thisWeekOpen, openChangeText]);
-        modPayload.push(["Completed (Closed/Resolved)", thisWeekCompleted, ""]);
-        modPayload.push(["Release Pending", releasePendingCount, ""]);
-        modPayload.push(["Adjusted Active Count", adjustedActive, `(Excludes Release Pending)`]);
-        modPayload.push(["", "", ""]);
-        modPayload.push(["TOP 10 MODULES", "", ""]);
-        modPayload.push(["Rank", "Module", "Ticket Count"]);
-        top10.forEach((m, idx) => modPayload.push([idx+1, m[0], m[1]]));
-        modPayload.push(["", "", ""]);
-        modPayload.push(["ADDITIONAL MODULES", "", ""]);
-        remaining.forEach((m) => modPayload.push(["", m[0], m[1]]));
+        // Define an empty 4-column row for consistent padding
+        const padRow = ["", "", "", ""];
+
+        modPayload.push(["MODULE WISE REPORT", `${deptFilter === 'All' ? 'Global' : deptFilter} Department`, "Generated on:", new Date().toLocaleDateString()]);
+        modPayload.push(padRow);
+        
+        // 1. Key Metrics Table
+        modPayload.push(["KEY METRICS", "", "", ""]);
+        modPayload.push(["Metric", "This Week", "Last Week", "Change"]);
+        modPayload.push(["Total Open Tickets", thisWeekOpen, lastWeekOpen, formatChange(openChange)]);
+        modPayload.push(["Active Tickets (excl. ReleasePending)", adjustedActive, lastWeekAdjusted, formatChange(adjChange)]);
+        modPayload.push(["Completed (Closed/Resolved)", thisWeekCompleted, lastWeekCompleted, formatChange(compChange)]);
+        modPayload.push(["Release Pending", releasePendingCount, "-", "-"]);
+        modPayload.push(padRow);
+
+        // 2. Top 10 Modules Table
+        modPayload.push(["TOP 10 MODULES", "", "", ""]);
+        modPayload.push(["Rank", "Module", "Ticket Count", "Status Indicator"]);
+        top10.forEach((m, idx) => {
+            let dotText = 'Normal'; 
+            if (idx < 3) dotText = 'High Priority'; 
+            else if (idx < 6) dotText = 'Medium Priority'; 
+            modPayload.push([idx+1, m[0], m[1], dotText]);
+        });
+        modPayload.push(padRow);
+
+        // 3. Focus Areas
+        modPayload.push(["FOCUS AREAS:", `The top 3 modules (${top3Names.join(', ')}) account for ${top3Sum} tickets, approximately ${top3Percent}% of all open tickets.`, "", ""]);
+        modPayload.push(padRow);
+
+        // 4. Additional Modules
+        modPayload.push(["COMPLETE MODULE BREAKDOWN (Additional)", "", "", ""]);
+        modPayload.push(["Module", "Ticket Count", "", ""]);
+        remaining.forEach((m) => modPayload.push([m[0], m[1], "", ""]));
         
         state.executive.modulePayloadArray = modPayload;
 
