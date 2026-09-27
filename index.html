@@ -2587,18 +2587,18 @@
         // --- Build Data Array for Google Sheets Sync ---
         let modPayload = [];
         modPayload.push(["MODULE WISE REPORT", `${deptFilter === 'All' ? 'Global' : deptFilter} Department`, "Generated on: " + new Date().toLocaleDateString()]);
-        modPayload.push([""]);
-        modPayload.push(["OVERALL STATUS"]);
+        modPayload.push(["", "", ""]);
+        modPayload.push(["OVERALL STATUS", "", ""]);
         modPayload.push(["Total Open Tickets", thisWeekOpen, openChangeText]);
-        modPayload.push(["Completed (Closed/Resolved)", thisWeekCompleted]);
-        modPayload.push(["Release Pending", releasePendingCount]);
+        modPayload.push(["Completed (Closed/Resolved)", thisWeekCompleted, ""]);
+        modPayload.push(["Release Pending", releasePendingCount, ""]);
         modPayload.push(["Adjusted Active Count", adjustedActive, `(Excludes Release Pending)`]);
-        modPayload.push([""]);
-        modPayload.push(["TOP 10 MODULES"]);
+        modPayload.push(["", "", ""]);
+        modPayload.push(["TOP 10 MODULES", "", ""]);
         modPayload.push(["Rank", "Module", "Ticket Count"]);
         top10.forEach((m, idx) => modPayload.push([idx+1, m[0], m[1]]));
-        modPayload.push([""]);
-        modPayload.push(["ADDITIONAL MODULES"]);
+        modPayload.push(["", "", ""]);
+        modPayload.push(["ADDITIONAL MODULES", "", ""]);
         remaining.forEach((m) => modPayload.push(["", m[0], m[1]]));
         
         state.executive.modulePayloadArray = modPayload;
