@@ -1167,8 +1167,9 @@
             try {
                 result = JSON.parse(rawText);
             } catch (parseError) {
-                // Temporarily print the exact Google Server error to the screen
-                throw new Error("HIDDEN GOOGLE ERROR: " + rawText.substring(0, 300));
+                // Safely convert HTML tags to text so it doesn't render invisibly
+                const safeText = rawText.substring(0, 300).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                throw new Error("HIDDEN GOOGLE ERROR: " + safeText);
             }
             
             if (result.error) throw new Error(result.error);
