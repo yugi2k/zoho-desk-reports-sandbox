@@ -1067,7 +1067,7 @@
       }
       btn.textContent = "Sending..."; btn.disabled = true;
       try {
-        const res = await fetch(PROXY_URL, { method: 'POST', body: JSON.stringify({ action: 'sendOtp', email: email }) });
+        const res = await fetch(PROXY_URL, { method: 'POST', credentials: 'omit', body: JSON.stringify({ action: 'sendOtp', email: email }) });
         const result = await res.json(); if (result.error) throw new Error();
         pendingEmail = email; document.getElementById('otpStep2').style.display = 'block'; btn.textContent = "OTP Sent!";
       } catch (err) { btn.textContent = "Send OTP"; btn.disabled = false; }
@@ -1076,7 +1076,7 @@
       const otp = document.getElementById('otpInput').value.trim(); const btn = document.querySelector('button[onclick="verifyOTP()"]');
       if (!otp) return; btn.textContent = "Verifying..."; btn.disabled = true;
       try {
-        const res = await fetch(PROXY_URL, { method: 'POST', body: JSON.stringify({ action: 'verifyOtp', email: pendingEmail, otp: otp }) });
+        const res = await fetch(PROXY_URL, { method: 'POST', credentials: 'omit', body: JSON.stringify({ action: 'verifyOtp', email: pendingEmail, otp: otp }) });
         const result = await res.json(); if (result.error) throw new Error();
         loadSecureApp();
       } catch (err) { btn.textContent = "Login securely"; btn.disabled = false; }
@@ -1160,7 +1160,7 @@
             lastUpdateMs = parseInt(cacheTimestamp);
         } else {
             const fetchUrl = forceLive ? `${PROXY_URL}?refresh=true&pin=${encodeURIComponent(pin)}` : PROXY_URL;
-            const response = await fetch(fetchUrl, { method: 'GET' });
+            const response = await fetch(fetchUrl, { method: 'GET', credentials: 'omit' });
             const rawText = await response.text();
             
             let result;
@@ -1840,7 +1840,7 @@
       btnEl.disabled = true; inputEl.disabled = true; tableCont.style.display = 'none'; controls.style.display = 'none'; loader.style.display = 'block';
 
       try {
-        const res = await fetch(PROXY_URL, { method: 'POST', body: JSON.stringify({ action: 'aiSearch', query: query }) });
+        const res = await fetch(PROXY_URL, { method: 'POST', credentials: 'omit', body: JSON.stringify({ action: 'aiSearch', query: query }) });
         const result = await res.json();
         if (result.error) throw new Error(result.error);
         
@@ -2383,9 +2383,10 @@
          const tabStr = `Weekly ${deptName} - ${getFormattedDateForTab()}`;
 
          const res = await fetch(PROXY_URL, { 
-             method: 'POST', 
-             body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.payloadArray }) 
-         });
+          method: 'POST', 
+          credentials: 'omit',
+          body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.payloadArray }) 
+        });
          const result = await res.json();
          if(result.error) throw new Error(result.error);
          
@@ -2412,9 +2413,10 @@
          const tabStr = `Weekly Module ${deptName} - ${getFormattedDateForTab()}`;
 
          const res = await fetch(PROXY_URL, { 
-             method: 'POST', 
-             body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.modulePayloadArray }) 
-         });
+          method: 'POST', 
+          credentials: 'omit',
+          body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.payloadArray }) 
+        });
          const result = await res.json();
          if(result.error) throw new Error(result.error);
          
