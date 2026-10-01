@@ -2773,19 +2773,19 @@
                     modCounts[mName] = (modCounts[mName] || 0) + 1;
                 }
             });
-            // Filter out 'General' and get top 5
             const top5 = Object.entries(modCounts).filter(([m, c]) => m !== 'General').sort((a,b)=>b[1]-a[1]).slice(0, 5);
             const totalTop5 = top5.reduce((sum, m) => sum + m[1], 0);
             const top2Sum = (top5[0]?.[1]||0) + (top5[1]?.[1]||0);
             const next3Sum = totalTop5 - top2Sum;
-            const top2Percent = totalTop5 > 0 ? ((top2Sum / totalTop5) * 100).toFixed(1) : 0;
+            const top2Percent = totalTop5 > 0 ? ((top2Sum / totalTop5) * 100).toFixed(0) : 0;
 
-            // USE BACKTICKS TO PASTE RAW HTML HERE:
             htmlTemplate = `
-              <h2>Development Ticket Volume</h2>
-              <p>Top 5 Modules Total: <strong>${totalTop5}</strong></p>
-              <p>Top 2 (${top5[0]?.[0] \vert{}\vert{} '-'} &${top5[1]?.[0] || '-'}): <strong>${top2Sum} tickets (${top2Percent}%)</strong></p>
-              <p>Next 3: <strong>${next3Sum} tickets</strong></p>
+              <div style="font-family: sans-serif; color: #1c2b3a; padding: 20px;">
+                <h2>Development Ticket Volume</h2>
+                <p>Top 5 Modules Total: <strong>${totalTop5}</strong></p>
+                <p>Top 2 (${top5[0]?.[0] || '-'} & ${top5[1]?.[0] || '-'}): <strong>${top2Sum} tickets (${top2Percent}%)</strong></p>
+                <p>Next 3: <strong>${next3Sum} tickets</strong></p>
+              </div>
             `;
         } 
         else if (dept === 'Services') {
@@ -2798,22 +2798,20 @@
                 const isClosed = (t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp');
                 const noResp = (now - new Date(t.modifiedTime || t.createdTime)) > 86400000;
 
-                if (!isClosed) { 
-                    currActive++; 
-                    if (noResp) currNoResp++; 
-                }
+                if (!isClosed) { currActive++; if (noResp) currNoResp++; }
                 if (cDate < oneWeekAgo) {
                     const wasClosed = isClosed && new Date(t.closedTime) < oneWeekAgo;
                     if (!wasClosed) priorActive++; 
                 }
             });
 
-            // USE BACKTICKS TO PASTE RAW HTML HERE:
             htmlTemplate = `
-              <h2>Services Two-Week Movement</h2>
-              <p>Open + In Progress (Current): <strong>${currActive}</strong></p>
-              <p>Open + In Progress (Prior): <strong>${priorActive}</strong></p>
-              <p>Awaiting Response >24h: <strong>${currNoResp}</strong></p>
+              <div style="font-family: sans-serif; color: #1c2b3a; padding: 20px;">
+                <h2>Services Two-Week Movement</h2>
+                <p>Open + In Progress (Current): <strong>${currActive}</strong></p>
+                <p>Open + In Progress (Prior): <strong>${priorActive}</strong></p>
+                <p>Awaiting Response >24h: <strong>${currNoResp}</strong></p>
+              </div>
             `;
         }
         else if (dept === 'Support') {
@@ -2833,14 +2831,15 @@
                 }
             });
 
-            // USE BACKTICKS TO PASTE RAW HTML HERE:
             htmlTemplate = `
-              <h2>Support Desk Security Age Bands</h2>
-              <p>Total Active: <strong>${activeCount}</strong></p>
-              <p>0-30 Days: <strong>${age0_30}</strong></p>
-              <p>31-90 Days: <strong>${age31_90}</strong></p>
-              <p>91-365 Days: <strong>${age91_365}</strong></p>
-              <p>Over 365 Days: <strong>${age365plus}</strong></p>
+              <div style="font-family: sans-serif; color: #1c2b3a; padding: 20px;">
+                <h2>Support Desk Security Age Bands</h2>
+                <p>Total Active: <strong>${activeCount}</strong></p>
+                <p>0-30 Days: <strong>${age0_30}</strong></p>
+                <p>31-90 Days: <strong>${age31_90}</strong></p>
+                <p>91-365 Days: <strong>${age91_365}</strong></p>
+                <p>Over 365 Days: <strong>${age365plus}</strong></p>
+              </div>
             `;
         }
 
@@ -2852,6 +2851,7 @@
         if(savedEmail) document.getElementById('emailSendTo').value = savedEmail;
         document.getElementById('emailPreviewModal').style.display = 'flex';
     }
+
     async function sendDeptEmail() {
         const btn = document.getElementById('btnSendEmail');
         const emailAddress = document.getElementById('emailSendTo').value.trim();
@@ -2862,7 +2862,7 @@
         try {
             const res = await fetch(PROXY_URL, { 
                 method: 'POST', credentials: 'omit', 
-                body: JSON.stringify({ action: 'sendReportEmail', emailTo: emailAddress, subject: `Weekly ${window.currentEmailDept} Metrics`, htmlBody: window.currentEmailPayload }) 
+                body: JSON.stringify({ action: 'sendReportEmail', emailTo: emailAddress, subject: \`Weekly \${window.currentEmailDept} Metrics\`, htmlBody: window.currentEmailPayload }) 
             });
             const result = await res.json();
             if (result.error) throw new Error(result.error);
