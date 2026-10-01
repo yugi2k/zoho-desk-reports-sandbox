@@ -327,6 +327,26 @@
     </div>
   </div>
 
+  <!-- DEPARTMENT EMAIL PREVIEW MODAL -->
+  <div id="emailPreviewModal" class="modal-overlay">
+    <div class="modal-content animate-in" style="max-width: 800px; width: 95vw; background: #ffffff; color: #0f172a; text-align: left; padding: 40px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
+          <div>
+            <h2 style="margin:0; font-weight:700; color:#0f172a; font-size: 1.5rem;" id="emailPreviewTitle">Report Preview</h2>
+            <p style="color: #64748b; margin-top: 5px; font-weight: 500; font-size: 0.9rem;">Review before sending.</p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="email" id="emailSendTo" class="filter-input" placeholder="Your Email Address" style="width: 200px;">
+              <button class="btn-action" id="btnSendEmail" onclick="sendDeptEmail()" style="background:#10b981;">Send Email</button>
+              <button class="icon-btn" onclick="document.getElementById('emailPreviewModal').style.display='none'" style="border-color:#cbd5e1; color:#0f172a; background: transparent;">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+          </div>
+      </div>
+      <div id="emailPreviewContent" style="max-height: 60vh; overflow-y: auto; background: #edf1f5; padding: 20px; border-radius: 8px;"></div>
+    </div>
+  </div>
+
   <!-- SECURE APP WRAPPER -->
   <div id="view-secure-app" class="page-view">
     
@@ -591,6 +611,7 @@
           <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-right: 10px;">
             Total Tickets: <span id="ticketsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
           </div>
+          <button class="btn-action" id="btnDeptEmailPreview" onclick="openEmailPreview()" style="background-color: #8b5cf6; display: none;">Preview & Email Report</button>
           <button class="btn-action btn-clear" onclick="clearTicketsFilters()" data-tooltip="Reset all filters">Clear</button>
           <button class="btn-action btn-export" onclick="exportTicketsToCSV()" data-tooltip="Download current view">Export</button>
         </div>
@@ -1592,6 +1613,7 @@
     // VIEW 4: TICKETS DEEP DIVE
     // ==========================================
     function initTicketsView(filterType, filterValue) {
+      document.getElementById('btnDeptEmailPreview').style.display = 'none';
       document.getElementById('headerTitleText').textContent = 'Loading Tickets...';
       state.tickets.filterType = filterType; state.tickets.filterValue = filterValue;
       
@@ -1616,6 +1638,13 @@
           const val = decodeURIComponent(filterValue);
           baseT = baseT.filter(t => (t.department?t.department.name:'General') === val);
           document.getElementById('headerTitleText').textContent = `${val} Tickets`;
+          
+          if (['Support', 'Services', 'Development'].includes(val)) {
+              document.getElementById('btnDeptEmailPreview').style.display = 'inline-flex';
+              window.currentEmailDept = val;
+          } else {
+              document.getElementById('btnDeptEmailPreview').style.display = 'none';
+          }
       }
       else if (filterType === 'timeframe') {
         const today = getETMidnightForOffset(0); const yesterday = getETMidnightForOffset(-1); const last7 = getETMidnightForOffset(-7); const last30 = getETMidnightForOffset(-30);
@@ -2723,6 +2752,124 @@
         document.getElementById('moduleReportSubtitle').innerText = `${deptFilter === 'All' ? 'Global' : deptFilter} Department • ${titleDate}`;
         document.getElementById('moduleReportContent').innerHTML = html;
         document.getElementById('moduleReportModal').style.display = 'flex';
+    }
+
+    // ==========================================
+    // DEPARTMENT EMAIL PREVIEWS & SENDING
+    // ==========================================
+    window.currentEmailPayload = ""; 
+
+    function openEmailPreview() {
+        const dept = window.currentEmailDept;
+        const baseData = window.allGlobalTickets.filter(t => (t.department ? t.department.name : 'General') === dept);
+        
+        let htmlTemplate = "";
+        
+        if (dept === 'Development') {
+            let modCounts = {};
+            baseData.forEach(t => {
+                if (!(t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp')) {
+                    let mName = (t.module && t.module !== 'N/A') ? t.module : 'General';
+                    modCounts[mName] = (modCounts[mName] || 0) + 1;
+                }
+            });
+            // Filter out 'General' and get top 5
+            const top5 = Object.entries(modCounts).filter(([m, c]) => m !== 'General').sort((a,b)=>b[1]-a[1]).slice(0, 5);
+            const totalTop5 = top5.reduce((sum, m) => sum + m[1], 0);
+            const top2Sum = (top5[0]?.[1]||0) + (top5[1]?.[1]||0);
+            const next3Sum = totalTop5 - top2Sum;
+            const top2Percent = totalTop5 > 0 ? ((top2Sum / totalTop5) * 100).toFixed(1) : 0;
+
+            // USE BACKTICKS TO PASTE RAW HTML HERE:
+            htmlTemplate = `
+              <h2>Development Ticket Volume</h2>
+              <p>Top 5 Modules Total: <strong>${totalTop5}</strong></p>
+              <p>Top 2 (${top5[0]?.[0] \vert{}\vert{} '-'} &${top5[1]?.[0] || '-'}): <strong>${top2Sum} tickets (${top2Percent}%)</strong></p>
+              <p>Next 3: <strong>${next3Sum} tickets</strong></p>
+            `;
+        } 
+        else if (dept === 'Services') {
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+            let currActive = 0, priorActive = 0, currNoResp = 0;
+            
+            baseData.forEach(t => {
+                const cDate = new Date(t.createdTime);
+                const isClosed = (t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp');
+                const noResp = (now - new Date(t.modifiedTime || t.createdTime)) > 86400000;
+
+                if (!isClosed) { 
+                    currActive++; 
+                    if (noResp) currNoResp++; 
+                }
+                if (cDate < oneWeekAgo) {
+                    const wasClosed = isClosed && new Date(t.closedTime) < oneWeekAgo;
+                    if (!wasClosed) priorActive++; 
+                }
+            });
+
+            // USE BACKTICKS TO PASTE RAW HTML HERE:
+            htmlTemplate = `
+              <h2>Services Two-Week Movement</h2>
+              <p>Open + In Progress (Current): <strong>${currActive}</strong></p>
+              <p>Open + In Progress (Prior): <strong>${priorActive}</strong></p>
+              <p>Awaiting Response >24h: <strong>${currNoResp}</strong></p>
+            `;
+        }
+        else if (dept === 'Support') {
+            let activeCount = 0;
+            let age0_30 = 0, age31_90 = 0, age91_365 = 0, age365plus = 0;
+            
+            baseData.forEach(t => {
+                if (!(t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp')) {
+                    activeCount++;
+                    const ageDays = Math.floor((new Date() - new Date(t.createdTime)) / (1000 * 60 * 60 * 24));
+                    if ((t.module || '').toLowerCase().includes('security')) {
+                        if (ageDays <= 30) age0_30++;
+                        else if (ageDays <= 90) age31_90++;
+                        else if (ageDays <= 365) age91_365++;
+                        else age365plus++;
+                    }
+                }
+            });
+
+            // USE BACKTICKS TO PASTE RAW HTML HERE:
+            htmlTemplate = `
+              <h2>Support Desk Security Age Bands</h2>
+              <p>Total Active: <strong>${activeCount}</strong></p>
+              <p>0-30 Days: <strong>${age0_30}</strong></p>
+              <p>31-90 Days: <strong>${age31_90}</strong></p>
+              <p>91-365 Days: <strong>${age91_365}</strong></p>
+              <p>Over 365 Days: <strong>${age365plus}</strong></p>
+            `;
+        }
+
+        window.currentEmailPayload = htmlTemplate;
+        document.getElementById('emailPreviewTitle').innerText = `${dept} Report Preview`;
+        document.getElementById('emailPreviewContent').innerHTML = htmlTemplate;
+        
+        const savedEmail = document.getElementById('emailInput')?.value || pendingEmail || "";
+        if(savedEmail) document.getElementById('emailSendTo').value = savedEmail;
+        document.getElementById('emailPreviewModal').style.display = 'flex';
+    }
+    async function sendDeptEmail() {
+        const btn = document.getElementById('btnSendEmail');
+        const emailAddress = document.getElementById('emailSendTo').value.trim();
+        
+        if (!emailAddress || !emailAddress.includes('@')) { alert("Please enter a valid email."); return; }
+        btn.innerText = "Sending..."; btn.disabled = true;
+
+        try {
+            const res = await fetch(PROXY_URL, { 
+                method: 'POST', credentials: 'omit', 
+                body: JSON.stringify({ action: 'sendReportEmail', emailTo: emailAddress, subject: `Weekly ${window.currentEmailDept} Metrics`, htmlBody: window.currentEmailPayload }) 
+            });
+            const result = await res.json();
+            if (result.error) throw new Error(result.error);
+            btn.innerText = "✅ Sent!"; btn.style.background = "#10b981";
+        } catch (err) { alert("Failed to send email: " + err.message); btn.innerText = "Failed"; btn.style.background = "#ef4444"; }
+
+        setTimeout(() => { btn.innerText = "Send Email"; btn.style.background = "#10b981"; btn.disabled = false; }, 3000);
     }
 
     // ==========================================
