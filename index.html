@@ -888,7 +888,8 @@
         col_closed: 'Closed Date',
         col_responded: 'Agent Responded',
         col_resolution: 'Resolution (Hrs)',
-        col_resolved: 'Issue Resolved Time'
+        col_resolved: 'Issue Resolved Time',
+        col_module: 'Module' // <-- ADD THIS LINE
     };
 
     const tableDateFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' });
@@ -942,7 +943,7 @@
     function initAllColumns() {
        initColumns('reports', ['col_id', 'col_subject', 'col_priority', 'col_status', 'col_assignee', 'col_responded', 'col_created', 'col_classification']);
        initColumns('agents', ['col_id', 'col_subject', 'col_client', 'col_priority', 'col_status', 'col_created', 'col_updated', 'col_closed', 'col_classification']);
-       initColumns('tickets', ['col_id', 'col_subject', 'col_client', 'col_priority', 'col_dept', 'col_assignee', 'col_status', 'col_created', 'col_classification']);
+       initColumns('tickets', ['col_id', 'col_subject', 'col_client', 'col_priority', 'col_dept', 'col_assignee', 'col_status', 'col_created', 'col_classification', 'col_module']);
        initColumns('critical', ['col_created', 'col_client', 'col_id', 'col_subject', 'col_status', 'col_priority', 'col_resolved', 'col_responded', 'col_classification']);
        initColumns('ai', ['col_id', 'col_subject', 'col_client', 'col_dept', 'col_assignee', 'col_status', 'col_created', 'col_updated', 'col_classification']);
     }
@@ -986,6 +987,8 @@
         case 'col_resolved': 
              let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
              val = customResolvedTimes[t.id] || '-'; break;
+          case 'col_module': 
+             val = (t.module && t.module.trim() !== '' && t.module !== 'N/A' && t.module !== 'General') ? t.module : 'No Module Selected'; break;
       }
       return `<td>${val}</td>`;
     }
@@ -1010,6 +1013,9 @@
         case 'col_resolved': 
              let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
              return `"${(customResolvedTimes[t.id] || '-').replace(/"/g,'""')}"`;
+          case 'col_module': 
+             let mVal = (t.module && t.module.trim() !== '' && t.module !== 'N/A' && t.module !== 'General') ? t.module : 'No Module Selected';
+             return `"${mVal.replace(/"/g,'""')}"`;
       }
       return '-';
     }
