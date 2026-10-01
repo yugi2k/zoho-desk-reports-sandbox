@@ -2138,7 +2138,7 @@
       state.executive.currentDept = selected;
       document.getElementById('execDeptLabel').innerText = selected === 'All' ? 'All Departments' : selected;
       
-      // If department changed (or first load), pull the relevant agents into the new dropdown
+      // Rebuild the Assignee list if the department changed
       if (isInit || prevDept !== selected) {
           let deptData = window.allGlobalTickets;
           if (selected !== 'All') {
@@ -2150,18 +2150,22 @@
           });
           
           const el = document.getElementById('execAgentDropdown');
-          el.innerHTML = '';
-          Array.from(ag).sort().forEach(v => {
-              el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="renderExecutiveView()"> ${v}</label>`;
-          });
+          if (el) {
+              el.innerHTML = '';
+              Array.from(ag).sort().forEach(v => {
+                  el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="renderExecutiveView()"> ${v}</label>`;
+              });
+          }
       }
 
-      // Only show the Assignee dropdown if the Development department is selected
+      // Show the Assignee filter ONLY for Development
       const agentFilterGrp = document.getElementById('execAgentFilterGroup');
-      if (selected === 'Development') {
-          agentFilterGrp.style.display = 'flex';
-      } else {
-          agentFilterGrp.style.display = 'none';
+      if (agentFilterGrp) {
+          if (selected === 'Development') {
+              agentFilterGrp.style.display = 'flex';
+          } else {
+              agentFilterGrp.style.display = 'none';
+          }
       }
 
       renderExecutiveView();
@@ -2175,24 +2179,22 @@
           baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
       }
 
-      // ========================================================
-      // NEW: AGENT FILTER FOR DEVELOPMENT
-      // ========================================================
+      // Apply the Agent Filter explicitly for Development before running math
       if (deptFilter === 'Development') {
-          const sA = Array.from(document.querySelectorAll('#execAgentDropdown input:checked')).map(c=>c.value);
-          document.getElementById('execAgentLabel').innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
-          
-          // If any agents are checked, filter the array before the math runs
-          if (sA.length > 0) {
-              baseData = baseData.filter(t => {
-                  const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
-                  return sA.includes(asn);
-              });
+          const agentInputs = document.querySelectorAll('#execAgentDropdown input:checked');
+          if (agentInputs) {
+              const sA = Array.from(agentInputs).map(c=>c.value);
+              const labelEl = document.getElementById('execAgentLabel');
+              if (labelEl) labelEl.innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
+              
+              if (sA.length > 0) {
+                  baseData = baseData.filter(t => {
+                      const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
+                      return sA.includes(asn);
+                  });
+              }
           }
       }
-
-      const today = new Date();
-      // ... KEEP ALL YOUR EXISTING LOGIC BELOW THIS EXACTLY AS IS ...
 
       const today = new Date();
       const last7DaysDate = getETMidnightForOffset(-7);
@@ -2200,7 +2202,7 @@
       const dateRangeStr = `${dateFmt.format(last7DaysDate)} - ${dateFmt.format(today)}`;
 
       // ========================================================
-      // 1. SPECIFIC LAYOUT FOR "SERVICES"
+      // 1. SERVICES LAYOUT
       // ========================================================
       if (deptFilter === 'Services') {
           const now = new Date();
@@ -2252,24 +2254,21 @@
           const dfRel = currRelevant - priorRelevant; const dRs = dfRel > 0 ? "+"+dfRel : dfRel;
           const dfNR = currNoResp - priorNoResp; const dNRs = dfNR > 0 ? "+"+dfNR : dfNR;
 
-          // Build Google Sheets Payload
           let payload = [];
           payload.push(["SERVICES DESK REPORT", new Date().toLocaleDateString(), "", ""]);
           payload.push(["", "", "", ""]);
-          
           payload.push(["CURRENT SERVICE WORKLOAD", "", "", ""]);
           payload.push(["Open + In Progress statuses", currActive, "Relevant with services desk", currRelevant]);
           payload.push(["Awaiting response over 24 hours", currNoResp, "All listed statuses", totalListed]);
           payload.push(["", "", "", ""]);
-          
           payload.push(["WEEK-OVER-WEEK COMPARISON", "Prior", "Current", "Change"]);
           payload.push(["All listed statuses", priorTotalListed, totalListed, dTs]);
           payload.push(["Open + In Progress", priorActive, currActive, dAs]);
           payload.push(["Relevant with services desk", priorRelevant, currRelevant, dRs]);
           payload.push(["Awaiting response >24h", priorNoResp, currNoResp, dNRs]);
           payload.push(["", "", "", ""]);
-          
           payload.push(["STATUS BREAKDOWN", "Tickets", "Share", ""]);
+          
           let statHtml = "";
           Object.entries(sC).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => {
               if(v > 0) {
@@ -2279,16 +2278,15 @@
               }
           });
           payload.push(["", "", "", ""]);
-          
           payload.push(["ACTIVE-WORK SHARE", "", "", ""]);
           payload.push(["Open + In Progress", currActive, "Other listed statuses", totalListed - currActive]);
           payload.push(["", "", "", ""]);
           payload.push(["ACTIVE-WORK COMPOSITION", "", "", ""]);
           payload.push(["Open", sC['Open'] || 0, "In Progress", sC['In Progress'] || 0]);
           payload.push(["", "", "", ""]);
-          
           payload.push(["RESPONSES BEYOND 24 HOURS", "", "", ""]);
           payload.push(["Ticket ID", "Last modified", "Hours reported", ""]);
+          
           unrespList.sort((a,b) => b.ms - a.ms);
           const dtFmt = new Intl.DateTimeFormat('en-US', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit', hour12:true });
           let unrespHtml = "";
@@ -2308,57 +2306,21 @@
           document.getElementById('execWidgetsContainer').innerHTML = `
              <div class="exec-grid-container">
                 <div class="glass-panel exec-table-panel">
-                   <table>
-                      <thead style="background:var(--th-bg);"><tr><th colspan="2" style="font-size: 1rem; color: var(--accent);">Current service workload</th></tr></thead>
-                      <tbody>
-                         <tr><td>Open + In Progress statuses</td><td style="font-size:1.2rem;"><strong>${currActive}</strong></td></tr>
-                         <tr><td>Relevant with services desk</td><td style="font-size:1.2rem;"><strong>${currRelevant}</strong></td></tr>
-                         <tr><td>Awaiting response over 24 hours</td><td style="font-size:1.2rem;"><strong>${currNoResp}</strong></td></tr>
-                         <tr><td>All listed statuses</td><td style="font-size:1.2rem;"><strong>${totalListed}</strong></td></tr>
-                      </tbody>
-                   </table>
+                   <table><thead style="background:var(--th-bg);"><tr><th colspan="2" style="font-size: 1rem; color: var(--accent);">Current service workload</th></tr></thead>
+                      <tbody><tr><td>Open + In Progress statuses</td><td style="font-size:1.2rem;"><strong>${currActive}</strong></td></tr><tr><td>Relevant with services desk</td><td style="font-size:1.2rem;"><strong>${currRelevant}</strong></td></tr><tr><td>Awaiting response over 24 hours</td><td style="font-size:1.2rem;"><strong>${currNoResp}</strong></td></tr><tr><td>All listed statuses</td><td style="font-size:1.2rem;"><strong>${totalListed}</strong></td></tr></tbody></table>
                 </div>
                 <div class="glass-panel exec-table-panel">
-                   <table>
-                      <thead style="background:var(--th-bg);">
-                         <tr><th colspan="4" style="font-size: 1rem; color: var(--accent);">Week-over-week comparison</th></tr>
-                         <tr><th style="font-size:0.75rem;">Metric</th><th style="font-size:0.75rem;">Prior</th><th style="font-size:0.75rem;">Current</th><th style="font-size:0.75rem;">Change</th></tr>
-                      </thead>
-                      <tbody>
-                         <tr><td>All listed statuses</td><td>${priorTotalListed}</td><td><strong>${totalListed}</strong></td><td><span style="color:${dfTot>0?'#ef4444':'#10b981'}; font-weight:bold;">${dTs}</span></td></tr>
-                         <tr><td>Open + In Progress</td><td>${priorActive}</td><td><strong>${currActive}</strong></td><td><span style="color:${dfAct>0?'#ef4444':'#10b981'}; font-weight:bold;">${dAs}</span></td></tr>
-                         <tr><td>Relevant with services desk</td><td>${priorRelevant}</td><td><strong>${currRelevant}</strong></td><td><span style="color:${dfRel>0?'#ef4444':'#10b981'}; font-weight:bold;">${dRs}</span></td></tr>
-                         <tr><td>Awaiting response >24h</td><td>${priorNoResp}</td><td><strong>${currNoResp}</strong></td><td><span style="color:${dfNR>0?'#ef4444':'#10b981'}; font-weight:bold;">${dNRs}</span></td></tr>
-                      </tbody>
-                   </table>
+                   <table><thead style="background:var(--th-bg);"><tr><th colspan="4" style="font-size: 1rem; color: var(--accent);">Week-over-week comparison</th></tr><tr><th style="font-size:0.75rem;">Metric</th><th style="font-size:0.75rem;">Prior</th><th style="font-size:0.75rem;">Current</th><th style="font-size:0.75rem;">Change</th></tr></thead>
+                      <tbody><tr><td>All listed statuses</td><td>${priorTotalListed}</td><td><strong>${totalListed}</strong></td><td><span style="color:${dfTot>0?'#ef4444':'#10b981'}; font-weight:bold;">${dTs}</span></td></tr><tr><td>Open + In Progress</td><td>${priorActive}</td><td><strong>${currActive}</strong></td><td><span style="color:${dfAct>0?'#ef4444':'#10b981'}; font-weight:bold;">${dAs}</span></td></tr><tr><td>Relevant with services desk</td><td>${priorRelevant}</td><td><strong>${currRelevant}</strong></td><td><span style="color:${dfRel>0?'#ef4444':'#10b981'}; font-weight:bold;">${dRs}</span></td></tr><tr><td>Awaiting response >24h</td><td>${priorNoResp}</td><td><strong>${currNoResp}</strong></td><td><span style="color:${dfNR>0?'#ef4444':'#10b981'}; font-weight:bold;">${dNRs}</span></td></tr></tbody></table>
                 </div>
              </div>
-
              <div class="exec-grid-container">
                 <div class="glass-panel exec-table-panel" style="height:fit-content;">
-                   <table>
-                      <thead style="background:var(--th-bg);">
-                         <tr><th colspan="3" style="font-size: 1rem; color: var(--accent);">Status breakdown</th></tr>
-                         <tr><th style="font-size:0.75rem;">Status</th><th style="font-size:0.75rem;">Tickets</th><th style="font-size:0.75rem;">Share</th></tr>
-                      </thead>
-                      <tbody>${statHtml}</tbody>
-                   </table>
+                   <table><thead style="background:var(--th-bg);"><tr><th colspan="3" style="font-size: 1rem; color: var(--accent);">Status breakdown</th></tr><tr><th style="font-size:0.75rem;">Status</th><th style="font-size:0.75rem;">Tickets</th><th style="font-size:0.75rem;">Share</th></tr></thead><tbody>${statHtml}</tbody></table>
                 </div>
                 <div class="glass-panel exec-table-panel" style="height:fit-content;">
-                   <table>
-                      <thead style="background:var(--th-bg);">
-                         <tr><th colspan="3" style="font-size: 1rem; color: var(--accent);">Responses beyond 24 hours</th></tr>
-                         <tr><th style="font-size:0.75rem;">Ticket ID</th><th style="font-size:0.75rem;">Last modified</th><th style="font-size:0.75rem;">Hours reported</th></tr>
-                      </thead>
-                      <tbody>${unrespHtml}</tbody>
-                   </table>
-                   <table style="margin-top: 20px;">
-                      <thead style="background:var(--th-bg);"><tr><th colspan="2" style="font-size: 1rem; color: var(--accent);">Active-work composition</th></tr></thead>
-                      <tbody>
-                         <tr><td>Open</td><td><strong>${sC['Open'] || 0}</strong></td></tr>
-                         <tr><td>In Progress</td><td><strong>${sC['In Progress'] || 0}</strong></td></tr>
-                      </tbody>
-                   </table>
+                   <table><thead style="background:var(--th-bg);"><tr><th colspan="3" style="font-size: 1rem; color: var(--accent);">Responses beyond 24 hours</th></tr><tr><th style="font-size:0.75rem;">Ticket ID</th><th style="font-size:0.75rem;">Last modified</th><th style="font-size:0.75rem;">Hours reported</th></tr></thead><tbody>${unrespHtml}</tbody></table>
+                   <table style="margin-top: 20px;"><thead style="background:var(--th-bg);"><tr><th colspan="2" style="font-size: 1rem; color: var(--accent);">Active-work composition</th></tr></thead><tbody><tr><td>Open</td><td><strong>${sC['Open'] || 0}</strong></td></tr><tr><td>In Progress</td><td><strong>${sC['In Progress'] || 0}</strong></td></tr></tbody></table>
                 </div>
              </div>
           `;
@@ -2366,7 +2328,7 @@
       }
 
       // ========================================================
-      // 2. SPECIFIC LAYOUT FOR "DEVELOPMENT"
+      // 2. DEVELOPMENT LAYOUT
       // ========================================================
       if (deptFilter === 'Development') {
           const startOfThisWeek = getETMidnightForOffset(-7);
@@ -2386,14 +2348,12 @@
               let mName = (t.module && t.module.trim() !== '' && t.module !== 'N/A') ? t.module : 'No Module Selected';
               if (mName === 'General') mName = 'No Module Selected';
               
-              // Proxy matchers for Dev specific statuses
               const isDevComp = stat.includes('releasepending') || stat.includes('dev-completed') || stat.includes('resolved');
               const isAwaiting = stat.includes('awaiting response') || stat.includes('client awaiting');
 
               if (!isClosed) {
                   thisWeekOpen++;
                   moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
-                  
                   if (isDevComp) devCompletedThisWeek++;
                   if (isAwaiting) clientAwaiting++;
               }
@@ -2409,12 +2369,10 @@
 
           const adjustedActive = thisWeekOpen - devCompletedThisWeek;
           const lastWeekAdjusted = lastWeekOpen - devCompletedLastWeek;
-          
           const openChange = thisWeekOpen - lastWeekOpen;
           const devCompChange = devCompletedThisWeek - devCompletedLastWeek;
           const adjChange = adjustedActive - lastWeekAdjusted;
           const awaitChange = clientAwaiting - clientAwaitingLastWeek;
-
           const openChangeText = openChange >= 0 ? `(↑ up from ${lastWeekOpen} last week)` : `(↓ down from ${lastWeekOpen} last week)`;
           const formatChange = (num) => num > 0 ? `+${num}` : num;
 
@@ -2422,18 +2380,14 @@
           const top10 = modArray.slice(0, 10);
           const remaining = modArray.slice(10);
           
-          let top3Sum = 0;
-          let top3Names = [];
+          let top3Sum = 0; let top3Names = [];
           top10.slice(0, 3).forEach(m => { top3Sum += m[1]; top3Names.push(m[0]); });
           const top3Percent = thisWeekOpen > 0 ? ((top3Sum / thisWeekOpen) * 100).toFixed(2) : 0;
 
-          // Build Google Sheets Payload
           let payload = [];
           const padRow = ["", "", "", ""];
-          
           payload.push(["DEVELOPMENT METRICS REPORT", new Date().toLocaleDateString(), "", ""]);
           payload.push(["", "", "", ""]);
-          
           payload.push(["EXECUTIVE SUMMARY", "", "", ""]);
           payload.push(["Overall Status:", "", "", ""]);
           payload.push(["Total Open Tickets", thisWeekOpen, `(from ${lastWeekOpen} last week)`, ""]);
@@ -2441,12 +2395,10 @@
           payload.push(["Dev-Completed Tickets", devCompletedThisWeek, "tickets", ""]);
           payload.push(["Awaiting Client Response", clientAwaiting, "", ""]);
           payload.push(padRow);
-          
           payload.push(["Adjusted Active Count", "", "", ""]);
           payload.push(["Active Tickets (excluding dev-completed)", adjustedActive, "", ""]);
           payload.push([`Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}`, Math.abs(adjChange), `tickets (from ${lastWeekAdjusted})`, ""]);
           payload.push(padRow);
-
           payload.push(["KEY METRICS", "", "", ""]);
           payload.push(["Metric", "This Week", "Last Week", "Change"]);
           payload.push(["Total Open Tickets", thisWeekOpen, lastWeekOpen, formatChange(openChange)]);
@@ -2454,19 +2406,16 @@
           payload.push(["Dev-Completed", devCompletedThisWeek, devCompletedLastWeek, formatChange(devCompChange)]);
           payload.push(["Client Awaiting", clientAwaiting, clientAwaitingLastWeek, formatChange(awaitChange)]);
           payload.push(padRow);
-
           payload.push(["TOP 10 MODULES WITH MAXIMUM TICKETS: @Shailesh Tayde please review the top affected modules.", "", "", ""]);
           payload.push(["Rank", "Module", "Ticket Count", "Status Indicator"]);
           top10.forEach((m, idx) => {
               let dotText = 'Normal'; 
-              if (idx < 3) dotText = 'High Priority'; 
-              else if (idx < 5) dotText = 'Medium Priority'; 
+              if (idx < 3) dotText = 'High Priority'; else if (idx < 5) dotText = 'Medium Priority'; 
               payload.push([idx+1, m[0], m[1], dotText]);
           });
           payload.push(padRow);
           payload.push(["Focus Areas:", `The top 3 modules (${top3Names.join(', ')}) account for ${top3Sum} tickets, approximately ${top3Percent}% of all open tickets.`, "", ""]);
           payload.push(padRow);
-
           payload.push(["COMPLETE MODULE BREAKDOWN", "", "", ""]);
           payload.push(["Detailed Report Available:", "", "", ""]);
           payload.push(["Additional Modules with Active Tickets:", "", "", ""]);
@@ -2475,114 +2424,22 @@
           state.executive.payloadArray = payload;
           document.getElementById('execTotalCount').innerText = thisWeekOpen;
 
-          // Build UI HTML
-          let html = `
-              <div class="exec-grid-container" style="grid-template-columns: 1fr;">
-                  <div class="glass-panel exec-table-panel" style="padding: 20px;">
-                      <h3 style="margin-top:0; color: var(--accent);">EXECUTIVE SUMMARY</h3>
-                      <strong style="font-size: 1.1rem;">Overall Status:</strong>
-                      <ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;">
-                          <li><strong>Total Open Tickets:</strong> ${thisWeekOpen} ${openChangeText}</li>
-                          <li><strong>Week-over-Week ${openChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(openChange)} tickets</li>
-                          <li><strong>Dev-Completed Tickets:</strong> ${devCompletedThisWeek} tickets</li>
-                          <li><strong>Awaiting Client Response:</strong> ${clientAwaiting}</li>
-                      </ul>
-                      <strong style="font-size: 1.1rem; display:inline-block; margin-top: 15px;">Adjusted Active Count</strong>
-                      <ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;">
-                          <li><strong>Active Tickets (excluding dev-completed):</strong> ${adjustedActive}</li>
-                          <li><strong>Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})</li>
-                      </ul>
-                  </div>
-              </div>
-
-              <div class="exec-grid-container" style="grid-template-columns: 1fr;">
-                  <div class="glass-panel exec-table-panel">
-                      <h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent);">KEY METRICS</h3>
-                      <table style="margin-top: 10px;">
-                          <thead style="background:var(--th-bg);">
-                              <tr><th>Metric</th><th>This Week</th><th>Last Week</th><th>Change</th></tr>
-                          </thead>
-                          <tbody>
-                              <tr><td>Total Open Tickets</td><td>${thisWeekOpen}</td><td>${lastWeekOpen}</td><td><span style="color:${openChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(openChange)}</span></td></tr>
-                              <tr><td>Active Tickets (excl. dev-completed)</td><td>${adjustedActive}</td><td>${lastWeekAdjusted}</td><td><span style="color:${adjChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(adjChange)}</span></td></tr>
-                              <tr><td>Dev-Completed</td><td>${devCompletedThisWeek}</td><td>${devCompletedLastWeek}</td><td><span style="color:${devCompChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(devCompChange)}</span></td></tr>
-                              <tr><td>Client Awaiting</td><td>${clientAwaiting}</td><td>${clientAwaitingLastWeek}</td><td><span style="color:${awaitChange>0?'#ef4444':'#10b981'}; font-weight:bold;">${formatChange(awaitChange)}</span></td></tr>
-                          </tbody>
-                      </table>
-                  </div>
-              </div>
-
-              <div class="exec-grid-container" style="grid-template-columns: 1fr;">
-                  <div class="glass-panel exec-table-panel">
-                      <h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent); text-transform: uppercase;">TOP 10 MODULES WITH MAXIMUM TICKETS: <span style="font-weight:normal; font-size:0.9rem; color:var(--text-main);">@Shailesh Tayde please review the top affected modules.</span></h3>
-                      <table style="margin-top: 10px;">
-                          <thead style="background:var(--th-bg);">
-                              <tr><th>Rank</th><th>Module</th><th>Ticket Count</th><th>Status Indicator</th></tr>
-                          </thead>
-                          <tbody>
-          `;
-
-          if (top10.length === 0) {
-              html += `<tr><td colspan="4" style="text-align:center;">No data available</td></tr>`;
-          } else {
-              top10.forEach((m, idx) => {
-                  let rank = idx + 1;
-                  let dotColor = '#10b981'; let dotText = 'Normal'; 
-                  if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } 
-                  else if (rank <= 5) { dotColor = '#eab308'; dotText = 'Medium Priority'; } 
-                  html += `<tr><td>${rank}</td><td><strong>${m[0]}</strong></td><td>${m[1]}</td><td><span style="color:${dotColor}; font-size:1.2rem; vertical-align:middle;">●</span> ${dotText}</td></tr>`;
-              });
-          }
-
-          html += `
-                          </tbody>
-                      </table>
-                      <div style="padding: 15px 20px;">
-                          <strong>Focus Areas:</strong> The top 3 modules (${top3Names.join(', ')}) account for <strong>${top3Sum} tickets</strong>, approximately <strong>${top3Percent}%</strong> of all open tickets.
-                      </div>
-                  </div>
-              </div>
-
-              <div class="exec-grid-container" style="grid-template-columns: 1fr;">
-                  <div class="glass-panel exec-table-panel" style="padding: 20px;">
-                      <h3 style="margin-top:0; color: var(--accent); text-transform: uppercase;">COMPLETE MODULE BREAKDOWN</h3>
-                      <p style="margin-top:0;"><strong>Detailed Report Available:</strong></p>
-                      <p><strong>Additional Modules with Active Tickets:</strong> <a href="#" style="color:#38bdf8;">Module Report, ${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</a></p>
-                      <ul style="line-height: 1.6; margin-top: 10px;">
-          `;
-          
-          if (remaining.length === 0) {
-              html += `<li><em>No additional modules.</em></li>`;
-          } else {
-              remaining.forEach(m => {
-                  html += `<li>${m[0]}: ${m[1]} tickets</li>`;
-              });
-          }
-          
-          html += `
-                      </ul>
-                  </div>
-              </div>
-          `;
+          let html = `<div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel" style="padding: 20px;"><h3 style="margin-top:0; color: var(--accent);">EXECUTIVE SUMMARY</h3><strong style="font-size: 1.1rem;">Overall Status:</strong><ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;"><li><strong>Total Open Tickets:</strong> ${thisWeekOpen} ${openChangeText}</li><li><strong>Week-over-Week ${openChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(openChange)} tickets</li><li><strong>Dev-Completed Tickets:</strong> ${devCompletedThisWeek} tickets</li><li><strong>Awaiting Client Response:</strong> ${clientAwaiting}</li></ul><strong style="font-size: 1.1rem; display:inline-block; margin-top: 15px;">Adjusted Active Count</strong><ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;"><li><strong>Active Tickets (excluding dev-completed):</strong> ${adjustedActive}</li><li><strong>Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})</li></ul></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel"><h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent);">KEY METRICS</h3><table style="margin-top: 10px;"><thead style="background:var(--th-bg);"><tr><th>Metric</th><th>This Week</th><th>Last Week</th><th>Change</th></tr></thead><tbody><tr><td>Total Open Tickets</td><td>${thisWeekOpen}</td><td>${lastWeekOpen}</td><td><span style="color:${openChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(openChange)}</span></td></tr><tr><td>Active Tickets (excl. dev-completed)</td><td>${adjustedActive}</td><td>${lastWeekAdjusted}</td><td><span style="color:${adjChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(adjChange)}</span></td></tr><tr><td>Dev-Completed</td><td>${devCompletedThisWeek}</td><td>${devCompletedLastWeek}</td><td><span style="color:${devCompChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(devCompChange)}</span></td></tr><tr><td>Client Awaiting</td><td>${clientAwaiting}</td><td>${clientAwaitingLastWeek}</td><td><span style="color:${awaitChange>0?'#ef4444':'#10b981'}; font-weight:bold;">${formatChange(awaitChange)}</span></td></tr></tbody></table></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel"><h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent); text-transform: uppercase;">TOP 10 MODULES WITH MAXIMUM TICKETS: <span style="font-weight:normal; font-size:0.9rem; color:var(--text-main);">@Shailesh Tayde please review the top affected modules.</span></h3><table style="margin-top: 10px;"><thead style="background:var(--th-bg);"><tr><th>Rank</th><th>Module</th><th>Ticket Count</th><th>Status Indicator</th></tr></thead><tbody>`;
+          if (top10.length === 0) { html += `<tr><td colspan="4" style="text-align:center;">No data available</td></tr>`; } else { top10.forEach((m, idx) => { let rank = idx + 1; let dotColor = '#10b981'; let dotText = 'Normal'; if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } else if (rank <= 5) { dotColor = '#eab308'; dotText = 'Medium Priority'; } html += `<tr><td>${rank}</td><td><strong>${m[0]}</strong></td><td>${m[1]}</td><td><span style="color:${dotColor}; font-size:1.2rem; vertical-align:middle;">●</span> ${dotText}</td></tr>`; }); }
+          html += `</tbody></table><div style="padding: 15px 20px;"><strong>Focus Areas:</strong> The top 3 modules (${top3Names.join(', ')}) account for <strong>${top3Sum} tickets</strong>, approximately <strong>${top3Percent}%</strong> of all open tickets.</div></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel" style="padding: 20px;"><h3 style="margin-top:0; color: var(--accent); text-transform: uppercase;">COMPLETE MODULE BREAKDOWN</h3><p style="margin-top:0;"><strong>Detailed Report Available:</strong></p><p><strong>Additional Modules with Active Tickets:</strong> <a href="#" style="color:#38bdf8;">Module Report, ${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</a></p><ul style="line-height: 1.6; margin-top: 10px;">`;
+          if (remaining.length === 0) { html += `<li><em>No additional modules.</em></li>`; } else { remaining.forEach(m => { html += `<li>${m[0]}: ${m[1]} tickets</li>`; }); }
+          html += `</ul></div></div>`;
 
           document.getElementById('execWidgetsContainer').innerHTML = html;
           return;
       }
 
       // ========================================================
-      // 3. GENERIC LAYOUT FOR ALL OTHER DEPARTMENTS (Support, etc.)
+      // 3. GENERIC LAYOUT (Support, Production, etc.)
       // ========================================================
-      let totalActive = 0;
-      let deptCounts = {};
-      let last7Created = 0, last7Active = 0, last7Closed = 0;
-      let moduleCounts = {};
-      let statusCounts = {};
-      let priorityCounts = {};
-      let last7AssigneeCounts = {};
-      
-      let critTickets = [];
-      let secTickets = [];
-
+      let totalActive = 0; let deptCounts = {}; let last7Created = 0, last7Active = 0, last7Closed = 0;
+      let moduleCounts = {}; let statusCounts = {}; let priorityCounts = {}; let last7AssigneeCounts = {};
+      let critTickets = []; let secTickets = [];
       let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
       
       baseData.forEach(t => {
@@ -2617,7 +2474,6 @@
              totalActive++;
              deptCounts[dName] = (deptCounts[dName] || 0) + 1;
              if (stat !== 'Closed/Resolved' && stat !== 'Closed/Unresolved') statusCounts[stat] = (statusCounts[stat] || 0) + 1;
-             
              const prio = t.priority || 'Unassigned';
              priorityCounts[prio] = (priorityCounts[prio] || 0) + 1;
              if ((t.module || '').toLowerCase().includes('security')) secTickets.push(t);
@@ -2626,76 +2482,56 @@
 
       const deptList = Object.entries(deptCounts).sort((a,b)=>b[1]-a[1]);
       let deptHTML = deptList.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No active tickets</td></tr>` : deptList.map(([d, c]) => `<tr><td>${d}</td><td><strong>${c}</strong></td></tr>`).join('');
-
       const topAssigneesArray = Object.entries(last7AssigneeCounts).filter(([name]) => name !== 'Unassigned').sort((a,b)=>b[1]-a[1]).slice(0, 5);
       let assigneesHTML = topAssigneesArray.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No active assignments in timeframe</td></tr>` : topAssigneesArray.map(a => `<tr><td>${a[0]}</td><td><strong>${a[1]}</strong></td></tr>`).join('');
-
       const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count).slice(0, 5);
       let modHTML = modArray.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No module activity</td></tr>` : modArray.map(m => `<tr><td>${m.mod}</td><td><strong>${m.count}</strong></td></tr>`).join('');
-
       let critHTML = critTickets.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets in timeframe</td></tr>` : critTickets.map(t => `<tr><td><a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber || t.id}</a></td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
-
       const statArr = Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]);
       let statHTML = statArr.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No status data</td></tr>` : statArr.map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
-
       const prioArr = Object.entries(priorityCounts).sort((a,b)=>b[1]-a[1]);
       let priorityHTML = prioArr.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No priority data</td></tr>` : prioArr.map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
-       
       let secHTML = secTickets.length === 0 ? `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No active security tickets</td></tr>` : secTickets.map(t => {
          const ageDays = Math.floor((new Date() - new Date(t.createdTime)) / (1000 * 60 * 60 * 24));
          return `<tr><td><a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber || t.id}</a></td><td><strong>${t.subject}</strong></td><td><span class="priority-badge" style="background:#ef4444;">${ageDays} days</span></td><td>${t.clientName}</td></tr>`;
       }).join('');
 
-      // Build Generic Google Sheets Payload
       let payload = [];
       payload.push(["Department", deptFilter, "", "", ""]);
       payload.push(["", "", "", "", ""]);
       payload.push(["Total Active Tickets", totalActive, "", `Last 7 Days (${dateRangeStr})`, last7Created]);
-      
       const maxTopRows = Math.max(deptList.length, 2);
       for(let i=0; i<maxTopRows; i++) {
-         const dName = deptList[i] ? deptList[i][0] : "";
-         const dCount = deptList[i] ? deptList[i][1] : "";
-         let rName = "", rCount = "";
-         if (i === 0) { rName = "Active"; rCount = last7Active; }
-         else if (i === 1) { rName = "Closed"; rCount = last7Closed; }
+         const dName = deptList[i] ? deptList[i][0] : ""; const dCount = deptList[i] ? deptList[i][1] : "";
+         let rName = "", rCount = ""; if (i === 0) { rName = "Active"; rCount = last7Active; } else if (i === 1) { rName = "Closed"; rCount = last7Closed; }
          payload.push([dName, dCount, "", rName, rCount]);
       }
-      
       payload.push(["", "", "", "", ""]);
       payload.push([`Last 7 days Metrics (${dateRangeStr})`, "", "", "", ""]);
       payload.push(["", "", "", "", ""]);
       payload.push(["Module wise tickets reported", "(Issue/Bug)", "", "Critical Tickets", ""]);
       payload.push(["Module", "No. of Tickets", "", "Tickets", "Resolution Time"]);
-      
       const maxMetricRows = Math.max(critTickets.length, modArray.length);
       for(let i=0; i<maxMetricRows; i++) {
-         const mStr = modArray[i] ? modArray[i].mod : "";
-         const cStr = modArray[i] ? modArray[i].count : "";
+         const mStr = modArray[i] ? modArray[i].mod : ""; const cStr = modArray[i] ? modArray[i].count : "";
          const tStr = critTickets[i] ? (critTickets[i].ticketNumber || critTickets[i].id) : "";
          const rStr = critTickets[i] ? (customResolvedTimes[critTickets[i].id] || "-") : "";
          payload.push([mStr, cStr, "", tStr, rStr]);
       }
-
       payload.push(["", "", "", "", ""]);
       payload.push(["Top 5 Agents by Active Workload (Last 7 Days)", "", "", "", ""]);
       payload.push(["Agent Name", "Active Tickets", "", "", ""]);
       topAssigneesArray.forEach(a => payload.push([a[0], a[1], "", "", ""]));
-      
       payload.push(["", "", "", "", ""]);
       payload.push(["Active Ticket Metrics (All Time)", "", "", "", ""]);
       payload.push(["", "", "", "", ""]);
       payload.push(["Status wise count", "", "", "Priority wise count", ""]);
-      
       const maxStatPrioRows = Math.max(statArr.length, prioArr.length);
       for(let i=0; i<maxStatPrioRows; i++) {
-         const sName = statArr[i] ? statArr[i][0] : "";
-         const sCount = statArr[i] ? statArr[i][1] : "";
-         const pName = prioArr[i] ? prioArr[i][0] : "";
-         const pCount = prioArr[i] ? prioArr[i][1] : "";
+         const sName = statArr[i] ? statArr[i][0] : ""; const sCount = statArr[i] ? statArr[i][1] : "";
+         const pName = prioArr[i] ? prioArr[i][0] : ""; const pCount = prioArr[i] ? prioArr[i][1] : "";
          payload.push([sName, sCount, "", pName, pCount]);
       }
-      
       payload.push(["", "", "", "", ""]);
       payload.push(["Active Security Tickets", "", "", "", ""]);
       payload.push(["Ticket #", "Subject", "Age", "Client Name", ""]);
@@ -2708,80 +2544,15 @@
       state.executive.payloadArray = payload;
 
       document.getElementById('execWidgetsContainer').innerHTML = `
-         <div class="exec-grid-container">
-            <div class="glass-panel exec-table-panel" style="height:fit-content;">
-               <table>
-                  <thead style="background:var(--th-bg);"><tr><th colspan="2">Department Breakdown</th></tr></thead>
-                  <tbody>${deptHTML}</tbody>
-               </table>
-            </div>
-
-            <div class="glass-panel exec-table-panel" style="height:fit-content;">
-               <table>
-                  <thead style="background:var(--th-bg);">
-                     <tr><th>Last 7 Days <span style="font-weight:normal; font-size:0.8rem;">(${dateRangeStr})</span></th><th style="font-size:1.2rem; color:var(--accent);">${last7Created}</th></tr>
-                  </thead>
-                  <tbody>
-                     <tr><td>Active</td><td><strong>${last7Active}</strong></td></tr>
-                     <tr><td>Closed</td><td><strong>${last7Closed}</strong></td></tr>
-                  </tbody>
-               </table>
-            </div>
-         </div>
-         
+         <div class="exec-grid-container"><div class="glass-panel exec-table-panel" style="height:fit-content;"><table><thead style="background:var(--th-bg);"><tr><th colspan="2">Department Breakdown</th></tr></thead><tbody>${deptHTML}</tbody></table></div><div class="glass-panel exec-table-panel" style="height:fit-content;"><table><thead style="background:var(--th-bg);"><tr><th>Last 7 Days <span style="font-weight:normal; font-size:0.8rem;">(${dateRangeStr})</span></th><th style="font-size:1.2rem; color:var(--accent);">${last7Created}</th></tr></thead><tbody><tr><td>Active</td><td><strong>${last7Active}</strong></td></tr><tr><td>Closed</td><td><strong>${last7Closed}</strong></td></tr></tbody></table></div></div>
          <div class="section-title" style="margin-top: 15px;">Last 7 Days Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(${dateRangeStr})</span></div>
-         <div class="exec-grid-container">
-            <div class="glass-panel exec-table-panel">
-               <table>
-                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Module wise tickets reported (Issue/Bug)</th></tr><tr><th>Module</th><th>No. of Tickets</th></tr></thead>
-                  <tbody>${modHTML}</tbody>
-               </table>
-            </div>
-            <div class="glass-panel exec-table-panel">
-               <table>
-                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Critical Tickets</th></tr><tr><th>Tickets</th><th>Resolution Time</th></tr></thead>
-                  <tbody>${critHTML}</tbody>
-               </table>
-            </div>
-         </div>
-
-         <div class="exec-grid-container" style="margin-top: 25px;">
-            <div class="glass-panel exec-table-panel">
-               <table>
-                  <thead style="background:var(--th-bg);">
-                     <tr><th colspan="2" style="text-align:center; color:var(--text-main);">Top 5 Agents by Active Workload (Recent)</th></tr>
-                     <tr><th>Agent Name</th><th>Active Tickets</th></tr>
-                  </thead>
-                  <tbody>${assigneesHTML}</tbody>
-               </table>
-            </div>
-            <div></div>
-         </div>
-
+         <div class="exec-grid-container"><div class="glass-panel exec-table-panel"><table><thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Module wise tickets reported (Issue/Bug)</th></tr><tr><th>Module</th><th>No. of Tickets</th></tr></thead><tbody>${modHTML}</tbody></table></div><div class="glass-panel exec-table-panel"><table><thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Critical Tickets</th></tr><tr><th>Tickets</th><th>Resolution Time</th></tr></thead><tbody>${critHTML}</tbody></table></div></div>
+         <div class="exec-grid-container" style="margin-top: 25px;"><div class="glass-panel exec-table-panel"><table><thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center; color:var(--text-main);">Top 5 Agents by Active Workload (Recent)</th></tr><tr><th>Agent Name</th><th>Active Tickets</th></tr></thead><tbody>${assigneesHTML}</tbody></table></div><div></div></div>
          <div class="section-title" style="margin-top: 35px;">Active Ticket Metrics <span style="font-weight:normal; font-size:0.85rem; text-transform:none;">(All Time)</span></div>
-         <div class="exec-grid-container">
-            <div class="glass-panel exec-table-panel" style="height:fit-content;">
-               <table>
-                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Status wise count</th></tr></thead>
-                  <tbody>${statHTML}</tbody>
-               </table>
-            </div>
-            <div class="glass-panel exec-table-panel" style="height:fit-content;">
-               <table>
-                  <thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Priority wise count</th></tr></thead>
-                  <tbody>${priorityHTML}</tbody>
-               </table>
-            </div>
-         </div>
-
-         <div class="glass-panel exec-table-panel" style="margin-top: 20px;">
-            <table>
-               <thead style="background:var(--th-bg);"><tr><th colspan="4" style="text-align:center;">Active Security Tickets</th></tr><tr><th>Ticket #</th><th>Subject</th><th>Age</th><th>Client Name</th></tr></thead>
-               <tbody>${secHTML}</tbody>
-            </table>
-         </div>
+         <div class="exec-grid-container"><div class="glass-panel exec-table-panel" style="height:fit-content;"><table><thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Status wise count</th></tr></thead><tbody>${statHTML}</tbody></table></div><div class="glass-panel exec-table-panel" style="height:fit-content;"><table><thead style="background:var(--th-bg);"><tr><th colspan="2" style="text-align:center;">Priority wise count</th></tr></thead><tbody>${priorityHTML}</tbody></table></div></div>
+         <div class="glass-panel exec-table-panel" style="margin-top: 20px;"><table><thead style="background:var(--th-bg);"><tr><th colspan="4" style="text-align:center;">Active Security Tickets</th></tr><tr><th>Ticket #</th><th>Subject</th><th>Age</th><th>Client Name</th></tr></thead><tbody>${secHTML}</tbody></table></div>
       `;
-    }    
+    }
 // Helper to get "Sep 27" format for the tab names
     function getFormattedDateForTab() {
         return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date());
