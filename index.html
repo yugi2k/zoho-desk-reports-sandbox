@@ -2183,7 +2183,6 @@
                       priorTotalListed++;
                       if (isOpPr) priorActive++;
                       if (isOp) priorRelevant++;
-                      // Rough proxy for prior 24h breach
                       if (oneWeekAgo.getTime() - modified.getTime() > 86400000) priorNoResp++; 
                   }
               }
@@ -2199,13 +2198,11 @@
           payload.push(["SERVICES DESK REPORT", new Date().toLocaleDateString(), "", ""]);
           payload.push(["", "", "", ""]);
           
-          // Section: Workload
           payload.push(["CURRENT SERVICE WORKLOAD", "", "", ""]);
           payload.push(["Open + In Progress statuses", currActive, "Relevant with services desk", currRelevant]);
           payload.push(["Awaiting response over 24 hours", currNoResp, "All listed statuses", totalListed]);
           payload.push(["", "", "", ""]);
           
-          // Section: Week-over-week
           payload.push(["WEEK-OVER-WEEK COMPARISON", "Prior", "Current", "Change"]);
           payload.push(["All listed statuses", priorTotalListed, totalListed, dTs]);
           payload.push(["Open + In Progress", priorActive, currActive, dAs]);
@@ -2213,7 +2210,6 @@
           payload.push(["Awaiting response >24h", priorNoResp, currNoResp, dNRs]);
           payload.push(["", "", "", ""]);
           
-          // Section: Status Breakdown
           payload.push(["STATUS BREAKDOWN", "Tickets", "Share", ""]);
           let statHtml = "";
           Object.entries(sC).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => {
@@ -2225,7 +2221,6 @@
           });
           payload.push(["", "", "", ""]);
           
-          // Section: Active-work share & composition
           payload.push(["ACTIVE-WORK SHARE", "", "", ""]);
           payload.push(["Open + In Progress", currActive, "Other listed statuses", totalListed - currActive]);
           payload.push(["", "", "", ""]);
@@ -2233,7 +2228,6 @@
           payload.push(["Open", sC['Open'] || 0, "In Progress", sC['In Progress'] || 0]);
           payload.push(["", "", "", ""]);
           
-          // Section: 24h Responses
           payload.push(["RESPONSES BEYOND 24 HOURS", "", "", ""]);
           payload.push(["Ticket ID", "Last modified", "Hours reported", ""]);
           unrespList.sort((a,b) => b.ms - a.ms);
@@ -2249,7 +2243,6 @@
           });
           if(unrespHtml === "") unrespHtml = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">No tickets neglected over 24 hours.</td></tr>`;
 
-          // Apply state and render
           state.executive.payloadArray = payload;
           document.getElementById('execTotalCount').innerText = totalListed;
 
@@ -2310,12 +2303,215 @@
                 </div>
              </div>
           `;
-          return; // Exit function so it doesn't run the generic logic below
+          return;
       }
 
+      // ========================================================
+      // 2. SPECIFIC LAYOUT FOR "DEVELOPMENT"
+      // ========================================================
+      if (deptFilter === 'Development') {
+          const startOfThisWeek = getETMidnightForOffset(-7);
+          const startOfLastWeek = getETMidnightForOffset(-14);
+
+          let thisWeekOpen = 0, lastWeekOpen = 0;
+          let devCompletedThisWeek = 0, devCompletedLastWeek = 0;
+          let clientAwaiting = 0, clientAwaitingLastWeek = 0;
+          let moduleCounts = {};
+
+          baseData.forEach(t => {
+              const isClosed = (t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp');
+              const stat = (t.status || '').toLowerCase();
+              const cDate = new Date(t.createdTime);
+              const closedDate = t.closedTime ? new Date(t.closedTime) : null;
+              
+              let mName = (t.module && t.module.trim() !== '' && t.module !== 'N/A') ? t.module : 'No Module Selected';
+              if (mName === 'General') mName = 'No Module Selected';
+              
+              // Proxy matchers for Dev specific statuses
+              const isDevComp = stat.includes('releasepending') || stat.includes('dev-completed') || stat.includes('resolved');
+              const isAwaiting = stat.includes('awaiting response') || stat.includes('client awaiting');
+
+              if (!isClosed) {
+                  thisWeekOpen++;
+                  moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
+                  
+                  if (isDevComp) devCompletedThisWeek++;
+                  if (isAwaiting) clientAwaiting++;
+              }
+
+              let createdBeforeThisWeek = cDate < startOfThisWeek;
+              let closedThisWeek = isClosed && closedDate && closedDate >= startOfThisWeek;
+              if (createdBeforeThisWeek && (!isClosed || closedThisWeek)) {
+                  lastWeekOpen++;
+                  if (isDevComp) devCompletedLastWeek++;
+                  if (isAwaiting) clientAwaitingLastWeek++;
+              }
+          });
+
+          const adjustedActive = thisWeekOpen - devCompletedThisWeek;
+          const lastWeekAdjusted = lastWeekOpen - devCompletedLastWeek;
+          
+          const openChange = thisWeekOpen - lastWeekOpen;
+          const devCompChange = devCompletedThisWeek - devCompletedLastWeek;
+          const adjChange = adjustedActive - lastWeekAdjusted;
+          const awaitChange = clientAwaiting - clientAwaitingLastWeek;
+
+          const openChangeText = openChange >= 0 ? `(↑ up from ${lastWeekOpen} last week)` : `(↓ down from ${lastWeekOpen} last week)`;
+          const formatChange = (num) => num > 0 ? `+${num}` : num;
+
+          const modArray = Object.entries(moduleCounts).sort((a, b) => b[1] - a[1]);
+          const top10 = modArray.slice(0, 10);
+          const remaining = modArray.slice(10);
+          
+          let top3Sum = 0;
+          let top3Names = [];
+          top10.slice(0, 3).forEach(m => { top3Sum += m[1]; top3Names.push(m[0]); });
+          const top3Percent = thisWeekOpen > 0 ? ((top3Sum / thisWeekOpen) * 100).toFixed(2) : 0;
+
+          // Build Google Sheets Payload
+          let payload = [];
+          const padRow = ["", "", "", ""];
+          
+          payload.push(["DEVELOPMENT METRICS REPORT", new Date().toLocaleDateString(), "", ""]);
+          payload.push(["", "", "", ""]);
+          
+          payload.push(["EXECUTIVE SUMMARY", "", "", ""]);
+          payload.push(["Overall Status:", "", "", ""]);
+          payload.push(["Total Open Tickets", thisWeekOpen, `(from ${lastWeekOpen} last week)`, ""]);
+          payload.push([`Week-over-Week ${openChange >= 0 ? 'Increase' : 'Decrease'}`, Math.abs(openChange), "tickets", ""]);
+          payload.push(["Dev-Completed Tickets", devCompletedThisWeek, "tickets", ""]);
+          payload.push(["Awaiting Client Response", clientAwaiting, "", ""]);
+          payload.push(padRow);
+          
+          payload.push(["Adjusted Active Count", "", "", ""]);
+          payload.push(["Active Tickets (excluding dev-completed)", adjustedActive, "", ""]);
+          payload.push([`Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}`, Math.abs(adjChange), `tickets (from ${lastWeekAdjusted})`, ""]);
+          payload.push(padRow);
+
+          payload.push(["KEY METRICS", "", "", ""]);
+          payload.push(["Metric", "This Week", "Last Week", "Change"]);
+          payload.push(["Total Open Tickets", thisWeekOpen, lastWeekOpen, formatChange(openChange)]);
+          payload.push(["Active Tickets (excl. dev-completed)", adjustedActive, lastWeekAdjusted, formatChange(adjChange)]);
+          payload.push(["Dev-Completed", devCompletedThisWeek, devCompletedLastWeek, formatChange(devCompChange)]);
+          payload.push(["Client Awaiting", clientAwaiting, clientAwaitingLastWeek, formatChange(awaitChange)]);
+          payload.push(padRow);
+
+          payload.push(["TOP 10 MODULES WITH MAXIMUM TICKETS: @Shailesh Tayde please review the top affected modules.", "", "", ""]);
+          payload.push(["Rank", "Module", "Ticket Count", "Status Indicator"]);
+          top10.forEach((m, idx) => {
+              let dotText = 'Normal'; 
+              if (idx < 3) dotText = 'High Priority'; 
+              else if (idx < 5) dotText = 'Medium Priority'; 
+              payload.push([idx+1, m[0], m[1], dotText]);
+          });
+          payload.push(padRow);
+          payload.push(["Focus Areas:", `The top 3 modules (${top3Names.join(', ')}) account for ${top3Sum} tickets, approximately ${top3Percent}% of all open tickets.`, "", ""]);
+          payload.push(padRow);
+
+          payload.push(["COMPLETE MODULE BREAKDOWN", "", "", ""]);
+          payload.push(["Detailed Report Available:", "", "", ""]);
+          payload.push(["Additional Modules with Active Tickets:", "", "", ""]);
+          remaining.forEach((m) => payload.push([m[0], `${m[1]} tickets`, "", ""]));
+
+          state.executive.payloadArray = payload;
+          document.getElementById('execTotalCount').innerText = thisWeekOpen;
+
+          // Build UI HTML
+          let html = `
+              <div class="exec-grid-container" style="grid-template-columns: 1fr;">
+                  <div class="glass-panel exec-table-panel" style="padding: 20px;">
+                      <h3 style="margin-top:0; color: var(--accent);">EXECUTIVE SUMMARY</h3>
+                      <strong style="font-size: 1.1rem;">Overall Status:</strong>
+                      <ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;">
+                          <li><strong>Total Open Tickets:</strong> ${thisWeekOpen} ${openChangeText}</li>
+                          <li><strong>Week-over-Week ${openChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(openChange)} tickets</li>
+                          <li><strong>Dev-Completed Tickets:</strong> ${devCompletedThisWeek} tickets</li>
+                          <li><strong>Awaiting Client Response:</strong> ${clientAwaiting}</li>
+                      </ul>
+                      <strong style="font-size: 1.1rem; display:inline-block; margin-top: 15px;">Adjusted Active Count</strong>
+                      <ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;">
+                          <li><strong>Active Tickets (excluding dev-completed):</strong> ${adjustedActive}</li>
+                          <li><strong>Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})</li>
+                      </ul>
+                  </div>
+              </div>
+
+              <div class="exec-grid-container" style="grid-template-columns: 1fr;">
+                  <div class="glass-panel exec-table-panel">
+                      <h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent);">KEY METRICS</h3>
+                      <table style="margin-top: 10px;">
+                          <thead style="background:var(--th-bg);">
+                              <tr><th>Metric</th><th>This Week</th><th>Last Week</th><th>Change</th></tr>
+                          </thead>
+                          <tbody>
+                              <tr><td>Total Open Tickets</td><td>${thisWeekOpen}</td><td>${lastWeekOpen}</td><td><span style="color:${openChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(openChange)}</span></td></tr>
+                              <tr><td>Active Tickets (excl. dev-completed)</td><td>${adjustedActive}</td><td>${lastWeekAdjusted}</td><td><span style="color:${adjChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(adjChange)}</span></td></tr>
+                              <tr><td>Dev-Completed</td><td>${devCompletedThisWeek}</td><td>${devCompletedLastWeek}</td><td><span style="color:${devCompChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(devCompChange)}</span></td></tr>
+                              <tr><td>Client Awaiting</td><td>${clientAwaiting}</td><td>${clientAwaitingLastWeek}</td><td><span style="color:${awaitChange>0?'#ef4444':'#10b981'}; font-weight:bold;">${formatChange(awaitChange)}</span></td></tr>
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+
+              <div class="exec-grid-container" style="grid-template-columns: 1fr;">
+                  <div class="glass-panel exec-table-panel">
+                      <h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent); text-transform: uppercase;">TOP 10 MODULES WITH MAXIMUM TICKETS: <span style="font-weight:normal; font-size:0.9rem; color:var(--text-main);">@Shailesh Tayde please review the top affected modules.</span></h3>
+                      <table style="margin-top: 10px;">
+                          <thead style="background:var(--th-bg);">
+                              <tr><th>Rank</th><th>Module</th><th>Ticket Count</th><th>Status Indicator</th></tr>
+                          </thead>
+                          <tbody>
+          `;
+
+          if (top10.length === 0) {
+              html += `<tr><td colspan="4" style="text-align:center;">No data available</td></tr>`;
+          } else {
+              top10.forEach((m, idx) => {
+                  let rank = idx + 1;
+                  let dotColor = '#10b981'; let dotText = 'Normal'; 
+                  if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } 
+                  else if (rank <= 5) { dotColor = '#eab308'; dotText = 'Medium Priority'; } 
+                  html += `<tr><td>${rank}</td><td><strong>${m[0]}</strong></td><td>${m[1]}</td><td><span style="color:${dotColor}; font-size:1.2rem; vertical-align:middle;">●</span> ${dotText}</td></tr>`;
+              });
+          }
+
+          html += `
+                          </tbody>
+                      </table>
+                      <div style="padding: 15px 20px;">
+                          <strong>Focus Areas:</strong> The top 3 modules (${top3Names.join(', ')}) account for <strong>${top3Sum} tickets</strong>, approximately <strong>${top3Percent}%</strong> of all open tickets.
+                      </div>
+                  </div>
+              </div>
+
+              <div class="exec-grid-container" style="grid-template-columns: 1fr;">
+                  <div class="glass-panel exec-table-panel" style="padding: 20px;">
+                      <h3 style="margin-top:0; color: var(--accent); text-transform: uppercase;">COMPLETE MODULE BREAKDOWN</h3>
+                      <p style="margin-top:0;"><strong>Detailed Report Available:</strong></p>
+                      <p><strong>Additional Modules with Active Tickets:</strong> <a href="#" style="color:#38bdf8;">Module Report, ${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</a></p>
+                      <ul style="line-height: 1.6; margin-top: 10px;">
+          `;
+          
+          if (remaining.length === 0) {
+              html += `<li><em>No additional modules.</em></li>`;
+          } else {
+              remaining.forEach(m => {
+                  html += `<li>${m[0]}: ${m[1]} tickets</li>`;
+              });
+          }
+          
+          html += `
+                      </ul>
+                  </div>
+              </div>
+          `;
+
+          document.getElementById('execWidgetsContainer').innerHTML = html;
+          return;
+      }
 
       // ========================================================
-      // 2. GENERIC LAYOUT FOR ALL OTHER DEPARTMENTS
+      // 3. GENERIC LAYOUT FOR ALL OTHER DEPARTMENTS (Support, etc.)
       // ========================================================
       let totalActive = 0;
       let deptCounts = {};
@@ -2349,7 +2545,8 @@
           if (isClosed && closedDate && closedDate >= last7DaysDate) last7Closed++;
 
           if (cDate >= last7DaysDate) {
-             const mName = t.module && t.module !== 'N/A' ? t.module : 'General';
+             let mName = (t.module && t.module.trim() !== '' && t.module !== 'N/A') ? t.module : 'No Module Selected';
+             if (mName === 'General') mName = 'No Module Selected';
              moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
 
              const pr = (t.priority || '').toLowerCase();
@@ -2525,8 +2722,7 @@
             </table>
          </div>
       `;
-    }
-    
+    }    
 // Helper to get "Sep 27" format for the tab names
     function getFormattedDateForTab() {
         return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date());
