@@ -2862,7 +2862,7 @@
         try {
             const res = await fetch(PROXY_URL, { 
                 method: 'POST', credentials: 'omit', 
-                body: JSON.stringify({ action: 'sendReportEmail', emailTo: emailAddress, subject: \`Weekly \${window.currentEmailDept} Metrics\`, htmlBody: window.currentEmailPayload }) 
+                body: JSON.stringify({ action: 'sendReportEmail', emailTo: emailAddress, subject: `Weekly \${window.currentEmailDept} Metrics`, htmlBody: window.currentEmailPayload }) 
             });
             const result = await res.json();
             if (result.error) throw new Error(result.error);
