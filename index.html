@@ -804,6 +804,18 @@
             </div>
           </div>
 
+         <!-- NEW AGENT FILTER (Dynamically visible for Development) -->
+            <div class="filter-group" id="execAgentFilterGroup" style="display: none;">
+              <label>Assignee</label>
+              <div class="custom-select" style="width: 220px;">
+                <div class="select-btn filter-input" onclick="toggleDropdown('execAgentDropdown')"><span id="execAgentLabel">All Assignees</span> ▼</div>
+                <div class="select-dropdown" id="execAgentDropdown">
+                   <!-- Injected via JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="btn-group">
             <button class="btn-action" onclick="generateModuleReport()" style="background-color: #3b82f6;">Module Wise Report</button>
             <button class="btn-action btn-export" onclick="exportExecutiveToSheet()" id="btnSyncExec">Sync to Google Sheets</button>            
@@ -2111,19 +2123,47 @@
       const dp = new Set();
       window.allGlobalTickets.forEach(t => { dp.add(t.department ? t.department.name : 'General'); });
       const dropEl = document.getElementById('execDeptDropdown');
-      dropEl.innerHTML = `<label><input type="radio" name="execDept" value="All" onchange="applyExecFilters()" ${state.executive.currentDept === 'All' ? 'checked' : ''}> All Departments</label>`;
+      dropEl.innerHTML = `<label><input type="radio" name="execDept" value="All" onchange="applyExecFilters(false)" ${state.executive.currentDept === 'All' ? 'checked' : ''}> All Departments</label>`;
       Array.from(dp).sort().forEach(v => {
-         dropEl.innerHTML += `<label><input type="radio" name="execDept" value="${v}" onchange="applyExecFilters()" ${state.executive.currentDept === v ? 'checked' : ''}> ${v}</label>`;
+         dropEl.innerHTML += `<label><input type="radio" name="execDept" value="${v}" onchange="applyExecFilters(false)" ${state.executive.currentDept === v ? 'checked' : ''}> ${v}</label>`;
       });
       document.getElementById('execDeptLabel').innerText = state.executive.currentDept === 'All' ? 'All Departments' : state.executive.currentDept;
 
-      renderExecutiveView();
+      applyExecFilters(true);
     }
 
-    function applyExecFilters() {
+    function applyExecFilters(isInit = false) {
       const selected = document.querySelector('#execDeptDropdown input[name="execDept"]:checked').value;
+      const prevDept = state.executive.currentDept;
       state.executive.currentDept = selected;
       document.getElementById('execDeptLabel').innerText = selected === 'All' ? 'All Departments' : selected;
+      
+      // If department changed (or first load), pull the relevant agents into the new dropdown
+      if (isInit || prevDept !== selected) {
+          let deptData = window.allGlobalTickets;
+          if (selected !== 'All') {
+              deptData = deptData.filter(t => (t.department ? t.department.name : 'General') === selected);
+          }
+          const ag = new Set();
+          deptData.forEach(t => {
+             ag.add(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned');
+          });
+          
+          const el = document.getElementById('execAgentDropdown');
+          el.innerHTML = '';
+          Array.from(ag).sort().forEach(v => {
+              el.innerHTML += `<label><input type="checkbox" value="${v}" onchange="renderExecutiveView()"> ${v}</label>`;
+          });
+      }
+
+      // Only show the Assignee dropdown if the Development department is selected
+      const agentFilterGrp = document.getElementById('execAgentFilterGroup');
+      if (selected === 'Development') {
+          agentFilterGrp.style.display = 'flex';
+      } else {
+          agentFilterGrp.style.display = 'none';
+      }
+
       renderExecutiveView();
     }
 
@@ -2134,6 +2174,25 @@
       if (deptFilter !== 'All') {
           baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
       }
+
+      // ========================================================
+      // NEW: AGENT FILTER FOR DEVELOPMENT
+      // ========================================================
+      if (deptFilter === 'Development') {
+          const sA = Array.from(document.querySelectorAll('#execAgentDropdown input:checked')).map(c=>c.value);
+          document.getElementById('execAgentLabel').innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
+          
+          // If any agents are checked, filter the array before the math runs
+          if (sA.length > 0) {
+              baseData = baseData.filter(t => {
+                  const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
+                  return sA.includes(asn);
+              });
+          }
+      }
+
+      const today = new Date();
+      // ... KEEP ALL YOUR EXISTING LOGIC BELOW THIS EXACTLY AS IS ...
 
       const today = new Date();
       const last7DaysDate = getETMidnightForOffset(-7);
