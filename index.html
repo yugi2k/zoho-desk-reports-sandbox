@@ -980,8 +980,8 @@
         case 'col_updated': val = t.modifiedTime?tableDateFmt.format(new Date(t.modifiedTime)):'-'; break;
         case 'col_closed': val = t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'; break;
         case 'col_responded': 
-             const rspData = t.customerResponseTime || t.agentRespondedTime || t.modifiedTime || t.createdTime;
-             val = rspData?tableDateFmt.format(new Date(rspData)):'-'; break;
+             const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
+             val = rspData ? tableDateFmt.format(new Date(rspData)) : '-'; break;
         case 'col_resolution': val = `<strong>${t.resolutionTime||'-'}</strong>`; break;
         case 'col_classification': val = t.classification||'-'; break;
         case 'col_resolved': 
@@ -1006,8 +1006,8 @@
         case 'col_updated': return t.modifiedTime?csvDateFmt.format(new Date(t.modifiedTime)):'-';
         case 'col_closed': return t.closedTime?csvDateFmt.format(new Date(t.closedTime)):'-';
         case 'col_responded': 
-             const rspData = t.customerResponseTime || t.agentRespondedTime || t.modifiedTime || t.createdTime;
-             return rspData?csvDateFmt.format(new Date(rspData)):'-';
+             const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
+             return rspData ? csvDateFmt.format(new Date(rspData)) : '-';
         case 'col_resolution': return t.resolutionTime || '-';
         case 'col_classification': return `"${(t.classification||"").replace(/"/g,'""')}"`;
         case 'col_resolved': 
@@ -1240,7 +1240,7 @@
                 createdTime: t.createdTime, 
                 closedTime: t.closedTime, 
                 modifiedTime: t.modifiedTime, 
-                agentRespondedTime: t.customerResponseTime || t.agentRespondedTime || t.modifiedTime || t.createdTime, 
+                agentRespondedTime: t.agentRespondedTime || t.modifiedTime || t.createdTime, 
                 clientName: cName, 
                 classification: clsName, 
                 module: modName 
