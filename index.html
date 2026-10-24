@@ -15,12 +15,12 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://accounts.google.com/gsi/client?onload=renderGoogleButton" async defer></script>
 
-<style>
-/* APPLE DESIGN SYSTEM UPDATES */
+  <style>
+    /* APPLE DESIGN SYSTEM UPDATES */
     :root {
       --bg-gradient: radial-gradient(circle at 50% 0%, #1e293b, #0f172a, #020617);
       --glass-bg: rgba(30, 41, 59, 0.6);
-      --glass-border: rgba(0, 0, 0, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.08);
       --glass-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
       --dropdown-bg: rgba(15, 23, 42, 0.85); 
       --text-main: #f8fafc;
@@ -38,7 +38,7 @@
     body.light-mode {
       --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #eef2f6 100%);
       --glass-bg: rgba(255, 255, 255, 0.75);
-      --glass-border: rgba(255, 255, 255, 1);
+      --glass-border: rgba(0, 0, 0, 0.1); /* FIXED: Dark gray borders for light mode visibility */
       --glass-shadow: 0 10px 30px -10px rgba(0,0,0,0.08);
       --dropdown-bg: rgba(255, 255, 255, 0.95); 
       --text-main: #1d1d1f;
@@ -72,6 +72,8 @@
       justify-content: space-between;
       position: relative;
       overflow: hidden;
+      text-decoration: none;
+      color: inherit;
     }
     .metric-card::before {
       content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -80,6 +82,7 @@
     }
     .metric-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
     .metric-card:hover::before { opacity: 1; }
+    .metric-card.active-filter { border-color: #0A84FF; background: rgba(10, 132, 255, 0.05); }
     
     .metric-card h3 { 
       font-size: 0.85rem; 
@@ -95,18 +98,44 @@
       margin: 0; 
       letter-spacing: -0.04em; 
       line-height: 1;
+      color: var(--text-main);
     }
 
     /* Chart Containers */
     .chart-container { position: relative; height: 350px; width: 100%; padding: 20px; box-sizing: border-box; }
     .chart-container-small { position: relative; height: 250px; width: 100%; padding: 20px; box-sizing: border-box; }
 
-    /* Standardized UI Elements */
+    /* SF Pro / Apple Native Font Stack */
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; 
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      letter-spacing: -0.015em;
+      background: var(--bg-gradient); color: var(--text-main); margin: 0; padding: 2rem; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; transition: background 0.5s ease, color 0.5s ease; 
+    }
+
+    .page-view { display: none !important; width: 100%; }
+    .page-view.active { display: block !important; animation: fadeInScale 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    #view-login.page-view.active { display: flex !important; justify-content: center; align-items: center; flex: 1; min-height: 80vh; }
+
+    @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+    .animate-in { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+    @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .delay-1 { animation-delay: 0.1s; } .delay-2 { animation-delay: 0.2s; } .delay-3 { animation-delay: 0.3s; }
+
+    /* Skeleton Loader Animations */
+    .skeleton-wrapper { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .skeleton-card { height: 120px; border-radius: var(--radius-md); background: var(--input-bg); position: relative; overflow: hidden; }
+    .skeleton-card::after {
+      content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+      transform: translateX(-100%);
+      background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.05) 20%, rgba(255,255,255,0.1) 60%, rgba(255,255,255,0));
+      animation: shimmer 2s infinite;
+    }
+    body.light-mode .skeleton-card::after { background-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0.02) 20%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0)); }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+
     .header h1, h1 { font-weight: 800; letter-spacing: -0.03em; }
-    .metric-card { padding: 20px; text-align: center; border-radius: var(--radius-md); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; border: 1px solid var(--glass-border); cursor:pointer;}
-    .metric-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
-    .metric-card h3 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 8px;}
-    .metric-card p { font-size: 2.8rem; font-weight: 700; margin: 0; letter-spacing: -0.03em; }
 
     /* Toggles & Controls */
     .toggle-wrapper { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem;}
@@ -116,13 +145,9 @@
     .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: var(--text-muted); transition: .4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 50%; }
     input:checked + .slider { background-color: var(--accent); border-color: var(--accent); }
     input:checked + .slider:before { transform: translateX(22px); background-color: #fff; }
-    .animate-in { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .delay-1 { animation-delay: 0.1s; opacity: 0; }
-    .delay-2 { animation-delay: 0.2s; opacity: 0; }
-    .delay-3 { animation-delay: 0.3s; opacity: 0; }
 
-    .glass-panel { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: 16px; }
+    .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(10, 132, 255, 0.3); border-radius: 50%; border-top-color: #0A84FF; animation: spin 1s ease-in-out infinite; margin-left: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     [data-tooltip] { position: relative; }
     [data-tooltip]::before { content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); color: var(--text-main); padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1000; pointer-events: none; }
@@ -132,7 +157,6 @@
     .header { padding: 15px 25px; margin-bottom: 40px; }
     .title-group, .brand-group { display: flex; align-items: center; gap: 15px; }
     .brand-logo { height: 28px; border-radius: 4px; }
-    .header h1, h1 { margin: 0; font-size: 1.6rem; font-weight: 700; display: flex; align-items: center; gap: 10px; letter-spacing: -0.02em; }
     .agent-header-info { display: flex; gap: 20px; color: var(--text-muted); font-size: 0.85rem; margin-top: 6px; font-weight: 500;}
     .header-actions { display: flex; align-items: center; gap: 12px; }
     .icon-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; width: 40px; height: 40px; padding: 0; box-sizing: border-box; text-decoration: none; line-height: 0; }
@@ -143,15 +167,14 @@
     .btn-back { background: var(--glass-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; }
     .btn-back:hover { background: rgba(255,255,255,0.1); transform: translateX(-4px); }
 
-    .login-card { padding: 50px 40px; width: 100%; max-width: 420px; text-align: center; }
+    .login-card { padding: 50px 40px; width: 100%; max-width: 420px; text-align: center; margin: 0 auto;}
     .login-card h2 { margin-top: 0; margin-bottom: 8px; font-weight: 700; font-size: 1.8rem; }
     .login-card p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 30px; }
     .otp-group { margin-bottom: 20px; text-align: left; }
     .otp-group label { display: block; font-size: 0.8rem; margin-bottom: 8px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
     .otp-group input { width: 100%; padding: 14px 16px; background-color: var(--input-bg); color: var(--text-main); border: 1px solid var(--glass-border); border-radius: 10px; box-sizing: border-box; margin-bottom: 15px; font-family: inherit; font-size: 1rem; outline: none; transition: all 0.3s; }
-    .otp-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2); }
-    .btn-login { width: 100%; background-color: var(--accent); color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s; }
-    .btn-login:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(2, 132, 199, 0.3); }
+    .otp-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2); }
+    
     .divider { display: flex; align-items: center; text-align: center; margin: 30px 0; color: var(--text-muted); font-size: 0.85rem; }
     .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--glass-border); }
     .divider:not(:empty)::before { margin-right: 1em; }
@@ -160,22 +183,12 @@
     .section-title { font-size: 1rem; color: var(--text-muted); margin: 30px 0 20px 0; text-transform: uppercase; font-weight: 600; display: flex; align-items: center; gap: 10px; }
     .section-title::after { content: ''; flex: 1; height: 1px; background: var(--glass-border); }
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
-    .metric-card { padding: 20px; text-align: center; text-decoration: none; color: inherit; transition: all 0.3s; display: flex; flex-direction: column; justify-content: center; border: 2px solid transparent; cursor: pointer;}
-    .metric-card:hover { transform: translateY(-8px) scale(1.02); border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2); }
-    .metric-card.active-filter { border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
-    .metric-card h3 { margin: 0; font-size: 0.9rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase;}
-    .metric-card p { margin: 12px 0 0 0; font-size: 2.5rem; font-weight: 700; color: var(--text-main); }
-    .stats-subtext { margin-top: 10px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;}
-    .stats-open { color: #38bdf8; }
-    .stats-closed { color: #94a3b8; }
-    .total-card { grid-column: 1 / -1; border-color: var(--accent); background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, transparent 100%); }
-    .total-card p { color: var(--accent); }
 
     .controls-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 15px; position: relative; z-index: 200; }
     .controls-panel { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; padding: 16px 24px; position: relative; z-index: 100; margin-bottom: 20px; }
     .filter-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
     .filter-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
-    .filter-input, .select-btn, .filter-group input[type="text"] { background-color: var(--input-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; height: 40px; box-sizing: border-box; outline: none; font-family: inherit; transition: all 0.3s; cursor: pointer; }
+    .filter-input, .select-btn, .filter-group input[type="text"], .filter-group select { background-color: var(--input-bg); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; height: 40px; box-sizing: border-box; outline: none; font-family: inherit; transition: all 0.3s; cursor: pointer; }
     .filter-input:focus, .select-btn:hover, .filter-group input[type="text"]:focus { border-color: var(--accent); }
 
     .custom-select { position: relative; width: 160px; padding: 0; border: none; background: transparent; }
@@ -184,37 +197,29 @@
     .select-dropdown.active { display: block; }
     .select-dropdown label { display: flex; align-items: center; padding: 10px 14px; font-size: 0.85rem; cursor: pointer; transition: 0.2s; color: var(--text-main); margin: 0; }
     .select-dropdown label:hover { background-color: var(--row-hover); }
-    .select-dropdown input[type="checkbox"] { margin-right: 10px; accent-color: var(--accent); cursor: pointer; }
+    .select-dropdown input[type="checkbox"], .select-dropdown input[type="radio"] { margin-right: 10px; accent-color: var(--accent); cursor: pointer; }
 
-    .filters-group { display: flex; gap: 15px; align-items: center; }
-    .toggle-wrapper { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 500; }
-    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 24px; }
-    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: #3b82f6; }
-    input:checked + .slider:before { transform: translateX(20px); }
-    .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 50%; border-top-color: #3b82f6; animation: spin 1s ease-in-out infinite; margin-left: 8px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-group { display: flex; gap: 12px; }
+    .btn-login { width: 100%; background-color: var(--accent); color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s; }
+    .btn-login:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(10, 132, 255, 0.3); }
+    
+    .btn-action { color: white; border: none; padding: 0 18px; border-radius: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; font-family: inherit; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .btn-action:hover { transform: scale(1.02); }
+    .btn-export { background-color: #34C759; }
+    .btn-export:hover { background-color: #30B753; box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3); }
+    .btn-clear { background-color: var(--text-muted); }
+    .btn-clear:hover { background-color: #475569; }
+    .btn-view { color: var(--accent); background: transparent; border: 1px solid var(--accent); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.3s;}
+    .btn-view:hover { background: var(--accent); color: #fff;}
+    .btn-danger { background-color: #FF3B30; }
+    .btn-danger:hover { background-color: #D73329; box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3); }
+    .btn-copy { background-color: var(--accent); font-size: 0.8rem; height: 32px; padding: 0 12px; }
 
     .flatpickr-calendar { background: var(--dropdown-bg) !important; backdrop-filter: blur(24px) !important; border: 1px solid var(--glass-border) !important; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5) !important; border-radius: 16px !important; color: var(--text-main) !important; font-family: inherit !important; }
     .flatpickr-day { color: var(--text-main) !important; border-radius: 8px !important; }
     .flatpickr-day:hover { background: var(--row-hover) !important; }
     .flatpickr-day.selected { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; font-weight: 600; }
     .flatpickr-month, .flatpickr-weekday, .flatpickr-current-month input.cur-year { color: var(--text-main) !important; fill: var(--text-main) !important; }
-
-    .btn-group { display: flex; gap: 12px; }
-    .btn-action { color: white; border: none; padding: 0 18px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; font-family: inherit; transition: all 0.3s; }
-    .btn-action:hover { transform: translateY(-2px); }
-    .btn-export { background-color: #10b981; }
-    .btn-export:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
-    .btn-clear { background-color: var(--text-muted); }
-    .btn-clear:hover { background-color: #475569; }
-    .btn-view { color: var(--accent); background: transparent; border: 1px solid var(--accent); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.3s;}
-    .btn-view:hover { background: var(--accent); color: #fff;}
-    .btn-danger { background-color: #ef4444; }
-    .btn-danger:hover { background-color: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
-    .btn-copy { background-color: var(--accent); font-size: 0.8rem; height: 32px; padding: 0 12px; }
 
     .top-scrollbar { overflow-x: auto; overflow-y: hidden; height: 12px; margin-bottom: 4px; border-radius: 6px; display: block; }
     .top-scrollbar::-webkit-scrollbar { height: 10px; }
@@ -259,16 +264,15 @@
     .anomaly-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     .anomaly-card h3 { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; margin: 0 0 8px 0; color: var(--text-main); opacity: 0.8; }
     .anomaly-card p { font-size: 2.2rem; font-weight: 700; margin: 0; color: var(--text-main); }
-    .anomaly-card.bg-green { background: rgba(16, 185, 129, 0.2); border: 2px solid rgba(16, 185, 129, 0.4); }
-    .anomaly-card.bg-orange { background: rgba(249, 115, 22, 0.2); border: 2px solid rgba(249, 115, 22, 0.4); }
-    .anomaly-card.bg-red { background: rgba(239, 68, 68, 0.2); border: 2px solid rgba(239, 68, 68, 0.4); }
+    .anomaly-card.bg-green { background: rgba(52, 199, 89, 0.2); border: 2px solid rgba(52, 199, 89, 0.4); }
+    .anomaly-card.bg-orange { background: rgba(255, 149, 0, 0.2); border: 2px solid rgba(255, 149, 0, 0.4); }
+    .anomaly-card.bg-red { background: rgba(255, 59, 48, 0.2); border: 2px solid rgba(255, 59, 48, 0.4); }
     
     .flag-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
-    .flag-critical { background: #ef4444; color: #fff; }
-    .flag-high { background: #f97316; color: #fff; }
-    .flag-warning { background: #fde047; color: #0f172a; }
+    .flag-critical { background: #FF3B30; color: #fff; }
+    .flag-high { background: #FF9500; color: #fff; }
+    .flag-warning { background: #FFCC00; color: #0f172a; }
     
-    /* Executive Layout Styles */
     .exec-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
     .exec-table-panel { padding: 0; overflow: hidden; }
     .exec-table-panel table { margin: 0; }
@@ -283,7 +287,7 @@
   <!-- UNIVERSAL PIN MODAL -->
   <div id="pinModal" class="modal-overlay">
     <div class="modal-content animate-in">
-      <div style="width: 56px; height: 56px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);">
+      <div style="width: 56px; height: 56px; background: rgba(10, 132, 255, 0.1); border: 1px solid rgba(10, 132, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 0 20px rgba(10, 132, 255, 0.2);">
         <svg width="28" height="28" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
       </div>
       <h3 id="pinModalTitle">Admin Access</h3>
@@ -291,7 +295,7 @@
       <input type="password" id="pinInput" class="pin-input" placeholder="•••••" maxlength="5" autocomplete="off">
       <div style="display: flex; gap: 15px; justify-content: center;">
         <button class="btn-action btn-clear" onclick="closePinModal()">Cancel</button>
-        <button class="btn-action btn-export" id="submitPinBtn">Authenticate</button>
+        <button class="btn-action btn-export" id="submitPinBtn" style="background-color: var(--accent);">Authenticate</button>
       </div>
     </div>
   </div>
@@ -353,57 +357,52 @@
         <input type="text" id="otpInput" placeholder="Enter 6-digit code">
         <button class="btn-login" onclick="verifyOTP()">Login securely</button>
       </div>
-      
       <div class="divider">OR</div>
-
       <div style="display: flex; justify-content: center; width: 100%;">
         <div id="g_id_onload" data-client_id="801862906305-d2sbfbbcpih507cc8bot5sav1nlt8606.apps.googleusercontent.com" data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin" data-auto_prompt="false"></div>
         <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-logo_alignment="left"></div>
       </div>
-      
-      <p id="loginError" style="color: #ef4444; margin-top: 20px; font-size: 0.9rem; display: none; font-weight: 500;"></p>
+      <p id="loginError" style="color: #FF3B30; margin-top: 20px; font-size: 0.9rem; display: none; font-weight: 500;"></p>
     </div>
   </div>
 
   <!-- MODULE WISE REPORT MODAL -->
   <div id="moduleReportModal" class="modal-overlay">
-    <div class="modal-content animate-in" style="max-width: 900px; width: 95vw; background: #ffffff; color: #0f172a; text-align: left; padding: 40px;">
+    <div class="modal-content animate-in" style="max-width: 900px; width: 95vw; background: #ffffff; color: #1d1d1f; text-align: left; padding: 40px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
           <div>
-            <h2 style="margin:0; font-weight:700; color:#0f172a; font-size: 1.8rem;">EXECUTIVE SUMMARY</h2>
-            <p id="moduleReportSubtitle" style="color: #64748b; margin-top: 5px; font-weight: 500; font-size: 0.9rem;"></p>
+            <h2 style="margin:0; font-weight:700; color:#1d1d1f; font-size: 1.8rem;">EXECUTIVE SUMMARY</h2>
+            <p id="moduleReportSubtitle" style="color: #86868b; margin-top: 5px; font-weight: 500; font-size: 0.9rem;"></p>
           </div>
           <div style="display: flex; gap: 10px;">
-              <button class="btn-action btn-copy" id="btnSyncModule" onclick="exportModuleToSheet()" style="background:#3b82f6;">Sync to Google Sheets</button>
-              <button class="btn-action btn-copy" onclick="window.print()" style="background:#10b981;">Print / Save PDF</button>
-              <button class="icon-btn" onclick="document.getElementById('moduleReportModal').style.display='none'" style="border-color:#cbd5e1; color:#0f172a; background: transparent;">
+              <button class="btn-action btn-copy" id="btnSyncModule" onclick="exportModuleToSheet()" style="background:var(--accent);">Sync to Google Sheets</button>
+              <button class="btn-action btn-copy" onclick="window.print()" style="background:#34C759;">Print / Save PDF</button>
+              <button class="icon-btn" onclick="document.getElementById('moduleReportModal').style.display='none'" style="border-color:#cbd5e1; color:#1d1d1f; background: transparent;">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
           </div>
       </div>
-      <div id="moduleReportContent" style="max-height: 65vh; overflow-y: auto; padding-right: 10px; font-size: 0.95rem;">
-          <!-- JS will inject the report here -->
-      </div>
+      <div id="moduleReportContent" style="max-height: 65vh; overflow-y: auto; padding-right: 10px; font-size: 0.95rem;"></div>
     </div>
   </div>
 
   <!-- DEPARTMENT EMAIL PREVIEW MODAL -->
   <div id="emailPreviewModal" class="modal-overlay">
-    <div class="modal-content animate-in" style="max-width: 800px; width: 95vw; background: #ffffff; color: #0f172a; text-align: left; padding: 40px;">
+    <div class="modal-content animate-in" style="max-width: 800px; width: 95vw; background: #ffffff; color: #1d1d1f; text-align: left; padding: 40px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
           <div>
-            <h2 style="margin:0; font-weight:700; color:#0f172a; font-size: 1.5rem;" id="emailPreviewTitle">Report Preview</h2>
-            <p style="color: #64748b; margin-top: 5px; font-weight: 500; font-size: 0.9rem;">Review before sending.</p>
+            <h2 style="margin:0; font-weight:700; color:#1d1d1f; font-size: 1.5rem;" id="emailPreviewTitle">Report Preview</h2>
+            <p style="color: #86868b; margin-top: 5px; font-weight: 500; font-size: 0.9rem;">Review before sending.</p>
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
               <input type="email" id="emailSendTo" class="filter-input" placeholder="Your Email Address" style="width: 200px;">
-              <button class="btn-action" id="btnSendEmail" onclick="sendDeptEmail()" style="background:#10b981;">Send Email</button>
-              <button class="icon-btn" onclick="document.getElementById('emailPreviewModal').style.display='none'" style="border-color:#cbd5e1; color:#0f172a; background: transparent;">
+              <button class="btn-action" id="btnSendEmail" onclick="sendDeptEmail()" style="background:#34C759;">Send Email</button>
+              <button class="icon-btn" onclick="document.getElementById('emailPreviewModal').style.display='none'" style="border-color:#cbd5e1; color:#1d1d1f; background: transparent;">
                 <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
           </div>
       </div>
-      <div id="emailPreviewContent" style="max-height: 60vh; overflow-y: auto; background: #edf1f5; padding: 20px; border-radius: 8px;"></div>
+      <div id="emailPreviewContent" style="max-height: 60vh; overflow-y: auto; background: #f5f7fa; padding: 20px; border-radius: 8px;"></div>
     </div>
   </div>
 
@@ -428,7 +427,7 @@
       
       <div class="header-actions">
         <button class="icon-btn nav-link" onclick="navigateTo('anomaly')" data-tooltip="Anomaly Engine">
-          <svg fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          <svg fill="none" stroke="#FF3B30" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
         </button>
         <button class="icon-btn nav-link" onclick="navigateTo('reports')" data-tooltip="View Reports">
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
@@ -459,7 +458,6 @@
             <span style="background: linear-gradient(90deg, #a78bfa, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">New Version ✨</span>
          </div>
          
-         <!-- Filters for New Dashboard -->
          <div id="newDashFilters" style="display:none; gap: 15px; align-items: center;">
             <div class="filter-group">
               <label>Department</label>
@@ -484,7 +482,7 @@
            <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
          </div>
          <div class="skeleton-wrapper" style="grid-template-columns: 1fr 1fr;">
-           <div class="skeleton-card" style="height: 300px;"></div><div class="skeleton-card" style="height: 300px;"></div>
+           <div class="skeleton-card" style="height: 350px;"></div><div class="skeleton-card" style="height: 350px;"></div>
          </div>
       </div>
 
@@ -497,22 +495,22 @@
          
          <div class="exec-grid-container animate-in delay-2" style="grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
             <div class="glass-panel chart-container">
-               <h3 style="margin:0 0 15px 0; font-size:1rem; color:var(--text-muted); text-transform:uppercase;">Volume Trend</h3>
+               <h3 style="margin:0 0 15px 0; font-size:1rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Volume Trend</h3>
                <canvas id="trendChart"></canvas>
             </div>
             <div class="glass-panel chart-container">
-               <h3 style="margin:0 0 15px 0; font-size:1rem; color:var(--text-muted); text-transform:uppercase;">Priority Distribution</h3>
+               <h3 style="margin:0 0 15px 0; font-size:1rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Priority Distribution</h3>
                <canvas id="priorityChart"></canvas>
             </div>
          </div>
 
          <div class="exec-grid-container animate-in delay-3" style="grid-template-columns: 1fr 2fr; gap: 20px;">
             <div class="glass-panel chart-container-small">
-               <h3 style="margin:0 0 15px 0; font-size:1rem; color:var(--text-muted); text-transform:uppercase;">Status Overview</h3>
+               <h3 style="margin:0 0 15px 0; font-size:1rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Status Overview</h3>
                <canvas id="statusChart"></canvas>
             </div>
             <div class="glass-panel chart-container-small">
-               <h3 style="margin:0 0 15px 0; font-size:1rem; color:var(--text-muted); text-transform:uppercase;">Top Performers (Resolutions)</h3>
+               <h3 style="margin:0 0 15px 0; font-size:1rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Top Performers (Resolutions)</h3>
                <canvas id="agentChart"></canvas>
             </div>
          </div>
@@ -597,10 +595,10 @@
         </div>
 
         <div class="btn-group" style="margin-left: auto; align-items: center;">
-          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-right: 10px;">
+          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(10, 132, 255, 0.1); border: 1px solid rgba(10, 132, 255, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-right: 10px;">
             Total Tickets: <span id="reportsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
           </div>
-          <button class="btn-action" style="background-color: #f59e0b;" onclick="navigateTo('tickets', 'missingFields', 'all')" data-tooltip="View tickets missing Priority or Classification">Missing Fields</button>
+          <button class="btn-action" style="background-color: #FF9500;" onclick="navigateTo('tickets', 'missingFields', 'all')" data-tooltip="View tickets missing Priority or Classification">Missing Fields</button>
           <button class="btn-action btn-danger" onclick="navigateTo('critical')" data-tooltip="Critical Reports">Critical Reports</button>
           <button class="btn-action btn-clear" onclick="clearReportsLocalFilters()">Clear</button>
           <button class="btn-action btn-export" onclick="exportReportsToCSV()">Export</button>
@@ -734,10 +732,10 @@
         </div>
 
         <div class="btn-group" style="margin-left: auto; align-items: center;">
-          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-right: 10px;">
+          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(10, 132, 255, 0.1); border: 1px solid rgba(10, 132, 255, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-right: 10px;">
             Total Tickets: <span id="ticketsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
           </div>
-          <button class="btn-action" id="btnDeptEmailPreview" onclick="openEmailPreview()" style="background-color: #8b5cf6; display: none;">Preview & Email Report</button>
+          <button class="btn-action" id="btnDeptEmailPreview" onclick="openEmailPreview()" style="background-color: #5856D6; display: none;">Preview & Email Report</button>
           <button class="btn-action btn-clear" onclick="clearTicketsFilters()" data-tooltip="Reset all filters">Clear</button>
           <button class="btn-action btn-export" onclick="exportTicketsToCSV()" data-tooltip="Download current view">Export</button>
         </div>
@@ -920,37 +918,32 @@
                 <div class="select-btn filter-input" onclick="toggleDropdown('execDeptDropdown')"><span id="execDeptLabel">All Departments</span> ▼</div>
                 <div class="select-dropdown" id="execDeptDropdown">
                    <label><input type="radio" name="execDept" value="All" onchange="applyExecFilters()" checked> All Departments</label>
-                   <!-- Injected via JS -->
                 </div>
               </div>
             </div>
             
-            <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase;">
+            <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(10, 132, 255, 0.1); border: 1px solid rgba(10, 132, 255, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase;">
               Total Active: <span id="execTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
             </div>
           </div>
 
-         <!-- NEW AGENT FILTER (Dynamically visible for Development) -->
             <div class="filter-group" id="execAgentFilterGroup" style="display: none;">
               <label>Assignee</label>
               <div class="custom-select" style="width: 220px;">
                 <div class="select-btn filter-input" onclick="toggleDropdown('execAgentDropdown')"><span id="execAgentLabel">All Assignees</span> ▼</div>
                 <div class="select-dropdown" id="execAgentDropdown">
-                   <!-- Injected via JS -->
                 </div>
               </div>
             </div>
           </div>
 
           <div class="btn-group">
-            <button class="btn-action" onclick="generateModuleReport()" style="background-color: #3b82f6;">Module Wise Report</button>
+            <button class="btn-action" onclick="generateModuleReport()" style="background-color: var(--accent);">Module Wise Report</button>
             <button class="btn-action btn-export" onclick="exportExecutiveToSheet()" id="btnSyncExec">Sync to Google Sheets</button>            
           </div>
        </div>
 
-       <!-- Container for all Executive widgets -->
        <div id="execWidgetsContainer" class="animate-in delay-2">
-         <!-- Will be rendered entirely via JS to keep the data mapping clean -->
        </div>
     </div>
 
@@ -971,10 +964,7 @@
         if (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) { e.preventDefault(); }
     });
 
-// Global references for our charts so we can destroy them before redrawing
     let chartsObj = { trend: null, priority: null, status: null, agent: null };
-
-   
 
     function toggleDashboardVersion() {
        const isNew = document.getElementById('dashVersionToggle').checked;
@@ -988,7 +978,7 @@
            document.getElementById('dashboardClassicContainer').style.display = 'block';
            document.getElementById('newDashFilters').style.display = 'none';
            document.getElementById('dashboardNewContainer').style.display = 'none';
-           renderMainDashboard(); // Your existing function
+           renderMainDashboard(); 
        }
     }
 
@@ -1009,7 +999,6 @@
         let data = window.allGlobalTickets;
         if (dept !== 'All') data = data.filter(t => (t.department ? t.department.name : 'General') === dept);
 
-        // 1. TOP METRICS (Apple Colors)
         const openCnt = data.filter(t => !((t.status || '').toLowerCase().includes('clos'))).length;
         const closedCnt = data.length - openCnt;
         
@@ -1019,24 +1008,21 @@
             if(p.includes('critical')) pCounts.Critical++; else if(p.includes('high')||p.includes('urgent')) pCounts.High++; else if(p.includes('low')) pCounts.Low++; else pCounts.Medium++;
         });
 
-        // Left-aligned, sleeker cards
         document.getElementById('newDashMetricsTop').innerHTML = `
-            <div class="metric-card glass-panel"><h3>Total Open</h3><p style="color:#007AFF">${openCnt}</p></div>
+            <div class="metric-card glass-panel"><h3>Total Open</h3><p style="color:#0A84FF">${openCnt}</p></div>
             <div class="metric-card glass-panel"><h3>Total Closed</h3><p style="color:var(--text-main)">${closedCnt}</p></div>
             <div class="metric-card glass-panel"><h3>Critical Priority</h3><p style="color:#FF3B30">${pCounts.Critical}</p></div>
             <div class="metric-card glass-panel"><h3>High Priority</h3><p style="color:#FF9500">${pCounts.High}</p></div>
         `;
 
-        // Configure Chart.js Global defaults for Apple aesthetics
         const isLight = document.body.classList.contains('light-mode');
         Chart.defaults.color = isLight ? '#86868b' : '#94a3b8';
         Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif';
         Chart.defaults.font.weight = '500';
         
         const gridColor = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)';
-        const cardBgColor = isLight ? '#ffffff' : '#1e293b'; // Used for borders on charts
+        const cardBgColor = isLight ? '#ffffff' : '#1e293b'; 
 
-        // 2. TREND GRAPH LOGIC
         let labels = []; let openData = []; let closedData = [];
         const now = new Date();
         
@@ -1065,20 +1051,19 @@
             }
         }
 
-        // Create Gradients for Line Chart
         const trendCtx = document.getElementById('trendChart').getContext('2d');
         const gradBlue = trendCtx.createLinearGradient(0, 0, 0, 350);
-        gradBlue.addColorStop(0, 'rgba(0, 122, 255, 0.5)'); // Apple Blue
-        gradBlue.addColorStop(1, 'rgba(0, 122, 255, 0.0)');
+        gradBlue.addColorStop(0, 'rgba(10, 132, 255, 0.5)'); 
+        gradBlue.addColorStop(1, 'rgba(10, 132, 255, 0.0)');
         
         const gradIndigo = trendCtx.createLinearGradient(0, 0, 0, 350);
-        gradIndigo.addColorStop(0, 'rgba(88, 86, 214, 0.5)'); // Apple Indigo
+        gradIndigo.addColorStop(0, 'rgba(88, 86, 214, 0.5)'); 
         gradIndigo.addColorStop(1, 'rgba(88, 86, 214, 0.0)');
 
         drawChart('trend', 'trendChart', 'line', {
             labels: labels,
             datasets: [
-                { label: 'New Tickets', data: openData, borderColor: '#007AFF', backgroundColor: gradBlue, fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 6 },
+                { label: 'New Tickets', data: openData, borderColor: '#0A84FF', backgroundColor: gradBlue, fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 6 },
                 { label: 'Closed Tickets', data: closedData, borderColor: '#5856D6', backgroundColor: gradIndigo, fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 6 }
             ]
         }, { 
@@ -1091,7 +1076,6 @@
             }
         });
 
-        // 3. PRIORITY DOUGHNUT (Separated segments)
         drawChart('priority', 'priorityChart', 'doughnut', {
             labels: ['Critical', 'High', 'Medium', 'Low'],
             datasets: [{ 
@@ -1107,7 +1091,6 @@
             plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } }
         });
 
-        // 4. STATUS DISTRIBUTION (Rounded Bars)
         let sCounts = {};
         data.filter(t => !((t.status||'').toLowerCase().includes('clos'))).forEach(t => { sCounts[t.status||'Open'] = (sCounts[t.status||'Open']||0)+1; });
         drawChart('status', 'statusChart', 'bar', {
@@ -1122,7 +1105,6 @@
             }
         });
 
-        // 5. TOP PERFORMERS (RESOLVED TICKETS)
         let aCounts = {};
         data.filter(t => (t.status||'').toLowerCase().includes('clos')).forEach(t => {
             const a = t.assignee ? t.assignee.fullName : 'Unassigned';
@@ -1142,18 +1124,12 @@
         });
     }
 
-    // Helper to safely destroy and recreate charts
     function drawChart(refName, canvasId, type, data, options) {
         if (chartsObj[refName]) chartsObj[refName].destroy();
         const ctx = document.getElementById(canvasId).getContext('2d');
         chartsObj[refName] = new Chart(ctx, { type: type, data: data, options: options });
     }
 
-
-
-    // ==========================================
-    // GLOBAL STATE & UTILITIES
-    // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
     const CACHE_VER = '_v9'; 
@@ -1181,21 +1157,11 @@
     };
 
     const ALL_COLS = {
-        col_id: 'Ticket #',
-        col_subject: 'Subject',
-        col_client: 'Client Name',
-        col_classification: 'Classification',
-        col_priority: 'Priority',
-        col_dept: 'Department',
-        col_status: 'Status',
-        col_assignee: 'Assignee',
-        col_created: 'Created Date',
-        col_updated: 'Last Updated',
-        col_closed: 'Closed Date',
-        col_responded: 'Agent Responded',
-        col_resolution: 'Resolution (Hrs)',
-        col_resolved: 'Issue Resolved Time',
-        col_module: 'Module' // <-- ADD THIS LINE
+        col_id: 'Ticket #', col_subject: 'Subject', col_client: 'Client Name',
+        col_classification: 'Classification', col_priority: 'Priority', col_dept: 'Department',
+        col_status: 'Status', col_assignee: 'Assignee', col_created: 'Created Date',
+        col_updated: 'Last Updated', col_closed: 'Closed Date', col_responded: 'Last Ticket Update',
+        col_resolution: 'Resolution (Hrs)', col_resolved: 'Issue Resolved Time', col_module: 'Module'
     };
 
     const tableDateFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' });
@@ -1224,9 +1190,6 @@
         return bDays;
     }
 
-    // ==========================================
-    // UNIFIED TABLE ENGINE
-    // ==========================================
     function initColumns(viewPrefix, defaultCols) {
         let savedCols = JSON.parse(localStorage.getItem(`sandbox_${viewPrefix}_columns_v2`));
         if (!savedCols) {
@@ -1272,22 +1235,21 @@
     function renderColData(c, t) {
       let val = '-';
       switch(c) {
-        case 'col_id': val = `<a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a>`; break;
+        case 'col_id': val = `<a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a>`; break;
         case 'col_subject': val = `<strong>${t.subject}</strong>`; break;
         case 'col_client': val = t.clientName; break;
         case 'col_dept': val = `<span class="dept-badge">${t.department ? (t.department.name || t.department) : 'General'}</span>`; break;
         case 'col_assignee': val = t.assignee ? (t.assignee.fullName || t.assignee) : 'Unassigned'; break;
         case 'col_priority': 
             const p = t.priority||'-'; const pl = p.toLowerCase(); let bg='#94a3b8'; let tc='#fff';
-            if(pl.includes('low')){bg='#86efac';tc='#0f172a';} else if(pl.includes('medium')){bg='#fde047';tc='#0f172a';} else if(pl.includes('high')){bg='#f97316';} else if(pl.includes('urgent')){bg='#fca5a5';tc='#0f172a';} else if(pl.includes('critical')){bg='#ef4444';}
+            if(pl.includes('low')){bg='#34C759';tc='#1d1d1f';} else if(pl.includes('medium')){bg='#FFCC00';tc='#1d1d1f';} else if(pl.includes('high')){bg='#FF9500';} else if(pl.includes('urgent')){bg='#FF3B30';tc='#fff';} else if(pl.includes('critical')){bg='#FF3B30';}
             val = p !== '-' ? `<span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span>` : '-'; break;
         case 'col_status': val = t.status||'-'; break;
         case 'col_created': val = t.createdTime?tableDateFmt.format(new Date(t.createdTime)):'-'; break;
         case 'col_updated': val = t.modifiedTime?tableDateFmt.format(new Date(t.modifiedTime)):'-'; break;
         case 'col_closed': val = t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'; break;
         case 'col_responded': 
-             const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
-             val = rspData ? tableDateFmt.format(new Date(rspData)) : '-'; break;
+             val = t.modifiedTime ? tableDateFmt.format(new Date(t.modifiedTime)) : '-'; break;
         case 'col_resolution': val = `<strong>${t.resolutionTime||'-'}</strong>`; break;
         case 'col_classification': val = t.classification||'-'; break;
         case 'col_resolved': 
@@ -1311,9 +1273,7 @@
         case 'col_created': return t.createdTime?csvDateFmt.format(new Date(t.createdTime)):'-';
         case 'col_updated': return t.modifiedTime?csvDateFmt.format(new Date(t.modifiedTime)):'-';
         case 'col_closed': return t.closedTime?csvDateFmt.format(new Date(t.closedTime)):'-';
-        case 'col_responded': 
-             const rspData = t.agentRespondedTime || t.modifiedTime || t.createdTime;
-             return rspData ? csvDateFmt.format(new Date(rspData)) : '-';
+        case 'col_responded': return t.modifiedTime ? `"${csvDateFmt.format(new Date(t.modifiedTime))}"` : '-';
         case 'col_resolution': return t.resolutionTime || '-';
         case 'col_classification': return `"${(t.classification||"").replace(/"/g,'""')}"`;
         case 'col_resolved': 
@@ -1339,9 +1299,6 @@
        document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u); 
     }
 
-    // ==========================================
-    // INITIALIZATION & AUTH
-    // ==========================================
     function initTheme() {
       if (localStorage.getItem('theme') === 'light') { document.body.classList.add('light-mode'); document.getElementById('themeIcon').textContent = '🌙'; }
     }
@@ -1349,6 +1306,7 @@
       const isLight = document.body.classList.toggle('light-mode');
       document.getElementById('themeIcon').textContent = isLight ? '🌙' : '☀️';
       localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      if(document.getElementById('dashVersionToggle').checked) renderNewDashboard();
     }
 
     function checkSession() {
@@ -1382,23 +1340,12 @@
       try {
         let base64Url = response.credential.split('.')[1];
         let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        
-        let jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        
+        let jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
         const payload = JSON.parse(jsonPayload);
-        
-        if (ALLOWED_EMAILS.includes(payload.email.toLowerCase())) {
-            loadSecureApp();
-        } else { 
-            document.getElementById('loginError').textContent = 'Access restricted. Email not on the approved list.'; 
-            document.getElementById('loginError').style.display = 'block'; 
-        }
+        if (ALLOWED_EMAILS.includes(payload.email.toLowerCase())) { loadSecureApp(); } 
+        else { document.getElementById('loginError').textContent = 'Access restricted. Email not on the approved list.'; document.getElementById('loginError').style.display = 'block'; }
       } catch (err) {
-        console.error("SSO Processing Error:", err);
-        document.getElementById('loginError').textContent = 'SSO Error: Could not securely verify your account.'; 
-        document.getElementById('loginError').style.display = 'block'; 
+        document.getElementById('loginError').textContent = 'SSO Error: Could not securely verify your account.'; document.getElementById('loginError').style.display = 'block'; 
       }
     }
 
@@ -1406,10 +1353,7 @@
     async function requestOTP() {
       const email = document.getElementById('emailInput').value.trim().toLowerCase(); 
       const btn = document.querySelector('button[onclick="requestOTP()"]');
-      if (!ALLOWED_EMAILS.includes(email)) { 
-          document.getElementById('loginError').textContent = 'Access temporarily restricted to specific users.'; 
-          document.getElementById('loginError').style.display='block'; return; 
-      }
+      if (!ALLOWED_EMAILS.includes(email)) { document.getElementById('loginError').textContent = 'Access temporarily restricted to specific users.'; document.getElementById('loginError').style.display='block'; return; }
       btn.textContent = "Sending..."; btn.disabled = true;
       try {
         const res = await fetch(PROXY_URL, { method: 'POST', credentials: 'omit', body: JSON.stringify({ action: 'sendOtp', email: email }) });
@@ -1427,9 +1371,6 @@
       } catch (err) { btn.textContent = "Login securely"; btn.disabled = false; }
     }
 
-    // ==========================================
-    // SPA HASH ROUTING
-    // ==========================================
     window.addEventListener('hashchange', function() {
       const view = window.location.hash.replace('#', '') || 'dashboard';
       navigateTo(view, null, null, true);
@@ -1455,11 +1396,8 @@
       if (!skipHistory) {
         const newHash = viewName === 'dashboard' ? '' : `#${viewName}`;
         if (window.location.hash !== newHash) {
-            if(newHash === '') {
-                window.history.pushState('', document.title, window.location.pathname + window.location.search);
-            } else {
-                window.history.pushState(null, null, newHash);
-            }
+            if(newHash === '') window.history.pushState('', document.title, window.location.pathname + window.location.search);
+            else window.history.pushState(null, null, newHash);
         }
       }
       
@@ -1472,7 +1410,7 @@
       document.getElementById('agentHeaderInfo').style.display = 'none';
       
       const titleEl = document.getElementById('headerTitleText');
-      if(viewName === 'dashboard') { titleEl.textContent = 'Support Portal'; renderMainDashboard(); }
+      if(viewName === 'dashboard') { titleEl.textContent = 'Support Portal'; if (document.getElementById('dashVersionToggle').checked) renderNewDashboard(); else renderMainDashboard(); }
       if(viewName === 'reports') { titleEl.textContent = 'Reports Dashboard'; initReportsView(); }
       if(viewName === 'agents') { titleEl.textContent = 'Support Agents'; showAgentsList(); }
       if(viewName === 'tickets') { initTicketsView(filterType, filterValue); }
@@ -1483,15 +1421,11 @@
       if(viewName === 'executive') { titleEl.textContent = 'Executive Reports'; initExecutiveView(); }
     }
 
-    // ==========================================
-    // DATA FETCHING ENGINE
-    // ==========================================
    async function fetchGlobalData(forceLive = false, pin = '') {
       const errorContainer = document.getElementById('dashboardClassicContainer');
       const lastUpdatedEl = document.getElementById('lastUpdatedText');
       if(forceLive && lastUpdatedEl) lastUpdatedEl.textContent = "⏱️ Forcing live sync...";
       
-      // 1. Show skeleton loader while fetching
       const skel = document.getElementById('dashboardSkeleton');
       if (skel) skel.style.display = 'block';
       if (errorContainer) errorContainer.style.display = 'none';
@@ -1515,13 +1449,7 @@
             const rawText = await response.text();
             
             let result;
-            try {
-                result = JSON.parse(rawText);
-            } catch (parseError) {
-                const safeText = rawText.substring(0, 300).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                throw new Error("HIDDEN GOOGLE ERROR: " + safeText);
-            }
-            
+            try { result = JSON.parse(rawText); } catch (e) { throw new Error("HIDDEN GOOGLE ERROR: " + rawText.substring(0, 300).replace(/</g, '&lt;')); }
             if (result.error) throw new Error(result.error);
             
             window.exactStatsData = result.exactStats;
@@ -1564,12 +1492,9 @@
           lastUpdatedEl.innerHTML = `⏱️ Last updated: ${formatter.format(new Date(lastUpdateMs))} ET`;
         }
         
-        // 2. Hide skeleton loader now that data is ready
         if (skel) skel.style.display = 'none';
-
         initAllColumns();
 
-        // 3. Route to the correct view cleanly
         const currentView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
         
         if (currentView === 'dashboard') {
@@ -1594,14 +1519,11 @@
         if (skel) skel.style.display = 'none';
         if (errorContainer) {
             errorContainer.style.display = 'block';
-            errorContainer.innerHTML = `<div class="glass-panel" style="padding:30px; text-align:center; color:#ef4444;">Error: ${err.message}</div>`;
+            errorContainer.innerHTML = `<div class="glass-panel" style="padding:30px; text-align:center; color:#FF3B30;">Error: ${err.message}</div>`;
         }
       }
     }
 
-    // ==========================================
-    // VIEW 1: DASHBOARD
-    // ==========================================
     function renderMainDashboard() {
       const container = document.getElementById('dashboardClassicContainer');
       if (!window.allGlobalTickets || window.allGlobalTickets.length === 0) return;
@@ -1659,7 +1581,7 @@
       Object.entries(priorityCounts).forEach(([priority, count]) => {
         if (count > 0) {
           let bg = '#94a3b8'; let tc = '#ffffff'; const p = priority.toLowerCase();
-          if (p.includes('low')) { bg = '#86efac'; tc = '#0f172a'; } else if (p.includes('medium')) { bg = '#fde047'; tc = '#0f172a'; } else if (p.includes('high')) { bg = '#f97316'; tc = '#ffffff'; } else if (p.includes('urgent')) { bg = '#fca5a5'; tc = '#0f172a'; } else if (p.includes('critical')) { bg = '#ef4444'; tc = '#ffffff'; } 
+          if (p.includes('low')) { bg = '#34C759'; tc = '#1d1d1f'; } else if (p.includes('medium')) { bg = '#FFCC00'; tc = '#1d1d1f'; } else if (p.includes('high')) { bg = '#FF9500'; tc = '#ffffff'; } else if (p.includes('urgent')) { bg = '#FF3B30'; tc = '#ffffff'; } else if (p.includes('critical')) { bg = '#FF3B30'; tc = '#ffffff'; } 
           html += `<div onclick="navigateTo('tickets', 'priority', '${encodeURIComponent(priority)}')" class="metric-card glass-panel"><div><span class="priority-badge" style="background-color:${bg}; color:${tc};">${priority}</span></div><p>${count}</p></div>`;
         }
       });
@@ -1668,9 +1590,6 @@
       container.innerHTML = html + `</div>`;
     }
 
-    // ==========================================
-    // VIEW 2: REPORTS
-    // ==========================================
     function initReportsView() {
       let cData = state.reports.isHistoryMode ? state.reports.historyData : window.allGlobalTickets;
       populateReportsDropdowns(cData || []);
@@ -1799,11 +1718,11 @@
         if(prio.includes('critical')) pCounts.Critical++; else if(prio.includes('urgent')) pCounts.Urgent++; else if(prio.includes('high')) pCounts.High++; else if(prio.includes('medium')) pCounts.Medium++; else if(prio.includes('low')) pCounts.Low++; else pCounts.None++;
       });
 
-      let pHT = ''; const clrs = { "Critical": "#ef4444", "Urgent": "#fca5a5", "High": "#f97316", "Medium": "#fde047", "Low": "#86efac", "None": "#94a3b8" };
+      let pHT = ''; const clrs = { "Critical": "#FF3B30", "Urgent": "#FF3B30", "High": "#FF9500", "Medium": "#FFCC00", "Low": "#34C759", "None": "#94a3b8" };
       Object.entries(pCounts).forEach(([p, c]) => {
         if(c > 0 || p !== "None") {
           const act = state.reports.activePriority === p ? 'active-filter' : '';
-          pHT += `<div class="metric-card glass-panel ${act}" onclick="state.reports.activePriority=(state.reports.activePriority==='${p}'?null:'${p}'); renderReportsView();"><div><span class="priority-badge" style="background-color:${clrs[p]}; color:${(p==='Medium'||p==='Low'||p==='Urgent')?'#0f172a':'#fff'};">${p}</span></div><p>${c}</p></div>`;
+          pHT += `<div class="metric-card glass-panel ${act}" onclick="state.reports.activePriority=(state.reports.activePriority==='${p}'?null:'${p}'); renderReportsView();"><div><span class="priority-badge" style="background-color:${clrs[p]}; color:${(p==='Medium'||p==='Low'||p==='None')?'#1d1d1f':'#fff'};">${p}</span></div><p>${c}</p></div>`;
         }
       });
       document.getElementById('reportsPriorityCardsContainer').innerHTML = pHT;
@@ -1839,9 +1758,6 @@
       unifiedExportCSV(`Reports_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`, exportData, colsToRender);
     }
 
-    // ==========================================
-    // VIEW 3: AGENTS
-    // ==========================================
     function showAgentsList() {
       document.getElementById('agentsListView').style.display = 'block'; document.getElementById('agentDetailsView').style.display = 'none';
       document.getElementById('globalBackBtn').style.display = 'inline-flex'; document.getElementById('backToAgentsBtn').style.display = 'none';
@@ -1872,7 +1788,7 @@
       document.getElementById('globalBackBtn').style.display = 'none'; document.getElementById('backToAgentsBtn').style.display = 'inline-flex';
       document.getElementById('headerTitleText').textContent = `${ag.firstName} ${ag.lastName}`;
       const hInfo = document.getElementById('agentHeaderInfo'); hInfo.style.display = 'flex';
-      hInfo.innerHTML = `<span>✉️ ${ag.email}</span> | <span>🏢 ${ag.department}</span> | <span style="color:#10b981;">● Active</span>`;
+      hInfo.innerHTML = `<span>✉️ ${ag.email}</span> | <span>🏢 ${ag.department}</span> | <span style="color:#34C759;">● Active</span>`;
 
       state.agents.currentId = aId;
       state.agents.currentTickets = window.allGlobalTickets.filter(t => t.assignee && t.assignee.id === aId);
@@ -1898,8 +1814,8 @@
       const cH = (tl, ob) => `<div class="metric-card glass-panel"><h3>${tl}</h3><p>${ob.t}</p><div class="stats-subtext"><span class="stats-open">Open: ${ob.o}</span> &nbsp;|&nbsp; <span class="stats-closed">Closed: ${ob.c}</span></div></div>`;
       document.getElementById('agentStatsCards').innerHTML = `<div class="metric-card glass-panel" style="border-color:var(--accent);"><h3>Open Today</h3><p style="color:var(--accent);">${s.todayOpen}</p></div>` + cH('Yesterday', s.yest) + cH('This Week', s.wk) + cH('This Month', s.mo);
       
-      let pH = ''; const clrs = { "Critical": "#ef4444", "Urgent": "#fca5a5", "High": "#f97316", "Medium": "#fde047", "Low": "#86efac" };
-      Object.entries(pC).forEach(([pr, ct]) => { pH += `<div class="metric-card glass-panel"><div><span class="priority-badge" style="background-color:${clrs[pr]}; color:${(pr==='Medium'||pr==='Low'||pr==='Urgent')?'#0f172a':'#fff'};">${pr}</span></div><p>${ct}</p></div>`; });
+      let pH = ''; const clrs = { "Critical": "#FF3B30", "Urgent": "#FF3B30", "High": "#FF9500", "Medium": "#FFCC00", "Low": "#34C759" };
+      Object.entries(pC).forEach(([pr, ct]) => { pH += `<div class="metric-card glass-panel"><div><span class="priority-badge" style="background-color:${clrs[pr]}; color:${(pr==='Medium'||pr==='Low'||pr==='Urgent')?'#1d1d1f':'#fff'};">${pr}</span></div><p>${ct}</p></div>`; });
       document.getElementById('agentPriorityCards').innerHTML = pH;
     }
     
@@ -1944,9 +1860,6 @@
       });
     }
 
-    // ==========================================
-    // VIEW 4: TICKETS DEEP DIVE
-    // ==========================================
     function initTicketsView(filterType, filterValue) {
       document.getElementById('btnDeptEmailPreview').style.display = 'none';
       document.getElementById('headerTitleText').textContent = 'Loading Tickets...';
@@ -2048,9 +1961,6 @@
       unifiedExportCSV(`Tickets_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`, state.tickets.currentFiltered, state.tickets.selectedCols);
     }
 
-    // ==========================================
-    // VIEW 5: CRITICAL REPORTS VIEW
-    // ==========================================
     function initCriticalView() {
       const jan1 = new Date('2026-01-01T00:00:00');
       state.critical.baseData = window.allGlobalTickets.filter(t => {
@@ -2151,9 +2061,6 @@
       unifiedExportCSV(`Critical_Tickets_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`, state.critical.filteredData, state.critical.selectedCols);
     }
 
-    // ==========================================
-    // VIEW 6: ADMIN RESOLUTION TIME ENTRY
-    // ==========================================
     function saveResolvedTime(ticketId, val) {
       let customResolvedTimes = JSON.parse(localStorage.getItem('sandbox_custom_resolved_times') || '{}');
       customResolvedTimes[ticketId] = val;
@@ -2182,9 +2089,6 @@
       });
     }
 
-    // ==========================================
-    // VIEW 7: AI SEARCH
-    // ==========================================
     async function runAiSearch(isReRender = false) {
       const inputEl = document.getElementById('aiSearchInput');
       const btnEl = document.getElementById('aiSearchBtn');
@@ -2219,7 +2123,7 @@
         renderAiTable();
         controls.style.display = 'flex'; tableCont.style.display = 'block';
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="${state.ai.selectedCols.length}" style="color:#ef4444; text-align:center; padding: 40px;">Error: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${state.ai.selectedCols.length}" style="color:#FF3B30; text-align:center; padding: 40px;">Error: ${err.message}</td></tr>`;
         tableCont.style.display = 'block';
       } finally {
         loader.style.display = 'none'; btnEl.disabled = false; inputEl.disabled = false; inputEl.focus();
@@ -2241,9 +2145,6 @@
        unifiedExportCSV(`AI_Search_Export_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`, state.ai.data, state.ai.selectedCols);
     }
 
-    // ==========================================
-    // VIEW 8: ANOMALY DETECTION ENGINE
-    // ==========================================
     function initAnomalyView() {
       state.anomaly.data = [];
       state.anomaly.filterType = 'All'; 
@@ -2393,7 +2294,7 @@
       tbody.innerHTML = '';
 
       if(state.anomaly.currentFiltered.length === 0) { 
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 60px; color: #10b981; font-weight: 600;">✅ System healthy. No anomalies match filter.</td></tr>`; 
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 60px; color: #34C759; font-weight: 600;">✅ System healthy. No anomalies match filter.</td></tr>`; 
           return; 
       }
       
@@ -2439,9 +2340,6 @@
         document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(u);
     }
 
-    // ==========================================
-    // VIEW 9: EXECUTIVE REPORTS
-    // ==========================================
     function initExecutiveView() {
       const dp = new Set();
       window.allGlobalTickets.forEach(t => { dp.add(t.department ? t.department.name : 'General'); });
@@ -2461,7 +2359,6 @@
       state.executive.currentDept = selected;
       document.getElementById('execDeptLabel').innerText = selected === 'All' ? 'All Departments' : selected;
       
-      // Rebuild the Assignee list if the department changed
       if (isInit || prevDept !== selected) {
           let deptData = window.allGlobalTickets;
           if (selected !== 'All') {
@@ -2481,7 +2378,6 @@
           }
       }
 
-      // Show the Assignee filter ONLY for Development
       const agentFilterGrp = document.getElementById('execAgentFilterGroup');
       if (agentFilterGrp) {
           if (selected === 'Development') {
@@ -2496,13 +2392,11 @@
 
     function renderExecutiveView() {
       const deptFilter = state.executive.currentDept;
-      
       let baseData = window.allGlobalTickets;
       if (deptFilter !== 'All') {
           baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
       }
 
-      // Apply the Agent Filter explicitly for Development before running math
       if (deptFilter === 'Development') {
           const agentInputs = document.querySelectorAll('#execAgentDropdown input:checked');
           if (agentInputs) {
@@ -2524,9 +2418,6 @@
       const dateFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
       const dateRangeStr = `${dateFmt.format(last7DaysDate)} - ${dateFmt.format(today)}`;
 
-      // ========================================================
-      // 1. SERVICES LAYOUT
-      // ========================================================
       if (deptFilter === 'Services') {
           const now = new Date();
           const oneWeekAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
@@ -2634,7 +2525,7 @@
                 </div>
                 <div class="glass-panel exec-table-panel">
                    <table><thead style="background:var(--th-bg);"><tr><th colspan="4" style="font-size: 1rem; color: var(--accent);">Week-over-week comparison</th></tr><tr><th style="font-size:0.75rem;">Metric</th><th style="font-size:0.75rem;">Prior</th><th style="font-size:0.75rem;">Current</th><th style="font-size:0.75rem;">Change</th></tr></thead>
-                      <tbody><tr><td>All listed statuses</td><td>${priorTotalListed}</td><td><strong>${totalListed}</strong></td><td><span style="color:${dfTot>0?'#ef4444':'#10b981'}; font-weight:bold;">${dTs}</span></td></tr><tr><td>Open + In Progress</td><td>${priorActive}</td><td><strong>${currActive}</strong></td><td><span style="color:${dfAct>0?'#ef4444':'#10b981'}; font-weight:bold;">${dAs}</span></td></tr><tr><td>Relevant with services desk</td><td>${priorRelevant}</td><td><strong>${currRelevant}</strong></td><td><span style="color:${dfRel>0?'#ef4444':'#10b981'}; font-weight:bold;">${dRs}</span></td></tr><tr><td>Awaiting response >24h</td><td>${priorNoResp}</td><td><strong>${currNoResp}</strong></td><td><span style="color:${dfNR>0?'#ef4444':'#10b981'}; font-weight:bold;">${dNRs}</span></td></tr></tbody></table>
+                      <tbody><tr><td>All listed statuses</td><td>${priorTotalListed}</td><td><strong>${totalListed}</strong></td><td><span style="color:${dfTot>0?'#FF3B30':'#34C759'}; font-weight:bold;">${dTs}</span></td></tr><tr><td>Open + In Progress</td><td>${priorActive}</td><td><strong>${currActive}</strong></td><td><span style="color:${dfAct>0?'#FF3B30':'#34C759'}; font-weight:bold;">${dAs}</span></td></tr><tr><td>Relevant with services desk</td><td>${priorRelevant}</td><td><strong>${currRelevant}</strong></td><td><span style="color:${dfRel>0?'#FF3B30':'#34C759'}; font-weight:bold;">${dRs}</span></td></tr><tr><td>Awaiting response >24h</td><td>${priorNoResp}</td><td><strong>${currNoResp}</strong></td><td><span style="color:${dfNR>0?'#FF3B30':'#34C759'}; font-weight:bold;">${dNRs}</span></td></tr></tbody></table>
                 </div>
              </div>
              <div class="exec-grid-container">
@@ -2650,9 +2541,6 @@
           return;
       }
 
-      // ========================================================
-      // 2. DEVELOPMENT LAYOUT
-      // ========================================================
       if (deptFilter === 'Development') {
           const startOfThisWeek = getETMidnightForOffset(-7);
           const startOfLastWeek = getETMidnightForOffset(-14);
@@ -2747,9 +2635,9 @@
           state.executive.payloadArray = payload;
           document.getElementById('execTotalCount').innerText = thisWeekOpen;
 
-          let html = `<div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel" style="padding: 20px;"><h3 style="margin-top:0; color: var(--accent);">EXECUTIVE SUMMARY</h3><strong style="font-size: 1.1rem;">Overall Status:</strong><ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;"><li><strong>Total Open Tickets:</strong> ${thisWeekOpen} ${openChangeText}</li><li><strong>Week-over-Week ${openChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(openChange)} tickets</li><li><strong>Dev-Completed Tickets:</strong> ${devCompletedThisWeek} tickets</li><li><strong>Awaiting Client Response:</strong> ${clientAwaiting}</li></ul><strong style="font-size: 1.1rem; display:inline-block; margin-top: 15px;">Adjusted Active Count</strong><ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;"><li><strong>Active Tickets (excluding dev-completed):</strong> ${adjustedActive}</li><li><strong>Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})</li></ul></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel"><h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent);">KEY METRICS</h3><table style="margin-top: 10px;"><thead style="background:var(--th-bg);"><tr><th>Metric</th><th>This Week</th><th>Last Week</th><th>Change</th></tr></thead><tbody><tr><td>Total Open Tickets</td><td>${thisWeekOpen}</td><td>${lastWeekOpen}</td><td><span style="color:${openChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(openChange)}</span></td></tr><tr><td>Active Tickets (excl. dev-completed)</td><td>${adjustedActive}</td><td>${lastWeekAdjusted}</td><td><span style="color:${adjChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(adjChange)}</span></td></tr><tr><td>Dev-Completed</td><td>${devCompletedThisWeek}</td><td>${devCompletedLastWeek}</td><td><span style="color:${devCompChange>0?'#10b981':'#ef4444'}; font-weight:bold;">${formatChange(devCompChange)}</span></td></tr><tr><td>Client Awaiting</td><td>${clientAwaiting}</td><td>${clientAwaitingLastWeek}</td><td><span style="color:${awaitChange>0?'#ef4444':'#10b981'}; font-weight:bold;">${formatChange(awaitChange)}</span></td></tr></tbody></table></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel"><h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent); text-transform: uppercase;">TOP 10 MODULES WITH MAXIMUM TICKETS: <span style="font-weight:normal; font-size:0.9rem; color:var(--text-main);">@Shailesh Tayde please review the top affected modules.</span></h3><table style="margin-top: 10px;"><thead style="background:var(--th-bg);"><tr><th>Rank</th><th>Module</th><th>Ticket Count</th><th>Status Indicator</th></tr></thead><tbody>`;
-          if (top10.length === 0) { html += `<tr><td colspan="4" style="text-align:center;">No data available</td></tr>`; } else { top10.forEach((m, idx) => { let rank = idx + 1; let dotColor = '#10b981'; let dotText = 'Normal'; if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } else if (rank <= 5) { dotColor = '#eab308'; dotText = 'Medium Priority'; } html += `<tr><td>${rank}</td><td><strong>${m[0]}</strong></td><td>${m[1]}</td><td><span style="color:${dotColor}; font-size:1.2rem; vertical-align:middle;">●</span> ${dotText}</td></tr>`; }); }
-          html += `</tbody></table><div style="padding: 15px 20px;"><strong>Focus Areas:</strong> The top 3 modules (${top3Names.join(', ')}) account for <strong>${top3Sum} tickets</strong>, approximately <strong>${top3Percent}%</strong> of all open tickets.</div></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel" style="padding: 20px;"><h3 style="margin-top:0; color: var(--accent); text-transform: uppercase;">COMPLETE MODULE BREAKDOWN</h3><p style="margin-top:0;"><strong>Detailed Report Available:</strong></p><p><strong>Additional Modules with Active Tickets:</strong> <a href="#" style="color:#38bdf8;">Module Report, ${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</a></p><ul style="line-height: 1.6; margin-top: 10px;">`;
+          let html = `<div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel" style="padding: 20px;"><h3 style="margin-top:0; color: var(--accent);">EXECUTIVE SUMMARY</h3><strong style="font-size: 1.1rem;">Overall Status:</strong><ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;"><li><strong>Total Open Tickets:</strong> ${thisWeekOpen} ${openChangeText}</li><li><strong>Week-over-Week ${openChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(openChange)} tickets</li><li><strong>Dev-Completed Tickets:</strong> ${devCompletedThisWeek} tickets</li><li><strong>Awaiting Client Response:</strong> ${clientAwaiting}</li></ul><strong style="font-size: 1.1rem; display:inline-block; margin-top: 15px;">Adjusted Active Count</strong><ul style="margin-top: 10px; line-height: 1.8; font-size: 1rem;"><li><strong>Active Tickets (excluding dev-completed):</strong> ${adjustedActive}</li><li><strong>Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})</li></ul></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel"><h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent);">KEY METRICS</h3><table style="margin-top: 10px;"><thead style="background:var(--th-bg);"><tr><th>Metric</th><th>This Week</th><th>Last Week</th><th>Change</th></tr></thead><tbody><tr><td>Total Open Tickets</td><td>${thisWeekOpen}</td><td>${lastWeekOpen}</td><td><span style="color:${openChange>0?'#34C759':'#FF3B30'}; font-weight:bold;">${formatChange(openChange)}</span></td></tr><tr><td>Active Tickets (excl. dev-completed)</td><td>${adjustedActive}</td><td>${lastWeekAdjusted}</td><td><span style="color:${adjChange>0?'#34C759':'#FF3B30'}; font-weight:bold;">${formatChange(adjChange)}</span></td></tr><tr><td>Dev-Completed</td><td>${devCompletedThisWeek}</td><td>${devCompletedLastWeek}</td><td><span style="color:${devCompChange>0?'#34C759':'#FF3B30'}; font-weight:bold;">${formatChange(devCompChange)}</span></td></tr><tr><td>Client Awaiting</td><td>${clientAwaiting}</td><td>${clientAwaitingLastWeek}</td><td><span style="color:${awaitChange>0?'#FF3B30':'#34C759'}; font-weight:bold;">${formatChange(awaitChange)}</span></td></tr></tbody></table></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel"><h3 style="padding: 15px 20px 0; margin: 0; color: var(--accent); text-transform: uppercase;">TOP 10 MODULES WITH MAXIMUM TICKETS: <span style="font-weight:normal; font-size:0.9rem; color:var(--text-main);">@Shailesh Tayde please review the top affected modules.</span></h3><table style="margin-top: 10px;"><thead style="background:var(--th-bg);"><tr><th>Rank</th><th>Module</th><th>Ticket Count</th><th>Status Indicator</th></tr></thead><tbody>`;
+          if (top10.length === 0) { html += `<tr><td colspan="4" style="text-align:center;">No data available</td></tr>`; } else { top10.forEach((m, idx) => { let rank = idx + 1; let dotColor = '#34C759'; let dotText = 'Normal'; if (rank <= 3) { dotColor = '#FF3B30'; dotText = 'High Priority'; } else if (rank <= 5) { dotColor = '#FF9500'; dotText = 'Medium Priority'; } html += `<tr><td>${rank}</td><td><strong>${m[0]}</strong></td><td>${m[1]}</td><td><span style="color:${dotColor}; font-size:1.2rem; vertical-align:middle;">●</span> ${dotText}</td></tr>`; }); }
+          html += `</tbody></table><div style="padding: 15px 20px;"><strong>Focus Areas:</strong> The top 3 modules (${top3Names.join(', ')}) account for <strong>${top3Sum} tickets</strong>, approximately <strong>${top3Percent}%</strong> of all open tickets.</div></div></div><div class="exec-grid-container" style="grid-template-columns: 1fr;"><div class="glass-panel exec-table-panel" style="padding: 20px;"><h3 style="margin-top:0; color: var(--accent); text-transform: uppercase;">COMPLETE MODULE BREAKDOWN</h3><p style="margin-top:0;"><strong>Detailed Report Available:</strong></p><p><strong>Additional Modules with Active Tickets:</strong> <a href="#" style="color:#0A84FF;">Module Report, ${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</a></p><ul style="line-height: 1.6; margin-top: 10px;">`;
           if (remaining.length === 0) { html += `<li><em>No additional modules.</em></li>`; } else { remaining.forEach(m => { html += `<li>${m[0]}: ${m[1]} tickets</li>`; }); }
           html += `</ul></div></div>`;
 
@@ -2757,9 +2645,6 @@
           return;
       }
 
-      // ========================================================
-      // 3. GENERIC LAYOUT (Support, Production, etc.)
-      // ========================================================
       let totalActive = 0; let deptCounts = {}; let last7Created = 0, last7Active = 0, last7Closed = 0;
       let moduleCounts = {}; let statusCounts = {}; let priorityCounts = {}; let last7AssigneeCounts = {};
       let critTickets = []; let secTickets = [];
@@ -2876,7 +2761,7 @@
          <div class="glass-panel exec-table-panel" style="margin-top: 20px;"><table><thead style="background:var(--th-bg);"><tr><th colspan="4" style="text-align:center;">Active Security Tickets</th></tr><tr><th>Ticket #</th><th>Subject</th><th>Age</th><th>Client Name</th></tr></thead><tbody>${secHTML}</tbody></table></div>
       `;
     }
-// Helper to get "Sep 27" format for the tab names
+    
     function getFormattedDateForTab() {
         return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date());
     }
@@ -2890,19 +2775,18 @@
          const tabStr = `Weekly ${deptName} - ${getFormattedDateForTab()}`;
 
          const res = await fetch(PROXY_URL, { 
-          method: 'POST', 
-          credentials: 'omit',
+          method: 'POST', credentials: 'omit',
           body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.payloadArray }) 
         });
          const result = await res.json();
          if(result.error) throw new Error(result.error);
          
          btn.innerText = "✅ Synced to Sheets!";
-         btn.style.backgroundColor = "#10b981";
+         btn.style.backgroundColor = "#34C759";
       } catch(e) {
          alert("Sync failed: " + e.message);
          btn.innerText = "Sync Failed";
-         btn.style.backgroundColor = "#ef4444";
+         btn.style.backgroundColor = "#FF3B30";
       }
       setTimeout(() => {
          btn.innerText = "Sync to Google Sheets";
@@ -2920,33 +2804,28 @@
          const tabStr = `Weekly Module ${deptName} - ${getFormattedDateForTab()}`;
 
          const res = await fetch(PROXY_URL, { 
-          method: 'POST', 
-          credentials: 'omit',
-          body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.payloadArray }) 
+          method: 'POST', credentials: 'omit',
+          body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.modulePayloadArray }) 
         });
          const result = await res.json();
          if(result.error) throw new Error(result.error);
          
          btn.innerText = "✅ Synced to Sheets!";
-         btn.style.backgroundColor = "#10b981";
+         btn.style.backgroundColor = "#34C759";
       } catch(e) {
          alert("Sync failed: " + e.message);
          btn.innerText = "Sync Failed";
-         btn.style.backgroundColor = "#ef4444";
+         btn.style.backgroundColor = "#FF3B30";
       }
       setTimeout(() => {
          btn.innerText = "Sync to Google Sheets";
-         btn.style.backgroundColor = "#3b82f6";
+         btn.style.backgroundColor = "#0A84FF";
          btn.disabled = false;
       }, 3000);
     }
 
-    // ==========================================
-    // UTILS & BINDINGS
-    // ==========================================
     function showPinModal(action) { 
       pendingAction = action;
-      
       let title = 'Admin Access';
       let desc = 'Enter PIN to force live data sync';
       
@@ -2979,10 +2858,7 @@
     });
 
     document.getElementById('pinInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('submitPinBtn').click();
-      }
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('submitPinBtn').click(); }
     });
     
     async function openStatsModal() {
@@ -2994,7 +2870,7 @@
         if(data.error) throw new Error(data.error);
         renderStatsTable(data.history);
       } catch(err) {
-        document.getElementById('statsTableBody').innerHTML = `<tr><td colspan="32" style="color:#ef4444; text-align:center; padding:30px;">Backend history not found. (${err.message})</td></tr>`;
+        document.getElementById('statsTableBody').innerHTML = `<tr><td colspan="32" style="color:#FF3B30; text-align:center; padding:30px;">Backend history not found. (${err.message})</td></tr>`;
       }
     }
     
@@ -3029,490 +2905,11 @@
       navigator.clipboard.writeText(dataStr).then(() => {
         const originalText = btn.innerText;
         btn.innerText = 'Copied!';
-        btn.style.backgroundColor = '#10b981';
+        btn.style.backgroundColor = '#34C759';
         setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = 'var(--accent)'; }, 2000);
       });
     }
 
-    function generateModuleReport() {
-        const deptFilter = (state.executive && state.executive.currentDept) ? state.executive.currentDept : 'All';
-        let baseData = window.allGlobalTickets;
-        if (deptFilter !== 'All') {
-            baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
-        }
-
-        const startOfThisWeek = getETMidnightForOffset(-7);
-        const startOfLastWeek = getETMidnightForOffset(-14);
-
-        let thisWeekOpen = 0, lastWeekOpen = 0;
-        let thisWeekCompleted = 0, lastWeekCompleted = 0;
-        let releasePendingCount = 0;
-        let moduleCounts = {};
-
-        baseData.forEach(t => {
-            const isClosed = (t.status || '').toLowerCase().includes('clos');
-            const stat = t.status || '';
-            const cDate = new Date(t.createdTime);
-            const closedDate = t.closedTime ? new Date(t.closedTime) : null;
-            
-            if (!isClosed) {
-                thisWeekOpen++;
-                let mName = (t.module && t.module !== 'N/A') ? t.module : 'General';
-                moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
-                if (stat === 'ReleasePending') releasePendingCount++;
-            }
-
-            let createdBeforeThisWeek = cDate < startOfThisWeek;
-            let closedThisWeek = isClosed && closedDate && closedDate >= startOfThisWeek;
-            if (createdBeforeThisWeek && (!isClosed || closedThisWeek)) {
-                lastWeekOpen++;
-            }
-
-            if (stat === 'Closed/Resolved' && closedDate) {
-                if (closedDate >= startOfThisWeek) thisWeekCompleted++;
-                else if (closedDate >= startOfLastWeek && closedDate < startOfThisWeek) lastWeekCompleted++;
-            }
-        });
-
-        const adjustedActive = thisWeekOpen - releasePendingCount;
-        const lastWeekAdjusted = lastWeekOpen - releasePendingCount;
-        
-        const openChange = thisWeekOpen - lastWeekOpen;
-        const compChange = thisWeekCompleted - lastWeekCompleted;
-        const adjChange = adjustedActive - lastWeekAdjusted;
-
-        const openChangeText = openChange >= 0 ? `(↑ up from ${lastWeekOpen} last week)` : `(↓ down from ${lastWeekOpen} last week)`;
-        const adjChangeText = adjChange >= 0 ? `${adjChange} tickets (from ${lastWeekAdjusted})` : `Decrease: ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})`;
-        const formatChange = (num) => num > 0 ? `+${num}` : num;
-
-        const modArray = Object.entries(moduleCounts).sort((a, b) => b[1] - a[1]);
-        const top10 = modArray.slice(0, 10);
-        const remaining = modArray.slice(10);
-        
-        let top3Sum = 0;
-        let top3Names = [];
-        top10.slice(0, 3).forEach(m => { top3Sum += m[1]; top3Names.push(m[0]); });
-        const top3Percent = thisWeekOpen > 0 ? ((top3Sum / thisWeekOpen) * 100).toFixed(2) : 0;
-
-        // --- Build Data Array for Google Sheets Sync ---
-        let modPayload = [];
-        // Define an empty 4-column row for consistent padding
-        const padRow = ["", "", "", ""];
-
-        modPayload.push(["MODULE WISE REPORT", `${deptFilter === 'All' ? 'Global' : deptFilter} Department`, "Generated on:", new Date().toLocaleDateString()]);
-        modPayload.push(padRow);
-        
-        // 1. Key Metrics Table
-        modPayload.push(["KEY METRICS", "", "", ""]);
-        modPayload.push(["Metric", "This Week", "Last Week", "Change"]);
-        modPayload.push(["Total Open Tickets", thisWeekOpen, lastWeekOpen, formatChange(openChange)]);
-        modPayload.push(["Active Tickets (excl. ReleasePending)", adjustedActive, lastWeekAdjusted, formatChange(adjChange)]);
-        modPayload.push(["Completed (Closed/Resolved)", thisWeekCompleted, lastWeekCompleted, formatChange(compChange)]);
-        modPayload.push(["Release Pending", releasePendingCount, "-", "-"]);
-        modPayload.push(padRow);
-
-        // 2. Top 10 Modules Table
-        modPayload.push(["TOP 10 MODULES", "", "", ""]);
-        modPayload.push(["Rank", "Module", "Ticket Count", "Status Indicator"]);
-        top10.forEach((m, idx) => {
-            let dotText = 'Normal'; 
-            if (idx < 3) dotText = 'High Priority'; 
-            else if (idx < 6) dotText = 'Medium Priority'; 
-            modPayload.push([idx+1, m[0], m[1], dotText]);
-        });
-        modPayload.push(padRow);
-
-        // 3. Focus Areas
-        modPayload.push(["FOCUS AREAS:", `The top 3 modules (${top3Names.join(', ')}) account for ${top3Sum} tickets, approximately ${top3Percent}% of all open tickets.`, "", ""]);
-        modPayload.push(padRow);
-
-        // 4. Additional Modules
-        modPayload.push(["COMPLETE MODULE BREAKDOWN (Additional)", "", "", ""]);
-        modPayload.push(["Module", "Ticket Count", "", ""]);
-        remaining.forEach((m) => modPayload.push([m[0], m[1], "", ""]));
-        
-        state.executive.modulePayloadArray = modPayload;
-
-        // --- Build HTML for the Modal UI ---
-        let html = `
-            <div style="margin-bottom: 20px;">
-                <strong>Overall Status:</strong>
-                <ul style="margin-top: 5px;">
-                    <li><strong>Total Open Tickets:</strong> ${thisWeekOpen} ${openChangeText}</li>
-                    <li><strong>Week-over-Week Change:</strong> ${formatChange(openChange)} tickets</li>
-                    <li><strong>Completed Tickets (Closed/Resolved):</strong> ${thisWeekCompleted} tickets</li>
-                    <li><strong>Release Pending:</strong> ${releasePendingCount} tickets</li>
-                </ul>
-            </div>
-            
-            <div style="margin-bottom: 30px;">
-                <strong>Adjusted Active Count</strong>
-                <ul style="margin-top: 5px;">
-                    <li><strong>Active Tickets (excluding Release Pending):</strong> ${adjustedActive}</li>
-                    <li><strong>Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(adjChange)} tickets</li>
-                </ul>
-            </div>
-
-            <strong style="text-transform: uppercase;">KEY METRICS</strong>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 30px; font-size: 0.9rem; text-align: center;">
-                <thead style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #cbd5e1; text-align: left;">Metric</th>
-                        <th style="padding: 10px; border: 1px solid #cbd5e1;">This Week</th>
-                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Last Week</th>
-                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Change</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Total Open Tickets</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${thisWeekOpen}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekOpen}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(openChange)}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Active Tickets (excl. ReleasePending)</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${adjustedActive}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekAdjusted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(adjChange)}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Completed (Closed/Resolved)</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${thisWeekCompleted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekCompleted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(compChange)}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Release Pending</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${releasePendingCount}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">-</td><td style="padding: 8px; border: 1px solid #cbd5e1;">-</td></tr>
-                </tbody>
-            </table>
-
-            <strong style="text-transform: uppercase;">TOP 10 MODULES WITH MAXIMUM TICKETS:</strong> <span style="color:#64748b; font-size: 0.85rem;">Please review the top affected areas.</span>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 10px; font-size: 0.9rem; text-align: center;">
-                <thead style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Rank</th>
-                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Module</th>
-                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Ticket Count</th>
-                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Status Indicator</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        if (top10.length === 0) {
-            html += `<tr><td colspan="4" style="padding: 15px; border: 1px solid #cbd5e1; text-align: center;">No active tickets available.</td></tr>`;
-        } else {
-            top10.forEach((m, index) => {
-                const rank = index + 1;
-                let dotColor = '#10b981'; let dotText = 'Normal'; 
-                if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } 
-                else if (rank <= 6) { dotColor = '#eab308'; dotText = 'Medium Priority'; } 
-
-                html += `
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${rank}</td>
-                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${m[0]}</td>
-                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${m[1]}</td>
-                        <td style="padding: 8px; border: 1px solid #cbd5e1;"><span style="color:${dotColor}; font-size: 1.1rem; vertical-align: middle;">●</span> ${dotText}</td>
-                    </tr>
-                `;
-            });
-        }
-
-        html += `
-                </tbody>
-            </table>
-            <div style="font-size: 0.85rem; margin-bottom: 35px;">
-                <strong>Focus Areas:</strong> The top 3 modules (${top3Names.join(', ')}) account for <strong>${top3Sum} tickets</strong>, approximately <strong>${top3Percent}%</strong> of all open tickets.
-            </div>
-
-            <strong style="text-transform: uppercase;">COMPLETE MODULE BREAKDOWN</strong>
-            <p style="margin-top: 5px; font-weight: bold; font-size: 0.9rem;">Additional Modules with Active Tickets:</p>
-            <ul style="font-size: 0.9rem; margin-top: 5px;">
-        `;
-
-        if (remaining.length === 0) {
-            html += `<li><em>No additional modules with active tickets.</em></li>`;
-        } else {
-            remaining.forEach(m => {
-                html += `<li>${m[0]}: ${m[1]} tickets</li>`;
-            });
-        }
-
-        html += `</ul>`;
-
-        const titleDate = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
-        document.getElementById('moduleReportSubtitle').innerText = `${deptFilter === 'All' ? 'Global' : deptFilter} Department • ${titleDate}`;
-        document.getElementById('moduleReportContent').innerHTML = html;
-        document.getElementById('moduleReportModal').style.display = 'flex';
-    }
-
-    // ==========================================
-    // DEPARTMENT EMAIL PREVIEWS & SENDING
-    // ==========================================
-    window.currentEmailPayload = ""; 
-
-    function openEmailPreview() {
-        const dept = window.currentEmailDept;
-        const baseData = window.allGlobalTickets.filter(t => (t.department ? t.department.name : 'General') === dept);
-        
-        // --- CUSTOM BRANDING VARIABLES ---
-        const COMPANY_LOGO_URL = "https://www.google.com/s2/favicons?domain=mindmatrix.net&sz=128"; 
-        const REPORT_DATE = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
-        
-        const headerHtml = `
-            <tr><td style="padding:15px 32px;background-color:#12263a;color:#ffffff">
-                <table cellpadding="0" cellspacing="0" width="100%"><tr>
-                <td style="color:#ffffff;font-size:17px;font-weight:700;">
-                    <img src="${COMPANY_LOGO_URL}" alt="Logo" style="height:20px; vertical-align: middle; margin-right: 8px;">
-                    MINDMATRIX<span style="color:#0ea5e9"> / </span>OPERATIONS
-                </td>
-                <td align="right" style="color:#c8d6e3;font-size:10px;font-weight:700;letter-spacing:1.1px">WEEKLY REPORT</td>
-                </tr></table>
-            </td></tr>`;
-
-        const signatureHtml = `
-            <div style="padding:0 34px 25px; margin-top:20px; border-top:1px solid #d5e0e9; padding-top:25px;">
-                <table width="100%" cellpadding="0" cellspacing="0"><tr>
-                <td width="50%" valign="top">
-                    <p style="margin:0;color:#657788;font-size:11px;">Regards,</p>
-                    <p style="margin:5px 0;color:#14283b;font-size:14px;font-weight:700;">Yugesh Kurakula</p>
-                    <p style="margin:0;color:#657788;font-size:11px;">Mindmatrix Desk Portal</p>
-                    <p style="margin:0;color:#657788;font-size:11px;"><a href="mailto:yugesh.kurakula@mindmatrix.net" style="color:#426fc3;text-decoration:none;">yugesh.kurakula@mindmatrix.net</a></p>
-                </td>
-                <td width="50%" valign="top" align="right">
-                    <img src="${COMPANY_LOGO_URL}" alt="Mindmatrix" style="height:35px;">
-                </td>
-                </tr></table>
-            </div>`;
-
-        const footerHtml = `
-            <tr><td style="padding:20px 34px 23px;background-color:#f2f5f8;border-top:1px solid #d9e2ea">
-                <p style="margin:0 0 8px;color:#536675;font-size:11px;line-height:1.55">Source: Zoho Reports Portal. Figures are a prepared email snapshot, not a live system view.</p>
-                <p style="margin:0;color:#728391;font-size:10px;line-height:1.5">MindMatrix Operations · Internal weekly reporting</p>
-            </td></tr>`;
-
-        let htmlTemplate = "";
-        
-        // ==========================================
-        // DEVELOPMENT REPORT
-        // ==========================================
-        if (dept === 'Development') {
-            let modCounts = {};
-            baseData.forEach(t => {
-                if (!(t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp')) {
-                    let mName = (t.module && t.module !== 'N/A') ? t.module : 'General';
-                    modCounts[mName] = (modCounts[mName] || 0) + 1;
-                }
-            });
-            const top5 = Object.entries(modCounts).filter(([m, c]) => m !== 'General').sort((a,b)=>b[1]-a[1]).slice(0, 5);
-            const totalTop5 = top5.reduce((sum, m) => sum + m[1], 0);
-            const top2Sum = (top5[0]?.[1]||0) + (top5[1]?.[1]||0);
-            const next3Sum = totalTop5 - top2Sum;
-            const t1N = top5[0]?.[0] || '-'; const t1C = top5[0]?.[1] || 0;
-            const t2N = top5[1]?.[0] || '-'; const t2C = top5[1]?.[1] || 0;
-
-            let modRows = '';
-            let cumulativeShare = 0;
-            top5.forEach(m => {
-                let pct = totalTop5 > 0 ? ((m[1] / totalTop5) * 100) : 0;
-                cumulativeShare += pct;
-                modRows += `<tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">${m[0]}</td><td style="padding:10px 8px"><table cellpadding="0" cellspacing="0" width="100%"><tr><td width="${pct.toFixed(1)}%" height="20" bgcolor="#694bb2"></td><td width="${(100-pct).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${m[1]} <span style="color:#6d8090;font-size:10px;font-weight:400">${pct.toFixed(1)}%</span></td></tr>`;
-            });
-
-            const top2Pct = totalTop5 > 0 ? ((top2Sum / totalTop5) * 100).toFixed(1) : 0;
-
-            htmlTemplate = `
-            <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Weekly Module-wise Support Tickets</title></head>
-            <body style="margin:0;padding:0;background-color:#edf1f5;color:#1c2b3a;font-family:Arial,Helvetica,sans-serif;">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#edf1f5"><tr><td align="center" style="padding:24px 12px">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="width:100%;max-width:640px;background-color:#ffffff;border:1px solid #d8e1e9">
-            ${headerHtml}
-            <tr><td height="7" bgcolor="#694bb2" style="height:7px;"></td></tr>
-            <tr><td style="padding:34px 34px 32px;background-color:#183149"><div style="color:#b9d4e7;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase">Module-wise support · ${REPORT_DATE}</div><h1 style="margin:14px 0 12px;color:#ffffff;font-size:34px;letter-spacing:-1.1px">Weekly Module-wise Tickets</h1><p style="margin:0;color:#d0e0ed;font-size:13px;line-height:1.6">A focused module breakdown for Development.</p><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:24px;"><tr><td width="140" valign="bottom" style="color:#ffffff;font-size:64px;font-weight:700;line-height:1">${totalTop5}</td><td valign="bottom" style="padding:0 0 6px 14px;border-left:4px solid #694bb2;color:#d3e2ed;font-size:12px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.4px">Tickets across the five modules shown</td></tr></table></td></tr>
-            <tr><td style="padding:26px 34px 4px;color:#657788;font-size:10px;font-weight:700;letter-spacing:1.5px">DATA-RICH WEEKLY BRIEF · ${REPORT_DATE.toUpperCase()}</td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Where tickets are concentrated</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="50%" valign="top" style="padding:18px 18px;background-color:#f3efff;border-right:10px solid #ffffff;"><div style="color:#694bb2;font-size:33px;font-weight:700;line-height:1.05">${t1C}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.3px">${t1N} tickets</div></td><td width="50%" valign="top" style="padding:18px 18px;background-color:#f3efff;"><div style="color:#694bb2;font-size:33px;font-weight:700;line-height:1.05">${t2C}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.3px">${t2N} tickets</div></td></tr></table><div style="height:13px;line-height:13px">&nbsp;</div></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Module ranking</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;line-height:1.3">Share of the five rows shown</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;line-height:1.45">Bar widths use ${totalTop5} tickets across these rows as the denominator</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%">${modRows}</table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Top-two concentration</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;line-height:1.3">${t1N} + ${t2N} versus the next three</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;line-height:1.45">${top2Sum} of ${totalTop5} displayed module tickets (${top2Pct}%) belong to ${t1N} and ${t2N}</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${top2Pct}%" height="34" bgcolor="#694bb2"></td><td width="${(100-top2Pct).toFixed(1)}%" height="34" bgcolor="#c8b7eb"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;line-height:1.4"><span style="color:#694bb2;font-size:16px;">■</span> Contacts + General<br><strong style="color:#203b31;font-size:12px">${top2Sum}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;line-height:1.4"><span style="color:#c8b7eb;font-size:16px;">■</span> Other three shown<br><strong style="color:#203b31;font-size:12px">${next3Sum}</strong></td></tr></table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Full five-row breakdown</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e0e8e1"><thead><tr><th style="padding:9px 12px;background-color:#edf4ee;color:#587065;font-size:11px;font-weight:700;text-align:left;border-bottom:1px solid #dce7dd;">Module</th><th style="padding:9px 12px;background-color:#edf4ee;color:#587065;font-size:11px;font-weight:700;text-align:right;border-bottom:1px solid #dce7dd;">Tickets</th><th style="padding:9px 12px;background-color:#edf4ee;color:#587065;font-size:11px;font-weight:700;text-align:right;border-bottom:1px solid #dce7dd;">Share</th></tr></thead><tbody>`;
-            
-            top5.forEach(m => {
-                let pct = totalTop5 > 0 ? ((m[1] / totalTop5) * 100).toFixed(1) : 0;
-                htmlTemplate += `<tr><td style="padding:9px 12px;color:#31473c;font-size:12px;border-bottom:1px solid #e5ece5;">${m[0]}</td><td style="padding:9px 12px;color:#31473c;font-size:12px;text-align:right;border-bottom:1px solid #e5ece5;">${m[1]}</td><td style="padding:9px 12px;color:#31473c;font-size:12px;text-align:right;border-bottom:1px solid #e5ece5;">${pct}%</td></tr>`;
-            });
-
-            htmlTemplate += `</tbody></table></td></tr>
-            <tr><td style="padding:0 34px 25px">${signatureHtml}</td></tr>
-            ${footerHtml}
-            </table></td></tr></table></body></html>`;
-        } 
-        // ==========================================
-        // SERVICES REPORT
-        // ==========================================
-        else if (dept === 'Services') {
-            const now = new Date();
-            const oneWeekAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-            let currActive = 0, priorActive = 0, currNoResp = 0, totalListed = 0, priorTotalListed = 0;
-            let sC = { 'Awaiting Response': 0, 'Pending': 0, 'Open': 0, 'In Progress': 0, 'Review': 0, 'On Hold': 0, 'Recurrence': 0 };
-
-            baseData.forEach(t => {
-                const cDate = new Date(t.createdTime);
-                const isClosed = (t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp');
-                const noResp = (now - new Date(t.modifiedTime || t.createdTime)) > 86400000;
-                const stat = t.status || 'Open';
-
-                if (!isClosed) { 
-                    totalListed++;
-                    let mS = Object.keys(sC).find(k => stat.toLowerCase().includes(k.toLowerCase())); 
-                    if (mS) sC[mS]++;
-                    if (stat.toLowerCase().includes('open') || stat.toLowerCase().includes('progress')) currActive++;
-                    if (noResp) currNoResp++; 
-                }
-                if (cDate < oneWeekAgo) {
-                    const wasClosed = isClosed && new Date(t.closedTime) < oneWeekAgo;
-                    if (!wasClosed) {
-                        priorTotalListed++;
-                        if (stat.toLowerCase().includes('open') || stat.toLowerCase().includes('progress')) priorActive++; 
-                    }
-                }
-            });
-
-            const diff = currActive - priorActive;
-            const diffStr = diff >= 0 ? "+" + diff : diff;
-            const diffTotal = totalListed - priorTotalListed;
-            const diffTotalStr = diffTotal >= 0 ? "+" + diffTotal : diffTotal;
-
-            const maxAct = Math.max(priorActive, currActive);
-            const prioW = maxAct > 0 ? (priorActive / maxAct * 100).toFixed(1) : 0;
-            const curW = maxAct > 0 ? (currActive / maxAct * 100).toFixed(1) : 0;
-            
-            const maxTot = Math.max(priorTotalListed, totalListed);
-            const prioTotW = maxTot > 0 ? (priorTotalListed / maxTot * 100).toFixed(1) : 0;
-            const curTotW = maxTot > 0 ? (totalListed / maxTot * 100).toFixed(1) : 0;
-
-            let statRows = '';
-            Object.entries(sC).forEach(([k,v]) => {
-                let pct = totalListed > 0 ? ((v / totalListed) * 100).toFixed(1) : 0;
-                if(v > 0) statRows += `<tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">${k}</td><td style="padding:10px 8px"><table cellpadding="0" cellspacing="0" width="100%"><tr><td width="${pct}%" height="20" bgcolor="#426fc3"></td><td width="${(100-pct).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${v} <span style="color:#6d8090;font-size:10px;font-weight:400">${pct}%</span></td></tr>`;
-            });
-
-            const openProgressPct = totalListed > 0 ? ((currActive / totalListed) * 100).toFixed(1) : 0;
-            const openOnly = sC['Open'];
-            const inProgOnly = sC['In Progress'];
-            const openProgTotal = openOnly + inProgOnly;
-            const openOnlyPct = openProgTotal > 0 ? ((openOnly / openProgTotal) * 100).toFixed(1) : 0;
-            const inProgOnlyPct = openProgTotal > 0 ? ((inProgOnly / openProgTotal) * 100).toFixed(1) : 0;
-
-            htmlTemplate = `
-            <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Services Open Tickets Report</title></head>
-            <body style="margin:0;padding:0;background-color:#edf1f5;color:#1c2b3a;font-family:Arial,Helvetica,sans-serif;">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#edf1f5"><tr><td align="center" style="padding:24px 12px">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="width:100%;max-width:640px;background-color:#ffffff;border:1px solid #d8e1e9">
-            ${headerHtml}
-            <tr><td height="7" bgcolor="#426fc3" style="height:7px;"></td></tr>
-            <tr><td style="padding:34px 34px 32px;background-color:#183149"><div style="color:#b9d4e7;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase">Services desk · ${REPORT_DATE}</div><h1 style="margin:14px 0 12px;color:#ffffff;font-size:34px;letter-spacing:-1.1px">Services Open Tickets Report</h1><p style="margin:0;color:#d0e0ed;font-size:13px;line-height:1.6">Weekly service-ticket status, the active-work subset and movement since the previous report.</p><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:24px;"><tr><td width="140" valign="bottom" style="color:#ffffff;font-size:64px;font-weight:700;line-height:1">${totalListed}</td><td valign="bottom" style="padding:0 0 6px 14px;border-left:4px solid #426fc3;color:#d3e2ed;font-size:12px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.4px">Tickets across listed statuses</td></tr></table></td></tr>
-            <tr><td style="padding:26px 34px 4px;color:#657788;font-size:10px;font-weight:700;letter-spacing:1.5px">DATA-RICH WEEKLY BRIEF · ${REPORT_DATE.toUpperCase()}</td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Current service workload</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="50%" valign="top" style="padding:18px 18px;background-color:#edf3ff;border-right:10px solid #ffffff;"><div style="color:#426fc3;font-size:33px;font-weight:700;line-height:1.05">${currActive}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Open + In Progress statuses</div></td><td width="50%" valign="top" style="padding:18px 18px;background-color:#edf3ff;"><div style="color:#426fc3;font-size:33px;font-weight:700;line-height:1.05">${currNoResp}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Awaiting response over 24h</div></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Week-over-week comparison</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Two-week movement</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td colspan="2" style="padding:13px 0 6px;color:#22384b;font-size:12px;font-weight:700">All listed statuses <span style="color:#66788a;font-weight:400">(${priorTotalListed} → ${totalListed}; ${diffTotalStr})</span></td></tr><tr><td width="54" style="padding:4px 8px 4px 0;color:#718177;font-size:10px">Prior</td><td><table width="100%" cellpadding="0" cellspacing="0"><tr><td width="${prioTotW}%" height="15" bgcolor="#b6c4d4"></td><td width="${(100-prioTotW).toFixed(1)}%" height="15" bgcolor="#e5ebf1"></td></tr></table></td></tr><tr><td width="54" style="padding:4px 8px 4px 0;color:#426fc3;font-size:10px">Current</td><td><table width="100%" cellpadding="0" cellspacing="0"><tr><td width="${curTotW}%" height="15" bgcolor="#426fc3"></td><td width="${(100-curTotW).toFixed(1)}%" height="15" bgcolor="#e5ebf1"></td></tr></table></td></tr><tr><td colspan="2" style="padding:13px 0 6px;color:#22384b;font-size:12px;font-weight:700;border-top:1px solid #e3e9ef;">Open + In Progress <span style="color:#66788a;font-weight:400">(${priorActive} → ${currActive}; ${diffStr})</span></td></tr><tr><td width="54" style="padding:4px 8px 4px 0;color:#718177;font-size:10px">Prior</td><td><table width="100%" cellpadding="0" cellspacing="0"><tr><td width="${prioW}%" height="15" bgcolor="#b6c4d4"></td><td width="${(100-prioW).toFixed(1)}%" height="15" bgcolor="#e5ebf1"></td></tr></table></td></tr><tr><td width="54" style="padding:4px 8px 4px 0;color:#426fc3;font-size:10px">Current</td><td><table width="100%" cellpadding="0" cellspacing="0"><tr><td width="${curW}%" height="15" bgcolor="#426fc3"></td><td width="${(100-curW).toFixed(1)}%" height="15" bgcolor="#e5ebf1"></td></tr></table></td></tr></table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Status breakdown</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Service ticket distribution</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${totalListed} tickets across all listed statuses</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%">${statRows}</table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Active-work share</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Open or In Progress versus other statuses</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${currActive} of ${totalListed} (${openProgressPct}%) are in Open or In Progress</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${openProgressPct}%" height="34" bgcolor="#426fc3"></td><td width="${(100-openProgressPct).toFixed(1)}%" height="34" bgcolor="#b7c9e9"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#426fc3;font-size:16px;">■</span> Open + In Progress<br><strong style="color:#203b31;font-size:12px">${currActive}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#b7c9e9;font-size:16px;">■</span> Other listed statuses<br><strong style="color:#203b31;font-size:12px">${totalListed - currActive}</strong></td></tr></table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Active-work composition</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Open versus In Progress</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${openProgTotal} tickets in these two statuses</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${openOnlyPct}%" height="34" bgcolor="#426fc3"></td><td width="${(100-openOnlyPct).toFixed(1)}%" height="34" bgcolor="#93afe0"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#426fc3;font-size:16px;">■</span> Open<br><strong style="color:#203b31;font-size:12px">${openOnly}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#93afe0;font-size:16px;">■</span> In Progress<br><strong style="color:#203b31;font-size:12px">${inProgOnly}</strong></td></tr></table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px">${signatureHtml}</td></tr>
-            ${footerHtml}
-            </table></td></tr></table></body></html>`;
-        }
-        // ==========================================
-        // SUPPORT REPORT
-        // ==========================================
-        else if (dept === 'Support') {
-            const now = new Date();
-            const sevenAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
-            let actC = 0, l7T = 0, l7A = 0, l7C = 0, l7S = 0;
-            let sC = { 'Pending': 0, 'Open': 0, 'Review': 0, 'Awaiting Response': 0, 'In Progress': 0, 'Working on it': 0 };
-            let pC = { 'Medium': 0, 'High': 0, 'Low': 0, 'Urgent': 0, 'Unassigned': 0 };
-            let aB = [0,0,0,0]; let secList = [];
-
-            baseData.forEach(t => {
-                const isC = (t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp');
-                const cD = new Date(t.createdTime); const clD = t.closedTime ? new Date(t.closedTime) : null;
-                const stat = t.status || 'Open'; const prio = t.priority || 'Unassigned';
-                const isSec = (t.module || '').toLowerCase().includes('security');
-
-                if (cD >= sevenAgo) { l7T++; if (!isC) l7A++; if (isSec && !isC) l7S++; }
-                if (isC && clD && clD >= sevenAgo) l7C++;
-
-                if (!isC) {
-                    actC++;
-                    let mS = Object.keys(sC).find(k => stat.toLowerCase().includes(k.toLowerCase())); if (mS) sC[mS]++;
-                    let mP = Object.keys(pC).find(k => prio.toLowerCase().includes(k.toLowerCase())); if (mP) pC[mP]++; else pC['Unassigned']++;
-                    if (isSec) {
-                        const aD = Math.floor((now - cD) / (1000 * 60 * 60 * 24));
-                        if (aD <= 30) aB[0]++; else if (aD <= 90) aB[1]++; else if (aD <= 365) aB[2]++; else aB[3]++;
-                        secList.push({ id: t.ticketNumber || t.id, age: aD });
-                    }
-                }
-            });
-
-            const gp = (v) => actC > 0 ? ((v / actC) * 100).toFixed(1) : 0;
-            let statRows = '';
-            Object.entries(sC).forEach(([k,v]) => {
-                if(v > 0) statRows += `<tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">${k}</td><td style="padding:10px 8px"><table cellpadding="0" cellspacing="0" width="100%"><tr><td width="${gp(v)}%" height="20" bgcolor="#0e8c7c"></td><td width="${(100-gp(v)).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${v} <span style="color:#6d8090;font-size:10px;font-weight:400">${gp(v)}%</span></td></tr>`;
-            });
-
-            secList.sort((a, b) => b.age - a.age);
-            let oldest = secList.length > 0 ? secList[0].age : 1;
-            let secRows = '';
-            secList.slice(0, 7).forEach(s => {
-                let wp = ((s.age / oldest) * 100).toFixed(1);
-                secRows += `<tr><td width="138" style="padding:10px 8px 10px 0;color:#24394b;font-size:11px;font-weight:700">#${s.id}</td><td style="padding:10px 8px"><table cellpadding="0" cellspacing="0" width="100%"><tr><td width="${wp}%" height="18" bgcolor="#9f6848"></td><td width="${(100-wp).toFixed(1)}%" height="18" bgcolor="#e5ebf1"></td></tr></table></td><td width="60" align="right" style="padding:10px 0;color:#172d40;font-size:11px;font-weight:700;">${s.age}d</td></tr>`;
-            });
-
-            const openPend = sC['Open'] + sC['Pending'];
-            const secTotal = aB[0]+aB[1]+aB[2]+aB[3];
-            const gsp = (v) => secTotal > 0 ? ((v / secTotal) * 100).toFixed(1) : 0;
-
-            htmlTemplate = `
-            <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Weekly Zoho Desk Support Metrics</title></head>
-            <body style="margin:0;padding:0;background-color:#edf1f5;color:#1c2b3a;font-family:Arial,Helvetica,sans-serif;">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#edf1f5"><tr><td align="center" style="padding:24px 12px">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="width:100%;max-width:640px;background-color:#ffffff;border:1px solid #d8e1e9">
-            ${headerHtml}
-            <tr><td height="7" bgcolor="#0e8c7c"></td></tr>
-            <tr><td style="padding:34px 34px 32px;background-color:#183149"><div style="color:#b9d4e7;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase">Support desk · ${REPORT_DATE}</div><h1 style="margin:14px 0 12px;color:#ffffff;font-size:34px;letter-spacing:-1.1px">Weekly Zoho Desk Support Metrics</h1><p style="margin:0;color:#d0e0ed;font-size:13px;line-height:1.6">The support snapshot covering current active ticket distribution and seven-day activity.</p><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:24px;"><tr><td width="140" valign="bottom" style="color:#ffffff;font-size:64px;font-weight:700;line-height:1">${actC}</td><td valign="bottom" style="padding:0 0 6px 14px;border-left:4px solid #0e8c7c;color:#d3e2ed;font-size:12px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.4px">All-time active Zoho Desk tickets</td></tr></table></td></tr>
-            <tr><td style="padding:26px 34px 4px;color:#657788;font-size:10px;font-weight:700;letter-spacing:1.5px">DATA-RICH WEEKLY BRIEF · ${REPORT_DATE.toUpperCase()}</td></tr>
-            <tr><td style="padding:0 34px 25px;"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Seven-day activity</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="50%" valign="top" style="padding:18px 18px;background-color:#e8f7f2;border-right:10px solid #ffffff;"><div style="color:#0e8c7c;font-size:33px;font-weight:700;line-height:1.05">${l7T}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Reported last-7-days</div></td><td width="50%" valign="top" style="padding:18px 18px;background-color:#e8f7f2;"><div style="color:#0e8c7c;font-size:33px;font-weight:700;line-height:1.05">${l7A}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Active figure</div></td></tr><tr><td width="50%" valign="top" style="padding:18px 18px;background-color:#e8f7f2;border-right:10px solid #ffffff;border-top:10px solid #ffffff;"><div style="color:#0e8c7c;font-size:33px;font-weight:700;line-height:1.05">${l7C}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Closed figure</div></td><td width="50%" valign="top" style="padding:18px 18px;background-color:#e8f7f2;border-top:10px solid #ffffff;"><div style="color:#0e8c7c;font-size:33px;font-weight:700;line-height:1.05">${l7S}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Active security tickets</div></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Active ticket status</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Status distribution</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${actC} active tickets; bars show share of the active total</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%">${statRows}</table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Queue concentration</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Open + Pending versus other statuses</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${openPend} of ${actC} active tickets (${gp(openPend)}%) are Open or Pending</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${gp(openPend)}%" height="34" bgcolor="#0e8c7c"></td><td width="${(100-gp(openPend)).toFixed(1)}%" height="34" bgcolor="#bddfd4"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#0e8c7c;font-size:16px;">■</span> Open + Pending<br><strong style="color:#203b31;font-size:12px">${openPend}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#bddfd4;font-size:16px;">■</span> Other active statuses<br><strong style="color:#203b31;font-size:12px">${actC - openPend}</strong></td></tr></table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Active ticket priority</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Priority composition</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${gp(pC['Medium'])}%" height="34" bgcolor="#0e8c7c"></td><td width="${gp(pC['High'])}%" height="34" bgcolor="#64b9a2"></td><td width="${gp(pC['Low'])}%" height="34" bgcolor="#9ed6bf"></td><td width="${gp(pC['Urgent'])}%" height="34" bgcolor="#c6e5d7"></td><td width="${gp(pC['Unassigned'])}%" height="34" bgcolor="#e4f1e9"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#0e8c7c;font-size:16px;">■</span> Medium<br><strong style="color:#203b31;font-size:12px">${pC['Medium']}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#64b9a2;font-size:16px;">■</span> High<br><strong style="color:#203b31;font-size:12px">${pC['High']}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#9ed6bf;font-size:16px;">■</span> Low<br><strong style="color:#203b31;font-size:12px">${pC['Low']}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#c6e5d7;font-size:16px;">■</span> Urgent<br><strong style="color:#203b31;font-size:12px">${pC['Urgent']}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#e4f1e9;font-size:16px;">■</span> Unassigned<br><strong style="color:#203b31;font-size:12px">${pC['Unassigned']}</strong></td></tr></table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Security watchlist age</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Ticket age bands</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${secTotal} active security tickets</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">0–30 days</td><td style="padding:10px 8px"><table width="100%"><tr><td width="${gsp(aB[0])}%" height="20" bgcolor="#9f6848"></td><td width="${(100-gsp(aB[0])).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${aB[0]} <span style="color:#6d8090;font-size:10px;font-weight:400">${gsp(aB[0])}%</span></td></tr><tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">31–90 days</td><td style="padding:10px 8px"><table width="100%"><tr><td width="${gsp(aB[1])}%" height="20" bgcolor="#9f6848"></td><td width="${(100-gsp(aB[1])).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${aB[1]} <span style="color:#6d8090;font-size:10px;font-weight:400">${gsp(aB[1])}%</span></td></tr><tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">91–365 days</td><td style="padding:10px 8px"><table width="100%"><tr><td width="${gsp(aB[2])}%" height="20" bgcolor="#9f6848"></td><td width="${(100-gsp(aB[2])).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${aB[2]} <span style="color:#6d8090;font-size:10px;font-weight:400">${gsp(aB[2])}%</span></td></tr><tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">Over 365 days</td><td style="padding:10px 8px"><table width="100%"><tr><td width="${gsp(aB[3])}%" height="20" bgcolor="#9f6848"></td><td width="${(100-gsp(aB[3])).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${aB[3]} <span style="color:#6d8090;font-size:10px;font-weight:400">${gsp(aB[3])}%</span></td></tr></table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Security ticket detail</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Age by ticket ID</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">Active security tickets ordered from oldest to newest</div></td></tr><tr><td style="padding:19px 20px 22px"><table width="100%">${secRows}</table></td></tr></table></td></tr>
-            <tr><td style="padding:0 34px 25px">${signatureHtml}</td></tr>
-            ${footerHtml}
-            </table></td></tr></table></body></html>`;
-        }
-
-        window.currentEmailPayload = htmlTemplate;
-        document.getElementById('emailPreviewTitle').innerText = `${dept} Report Preview`;
-        document.getElementById('emailPreviewContent').innerHTML = htmlTemplate;
-        
-        const savedEmail = document.getElementById('emailInput')?.value || pendingEmail || "";
-        if(savedEmail) document.getElementById('emailSendTo').value = savedEmail;
-        document.getElementById('emailPreviewModal').style.display = 'flex';
-    }
-
-    async function sendDeptEmail() {
-        const btn = document.getElementById('btnSendEmail');
-        const emailAddress = document.getElementById('emailSendTo').value.trim();
-        
-        if (!emailAddress || !emailAddress.includes('@')) { alert("Please enter a valid email."); return; }
-        btn.innerText = "Sending..."; btn.disabled = true;
-
-        try {
-            const res = await fetch(PROXY_URL, { 
-                method: 'POST', credentials: 'omit', 
-                body: JSON.stringify({ 
-                    action: 'sendReportEmail', 
-                    emailTo: emailAddress, 
-                    subject: 'Weekly ' + window.currentEmailDept + ' Metrics', 
-                    htmlBody: window.currentEmailPayload 
-                }) 
-            });
-            const result = await res.json();
-            if (result.error) throw new Error(result.error);
-            btn.innerText = "✅ Sent!"; btn.style.background = "#10b981";
-        } catch (err) { alert("Failed to send email: " + err.message); btn.innerText = "Failed"; btn.style.background = "#ef4444"; }
-
-        setTimeout(() => { btn.innerText = "Send Email"; btn.style.background = "#10b981"; btn.disabled = false; }, 3000);
-    }
-    
-    // ==========================================
-    // KEYBOARD SHORTCUTS
-    // ==========================================
     document.addEventListener('keydown', (e) => {
       if (e.altKey && (e.key === 'r' || e.key === 'R')) { 
         e.preventDefault(); 
