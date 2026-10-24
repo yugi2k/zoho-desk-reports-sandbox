@@ -20,7 +20,7 @@
     :root {
       --bg-gradient: radial-gradient(circle at 50% 0%, #1e293b, #0f172a, #020617);
       --glass-bg: rgba(30, 41, 59, 0.6);
-      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(0, 0, 0, 0.1);
       --glass-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
       --dropdown-bg: rgba(15, 23, 42, 0.85); 
       --text-main: #f8fafc;
@@ -38,11 +38,10 @@
     body.light-mode {
       --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #eef2f6 100%);
       --glass-bg: rgba(255, 255, 255, 0.75);
-      --glass-border: rgba(0, 0, 0, 0.1); /* <--- CHANGED THIS FROM WHITE TO DARK GRAY */
+      --glass-border: rgba(255, 255, 255, 1);
       --glass-shadow: 0 10px 30px -10px rgba(0,0,0,0.08);
       --dropdown-bg: rgba(255, 255, 255, 0.95); 
       --text-main: #1d1d1f;
-      /* ...rest of light mode block... */
       --text-muted: #86868b;
       --input-bg: rgba(255, 255, 255, 0.6);
       --row-hover: rgba(0, 0, 0, 0.02);
@@ -2877,8 +2876,7 @@
          <div class="glass-panel exec-table-panel" style="margin-top: 20px;"><table><thead style="background:var(--th-bg);"><tr><th colspan="4" style="text-align:center;">Active Security Tickets</th></tr><tr><th>Ticket #</th><th>Subject</th><th>Age</th><th>Client Name</th></tr></thead><tbody>${secHTML}</tbody></table></div>
       `;
     }
-
-    // Helper to get "Sep 27" format for the tab names
+// Helper to get "Sep 27" format for the tab names
     function getFormattedDateForTab() {
         return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date());
     }
@@ -2900,11 +2898,11 @@
          if(result.error) throw new Error(result.error);
          
          btn.innerText = "✅ Synced to Sheets!";
-         btn.style.backgroundColor = "#34C759";
+         btn.style.backgroundColor = "#10b981";
       } catch(e) {
          alert("Sync failed: " + e.message);
          btn.innerText = "Sync Failed";
-         btn.style.backgroundColor = "#FF3B30";
+         btn.style.backgroundColor = "#ef4444";
       }
       setTimeout(() => {
          btn.innerText = "Sync to Google Sheets";
@@ -2924,21 +2922,21 @@
          const res = await fetch(PROXY_URL, { 
           method: 'POST', 
           credentials: 'omit',
-          body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.modulePayloadArray }) 
+          body: JSON.stringify({ action: 'syncToSheet', tabName: tabStr, sheetData: state.executive.payloadArray }) 
         });
          const result = await res.json();
          if(result.error) throw new Error(result.error);
          
          btn.innerText = "✅ Synced to Sheets!";
-         btn.style.backgroundColor = "#34C759";
+         btn.style.backgroundColor = "#10b981";
       } catch(e) {
          alert("Sync failed: " + e.message);
          btn.innerText = "Sync Failed";
-         btn.style.backgroundColor = "#FF3B30";
+         btn.style.backgroundColor = "#ef4444";
       }
       setTimeout(() => {
          btn.innerText = "Sync to Google Sheets";
-         btn.style.backgroundColor = "var(--accent)";
+         btn.style.backgroundColor = "#3b82f6";
          btn.disabled = false;
       }, 3000);
     }
@@ -2948,6 +2946,7 @@
     // ==========================================
     function showPinModal(action) { 
       pendingAction = action;
+      
       let title = 'Admin Access';
       let desc = 'Enter PIN to force live data sync';
       
@@ -2980,7 +2979,10 @@
     });
 
     document.getElementById('pinInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('submitPinBtn').click(); }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('submitPinBtn').click();
+      }
     });
     
     async function openStatsModal() {
@@ -2992,7 +2994,7 @@
         if(data.error) throw new Error(data.error);
         renderStatsTable(data.history);
       } catch(err) {
-        document.getElementById('statsTableBody').innerHTML = `<tr><td colspan="32" style="color:#FF3B30; text-align:center; padding:30px;">Backend history not found. (${err.message})</td></tr>`;
+        document.getElementById('statsTableBody').innerHTML = `<tr><td colspan="32" style="color:#ef4444; text-align:center; padding:30px;">Backend history not found. (${err.message})</td></tr>`;
       }
     }
     
@@ -3027,11 +3029,487 @@
       navigator.clipboard.writeText(dataStr).then(() => {
         const originalText = btn.innerText;
         btn.innerText = 'Copied!';
-        btn.style.backgroundColor = '#34C759';
+        btn.style.backgroundColor = '#10b981';
         setTimeout(() => { btn.innerText = originalText; btn.style.backgroundColor = 'var(--accent)'; }, 2000);
       });
     }
 
+    function generateModuleReport() {
+        const deptFilter = (state.executive && state.executive.currentDept) ? state.executive.currentDept : 'All';
+        let baseData = window.allGlobalTickets;
+        if (deptFilter !== 'All') {
+            baseData = baseData.filter(t => (t.department ? t.department.name : 'General') === deptFilter);
+        }
+
+        const startOfThisWeek = getETMidnightForOffset(-7);
+        const startOfLastWeek = getETMidnightForOffset(-14);
+
+        let thisWeekOpen = 0, lastWeekOpen = 0;
+        let thisWeekCompleted = 0, lastWeekCompleted = 0;
+        let releasePendingCount = 0;
+        let moduleCounts = {};
+
+        baseData.forEach(t => {
+            const isClosed = (t.status || '').toLowerCase().includes('clos');
+            const stat = t.status || '';
+            const cDate = new Date(t.createdTime);
+            const closedDate = t.closedTime ? new Date(t.closedTime) : null;
+            
+            if (!isClosed) {
+                thisWeekOpen++;
+                let mName = (t.module && t.module !== 'N/A') ? t.module : 'General';
+                moduleCounts[mName] = (moduleCounts[mName] || 0) + 1;
+                if (stat === 'ReleasePending') releasePendingCount++;
+            }
+
+            let createdBeforeThisWeek = cDate < startOfThisWeek;
+            let closedThisWeek = isClosed && closedDate && closedDate >= startOfThisWeek;
+            if (createdBeforeThisWeek && (!isClosed || closedThisWeek)) {
+                lastWeekOpen++;
+            }
+
+            if (stat === 'Closed/Resolved' && closedDate) {
+                if (closedDate >= startOfThisWeek) thisWeekCompleted++;
+                else if (closedDate >= startOfLastWeek && closedDate < startOfThisWeek) lastWeekCompleted++;
+            }
+        });
+
+        const adjustedActive = thisWeekOpen - releasePendingCount;
+        const lastWeekAdjusted = lastWeekOpen - releasePendingCount;
+        
+        const openChange = thisWeekOpen - lastWeekOpen;
+        const compChange = thisWeekCompleted - lastWeekCompleted;
+        const adjChange = adjustedActive - lastWeekAdjusted;
+
+        const openChangeText = openChange >= 0 ? `(↑ up from ${lastWeekOpen} last week)` : `(↓ down from ${lastWeekOpen} last week)`;
+        const adjChangeText = adjChange >= 0 ? `${adjChange} tickets (from ${lastWeekAdjusted})` : `Decrease: ${Math.abs(adjChange)} tickets (from ${lastWeekAdjusted})`;
+        const formatChange = (num) => num > 0 ? `+${num}` : num;
+
+        const modArray = Object.entries(moduleCounts).sort((a, b) => b[1] - a[1]);
+        const top10 = modArray.slice(0, 10);
+        const remaining = modArray.slice(10);
+        
+        let top3Sum = 0;
+        let top3Names = [];
+        top10.slice(0, 3).forEach(m => { top3Sum += m[1]; top3Names.push(m[0]); });
+        const top3Percent = thisWeekOpen > 0 ? ((top3Sum / thisWeekOpen) * 100).toFixed(2) : 0;
+
+        // --- Build Data Array for Google Sheets Sync ---
+        let modPayload = [];
+        // Define an empty 4-column row for consistent padding
+        const padRow = ["", "", "", ""];
+
+        modPayload.push(["MODULE WISE REPORT", `${deptFilter === 'All' ? 'Global' : deptFilter} Department`, "Generated on:", new Date().toLocaleDateString()]);
+        modPayload.push(padRow);
+        
+        // 1. Key Metrics Table
+        modPayload.push(["KEY METRICS", "", "", ""]);
+        modPayload.push(["Metric", "This Week", "Last Week", "Change"]);
+        modPayload.push(["Total Open Tickets", thisWeekOpen, lastWeekOpen, formatChange(openChange)]);
+        modPayload.push(["Active Tickets (excl. ReleasePending)", adjustedActive, lastWeekAdjusted, formatChange(adjChange)]);
+        modPayload.push(["Completed (Closed/Resolved)", thisWeekCompleted, lastWeekCompleted, formatChange(compChange)]);
+        modPayload.push(["Release Pending", releasePendingCount, "-", "-"]);
+        modPayload.push(padRow);
+
+        // 2. Top 10 Modules Table
+        modPayload.push(["TOP 10 MODULES", "", "", ""]);
+        modPayload.push(["Rank", "Module", "Ticket Count", "Status Indicator"]);
+        top10.forEach((m, idx) => {
+            let dotText = 'Normal'; 
+            if (idx < 3) dotText = 'High Priority'; 
+            else if (idx < 6) dotText = 'Medium Priority'; 
+            modPayload.push([idx+1, m[0], m[1], dotText]);
+        });
+        modPayload.push(padRow);
+
+        // 3. Focus Areas
+        modPayload.push(["FOCUS AREAS:", `The top 3 modules (${top3Names.join(', ')}) account for ${top3Sum} tickets, approximately ${top3Percent}% of all open tickets.`, "", ""]);
+        modPayload.push(padRow);
+
+        // 4. Additional Modules
+        modPayload.push(["COMPLETE MODULE BREAKDOWN (Additional)", "", "", ""]);
+        modPayload.push(["Module", "Ticket Count", "", ""]);
+        remaining.forEach((m) => modPayload.push([m[0], m[1], "", ""]));
+        
+        state.executive.modulePayloadArray = modPayload;
+
+        // --- Build HTML for the Modal UI ---
+        let html = `
+            <div style="margin-bottom: 20px;">
+                <strong>Overall Status:</strong>
+                <ul style="margin-top: 5px;">
+                    <li><strong>Total Open Tickets:</strong> ${thisWeekOpen} ${openChangeText}</li>
+                    <li><strong>Week-over-Week Change:</strong> ${formatChange(openChange)} tickets</li>
+                    <li><strong>Completed Tickets (Closed/Resolved):</strong> ${thisWeekCompleted} tickets</li>
+                    <li><strong>Release Pending:</strong> ${releasePendingCount} tickets</li>
+                </ul>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <strong>Adjusted Active Count</strong>
+                <ul style="margin-top: 5px;">
+                    <li><strong>Active Tickets (excluding Release Pending):</strong> ${adjustedActive}</li>
+                    <li><strong>Week-over-Week ${adjChange >= 0 ? 'Increase' : 'Decrease'}:</strong> ${Math.abs(adjChange)} tickets</li>
+                </ul>
+            </div>
+
+            <strong style="text-transform: uppercase;">KEY METRICS</strong>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 30px; font-size: 0.9rem; text-align: center;">
+                <thead style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                    <tr>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1; text-align: left;">Metric</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">This Week</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Last Week</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Total Open Tickets</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${thisWeekOpen}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekOpen}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(openChange)}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Active Tickets (excl. ReleasePending)</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${adjustedActive}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekAdjusted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(adjChange)}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Completed (Closed/Resolved)</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${thisWeekCompleted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${lastWeekCompleted}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${formatChange(compChange)}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #cbd5e1; text-align: left;">Release Pending</td><td style="padding: 8px; border: 1px solid #cbd5e1;">${releasePendingCount}</td><td style="padding: 8px; border: 1px solid #cbd5e1;">-</td><td style="padding: 8px; border: 1px solid #cbd5e1;">-</td></tr>
+                </tbody>
+            </table>
+
+            <strong style="text-transform: uppercase;">TOP 10 MODULES WITH MAXIMUM TICKETS:</strong> <span style="color:#64748b; font-size: 0.85rem;">Please review the top affected areas.</span>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 10px; font-size: 0.9rem; text-align: center;">
+                <thead style="background-color: #f8fafc; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                    <tr>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Rank</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Module</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Ticket Count</th>
+                        <th style="padding: 10px; border: 1px solid #cbd5e1;">Status Indicator</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        if (top10.length === 0) {
+            html += `<tr><td colspan="4" style="padding: 15px; border: 1px solid #cbd5e1; text-align: center;">No active tickets available.</td></tr>`;
+        } else {
+            top10.forEach((m, index) => {
+                const rank = index + 1;
+                let dotColor = '#10b981'; let dotText = 'Normal'; 
+                if (rank <= 3) { dotColor = '#ef4444'; dotText = 'High Priority'; } 
+                else if (rank <= 6) { dotColor = '#eab308'; dotText = 'Medium Priority'; } 
+
+                html += `
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">${rank}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${m[0]}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;">${m[1]}</td>
+                        <td style="padding: 8px; border: 1px solid #cbd5e1;"><span style="color:${dotColor}; font-size: 1.1rem; vertical-align: middle;">●</span> ${dotText}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += `
+                </tbody>
+            </table>
+            <div style="font-size: 0.85rem; margin-bottom: 35px;">
+                <strong>Focus Areas:</strong> The top 3 modules (${top3Names.join(', ')}) account for <strong>${top3Sum} tickets</strong>, approximately <strong>${top3Percent}%</strong> of all open tickets.
+            </div>
+
+            <strong style="text-transform: uppercase;">COMPLETE MODULE BREAKDOWN</strong>
+            <p style="margin-top: 5px; font-weight: bold; font-size: 0.9rem;">Additional Modules with Active Tickets:</p>
+            <ul style="font-size: 0.9rem; margin-top: 5px;">
+        `;
+
+        if (remaining.length === 0) {
+            html += `<li><em>No additional modules with active tickets.</em></li>`;
+        } else {
+            remaining.forEach(m => {
+                html += `<li>${m[0]}: ${m[1]} tickets</li>`;
+            });
+        }
+
+        html += `</ul>`;
+
+        const titleDate = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
+        document.getElementById('moduleReportSubtitle').innerText = `${deptFilter === 'All' ? 'Global' : deptFilter} Department • ${titleDate}`;
+        document.getElementById('moduleReportContent').innerHTML = html;
+        document.getElementById('moduleReportModal').style.display = 'flex';
+    }
+
+    // ==========================================
+    // DEPARTMENT EMAIL PREVIEWS & SENDING
+    // ==========================================
+    window.currentEmailPayload = ""; 
+
+    function openEmailPreview() {
+        const dept = window.currentEmailDept;
+        const baseData = window.allGlobalTickets.filter(t => (t.department ? t.department.name : 'General') === dept);
+        
+        // --- CUSTOM BRANDING VARIABLES ---
+        const COMPANY_LOGO_URL = "https://www.google.com/s2/favicons?domain=mindmatrix.net&sz=128"; 
+        const REPORT_DATE = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+        
+        const headerHtml = `
+            <tr><td style="padding:15px 32px;background-color:#12263a;color:#ffffff">
+                <table cellpadding="0" cellspacing="0" width="100%"><tr>
+                <td style="color:#ffffff;font-size:17px;font-weight:700;">
+                    <img src="${COMPANY_LOGO_URL}" alt="Logo" style="height:20px; vertical-align: middle; margin-right: 8px;">
+                    MINDMATRIX<span style="color:#0ea5e9"> / </span>OPERATIONS
+                </td>
+                <td align="right" style="color:#c8d6e3;font-size:10px;font-weight:700;letter-spacing:1.1px">WEEKLY REPORT</td>
+                </tr></table>
+            </td></tr>`;
+
+        const signatureHtml = `
+            <div style="padding:0 34px 25px; margin-top:20px; border-top:1px solid #d5e0e9; padding-top:25px;">
+                <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td width="50%" valign="top">
+                    <p style="margin:0;color:#657788;font-size:11px;">Regards,</p>
+                    <p style="margin:5px 0;color:#14283b;font-size:14px;font-weight:700;">Yugesh Kurakula</p>
+                    <p style="margin:0;color:#657788;font-size:11px;">Mindmatrix Desk Portal</p>
+                    <p style="margin:0;color:#657788;font-size:11px;"><a href="mailto:yugesh.kurakula@mindmatrix.net" style="color:#426fc3;text-decoration:none;">yugesh.kurakula@mindmatrix.net</a></p>
+                </td>
+                <td width="50%" valign="top" align="right">
+                    <img src="${COMPANY_LOGO_URL}" alt="Mindmatrix" style="height:35px;">
+                </td>
+                </tr></table>
+            </div>`;
+
+        const footerHtml = `
+            <tr><td style="padding:20px 34px 23px;background-color:#f2f5f8;border-top:1px solid #d9e2ea">
+                <p style="margin:0 0 8px;color:#536675;font-size:11px;line-height:1.55">Source: Zoho Reports Portal. Figures are a prepared email snapshot, not a live system view.</p>
+                <p style="margin:0;color:#728391;font-size:10px;line-height:1.5">MindMatrix Operations · Internal weekly reporting</p>
+            </td></tr>`;
+
+        let htmlTemplate = "";
+        
+        // ==========================================
+        // DEVELOPMENT REPORT
+        // ==========================================
+        if (dept === 'Development') {
+            let modCounts = {};
+            baseData.forEach(t => {
+                if (!(t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp')) {
+                    let mName = (t.module && t.module !== 'N/A') ? t.module : 'General';
+                    modCounts[mName] = (modCounts[mName] || 0) + 1;
+                }
+            });
+            const top5 = Object.entries(modCounts).filter(([m, c]) => m !== 'General').sort((a,b)=>b[1]-a[1]).slice(0, 5);
+            const totalTop5 = top5.reduce((sum, m) => sum + m[1], 0);
+            const top2Sum = (top5[0]?.[1]||0) + (top5[1]?.[1]||0);
+            const next3Sum = totalTop5 - top2Sum;
+            const t1N = top5[0]?.[0] || '-'; const t1C = top5[0]?.[1] || 0;
+            const t2N = top5[1]?.[0] || '-'; const t2C = top5[1]?.[1] || 0;
+
+            let modRows = '';
+            let cumulativeShare = 0;
+            top5.forEach(m => {
+                let pct = totalTop5 > 0 ? ((m[1] / totalTop5) * 100) : 0;
+                cumulativeShare += pct;
+                modRows += `<tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">${m[0]}</td><td style="padding:10px 8px"><table cellpadding="0" cellspacing="0" width="100%"><tr><td width="${pct.toFixed(1)}%" height="20" bgcolor="#694bb2"></td><td width="${(100-pct).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${m[1]} <span style="color:#6d8090;font-size:10px;font-weight:400">${pct.toFixed(1)}%</span></td></tr>`;
+            });
+
+            const top2Pct = totalTop5 > 0 ? ((top2Sum / totalTop5) * 100).toFixed(1) : 0;
+
+            htmlTemplate = `
+            <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Weekly Module-wise Support Tickets</title></head>
+            <body style="margin:0;padding:0;background-color:#edf1f5;color:#1c2b3a;font-family:Arial,Helvetica,sans-serif;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#edf1f5"><tr><td align="center" style="padding:24px 12px">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="width:100%;max-width:640px;background-color:#ffffff;border:1px solid #d8e1e9">
+            ${headerHtml}
+            <tr><td height="7" bgcolor="#694bb2" style="height:7px;"></td></tr>
+            <tr><td style="padding:34px 34px 32px;background-color:#183149"><div style="color:#b9d4e7;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase">Module-wise support · ${REPORT_DATE}</div><h1 style="margin:14px 0 12px;color:#ffffff;font-size:34px;letter-spacing:-1.1px">Weekly Module-wise Tickets</h1><p style="margin:0;color:#d0e0ed;font-size:13px;line-height:1.6">A focused module breakdown for Development.</p><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:24px;"><tr><td width="140" valign="bottom" style="color:#ffffff;font-size:64px;font-weight:700;line-height:1">${totalTop5}</td><td valign="bottom" style="padding:0 0 6px 14px;border-left:4px solid #694bb2;color:#d3e2ed;font-size:12px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.4px">Tickets across the five modules shown</td></tr></table></td></tr>
+            <tr><td style="padding:26px 34px 4px;color:#657788;font-size:10px;font-weight:700;letter-spacing:1.5px">DATA-RICH WEEKLY BRIEF · ${REPORT_DATE.toUpperCase()}</td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Where tickets are concentrated</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="50%" valign="top" style="padding:18px 18px;background-color:#f3efff;border-right:10px solid #ffffff;"><div style="color:#694bb2;font-size:33px;font-weight:700;line-height:1.05">${t1C}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.3px">${t1N} tickets</div></td><td width="50%" valign="top" style="padding:18px 18px;background-color:#f3efff;"><div style="color:#694bb2;font-size:33px;font-weight:700;line-height:1.05">${t2C}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.3px">${t2N} tickets</div></td></tr></table><div style="height:13px;line-height:13px">&nbsp;</div></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Module ranking</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;line-height:1.3">Share of the five rows shown</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;line-height:1.45">Bar widths use ${totalTop5} tickets across these rows as the denominator</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%">${modRows}</table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Top-two concentration</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;line-height:1.3">${t1N} + ${t2N} versus the next three</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;line-height:1.45">${top2Sum} of ${totalTop5} displayed module tickets (${top2Pct}%) belong to ${t1N} and ${t2N}</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${top2Pct}%" height="34" bgcolor="#694bb2"></td><td width="${(100-top2Pct).toFixed(1)}%" height="34" bgcolor="#c8b7eb"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;line-height:1.4"><span style="color:#694bb2;font-size:16px;">■</span> Contacts + General<br><strong style="color:#203b31;font-size:12px">${top2Sum}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;line-height:1.4"><span style="color:#c8b7eb;font-size:16px;">■</span> Other three shown<br><strong style="color:#203b31;font-size:12px">${next3Sum}</strong></td></tr></table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Full five-row breakdown</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e0e8e1"><thead><tr><th style="padding:9px 12px;background-color:#edf4ee;color:#587065;font-size:11px;font-weight:700;text-align:left;border-bottom:1px solid #dce7dd;">Module</th><th style="padding:9px 12px;background-color:#edf4ee;color:#587065;font-size:11px;font-weight:700;text-align:right;border-bottom:1px solid #dce7dd;">Tickets</th><th style="padding:9px 12px;background-color:#edf4ee;color:#587065;font-size:11px;font-weight:700;text-align:right;border-bottom:1px solid #dce7dd;">Share</th></tr></thead><tbody>`;
+            
+            top5.forEach(m => {
+                let pct = totalTop5 > 0 ? ((m[1] / totalTop5) * 100).toFixed(1) : 0;
+                htmlTemplate += `<tr><td style="padding:9px 12px;color:#31473c;font-size:12px;border-bottom:1px solid #e5ece5;">${m[0]}</td><td style="padding:9px 12px;color:#31473c;font-size:12px;text-align:right;border-bottom:1px solid #e5ece5;">${m[1]}</td><td style="padding:9px 12px;color:#31473c;font-size:12px;text-align:right;border-bottom:1px solid #e5ece5;">${pct}%</td></tr>`;
+            });
+
+            htmlTemplate += `</tbody></table></td></tr>
+            <tr><td style="padding:0 34px 25px">${signatureHtml}</td></tr>
+            ${footerHtml}
+            </table></td></tr></table></body></html>`;
+        } 
+        // ==========================================
+        // SERVICES REPORT
+        // ==========================================
+        else if (dept === 'Services') {
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+            let currActive = 0, priorActive = 0, currNoResp = 0, totalListed = 0, priorTotalListed = 0;
+            let sC = { 'Awaiting Response': 0, 'Pending': 0, 'Open': 0, 'In Progress': 0, 'Review': 0, 'On Hold': 0, 'Recurrence': 0 };
+
+            baseData.forEach(t => {
+                const cDate = new Date(t.createdTime);
+                const isClosed = (t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp');
+                const noResp = (now - new Date(t.modifiedTime || t.createdTime)) > 86400000;
+                const stat = t.status || 'Open';
+
+                if (!isClosed) { 
+                    totalListed++;
+                    let mS = Object.keys(sC).find(k => stat.toLowerCase().includes(k.toLowerCase())); 
+                    if (mS) sC[mS]++;
+                    if (stat.toLowerCase().includes('open') || stat.toLowerCase().includes('progress')) currActive++;
+                    if (noResp) currNoResp++; 
+                }
+                if (cDate < oneWeekAgo) {
+                    const wasClosed = isClosed && new Date(t.closedTime) < oneWeekAgo;
+                    if (!wasClosed) {
+                        priorTotalListed++;
+                        if (stat.toLowerCase().includes('open') || stat.toLowerCase().includes('progress')) priorActive++; 
+                    }
+                }
+            });
+
+            const diff = currActive - priorActive;
+            const diffStr = diff >= 0 ? "+" + diff : diff;
+            const diffTotal = totalListed - priorTotalListed;
+            const diffTotalStr = diffTotal >= 0 ? "+" + diffTotal : diffTotal;
+
+            const maxAct = Math.max(priorActive, currActive);
+            const prioW = maxAct > 0 ? (priorActive / maxAct * 100).toFixed(1) : 0;
+            const curW = maxAct > 0 ? (currActive / maxAct * 100).toFixed(1) : 0;
+            
+            const maxTot = Math.max(priorTotalListed, totalListed);
+            const prioTotW = maxTot > 0 ? (priorTotalListed / maxTot * 100).toFixed(1) : 0;
+            const curTotW = maxTot > 0 ? (totalListed / maxTot * 100).toFixed(1) : 0;
+
+            let statRows = '';
+            Object.entries(sC).forEach(([k,v]) => {
+                let pct = totalListed > 0 ? ((v / totalListed) * 100).toFixed(1) : 0;
+                if(v > 0) statRows += `<tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">${k}</td><td style="padding:10px 8px"><table cellpadding="0" cellspacing="0" width="100%"><tr><td width="${pct}%" height="20" bgcolor="#426fc3"></td><td width="${(100-pct).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${v} <span style="color:#6d8090;font-size:10px;font-weight:400">${pct}%</span></td></tr>`;
+            });
+
+            const openProgressPct = totalListed > 0 ? ((currActive / totalListed) * 100).toFixed(1) : 0;
+            const openOnly = sC['Open'];
+            const inProgOnly = sC['In Progress'];
+            const openProgTotal = openOnly + inProgOnly;
+            const openOnlyPct = openProgTotal > 0 ? ((openOnly / openProgTotal) * 100).toFixed(1) : 0;
+            const inProgOnlyPct = openProgTotal > 0 ? ((inProgOnly / openProgTotal) * 100).toFixed(1) : 0;
+
+            htmlTemplate = `
+            <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Services Open Tickets Report</title></head>
+            <body style="margin:0;padding:0;background-color:#edf1f5;color:#1c2b3a;font-family:Arial,Helvetica,sans-serif;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#edf1f5"><tr><td align="center" style="padding:24px 12px">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="width:100%;max-width:640px;background-color:#ffffff;border:1px solid #d8e1e9">
+            ${headerHtml}
+            <tr><td height="7" bgcolor="#426fc3" style="height:7px;"></td></tr>
+            <tr><td style="padding:34px 34px 32px;background-color:#183149"><div style="color:#b9d4e7;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase">Services desk · ${REPORT_DATE}</div><h1 style="margin:14px 0 12px;color:#ffffff;font-size:34px;letter-spacing:-1.1px">Services Open Tickets Report</h1><p style="margin:0;color:#d0e0ed;font-size:13px;line-height:1.6">Weekly service-ticket status, the active-work subset and movement since the previous report.</p><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:24px;"><tr><td width="140" valign="bottom" style="color:#ffffff;font-size:64px;font-weight:700;line-height:1">${totalListed}</td><td valign="bottom" style="padding:0 0 6px 14px;border-left:4px solid #426fc3;color:#d3e2ed;font-size:12px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.4px">Tickets across listed statuses</td></tr></table></td></tr>
+            <tr><td style="padding:26px 34px 4px;color:#657788;font-size:10px;font-weight:700;letter-spacing:1.5px">DATA-RICH WEEKLY BRIEF · ${REPORT_DATE.toUpperCase()}</td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Current service workload</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="50%" valign="top" style="padding:18px 18px;background-color:#edf3ff;border-right:10px solid #ffffff;"><div style="color:#426fc3;font-size:33px;font-weight:700;line-height:1.05">${currActive}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Open + In Progress statuses</div></td><td width="50%" valign="top" style="padding:18px 18px;background-color:#edf3ff;"><div style="color:#426fc3;font-size:33px;font-weight:700;line-height:1.05">${currNoResp}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Awaiting response over 24h</div></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Week-over-week comparison</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Two-week movement</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td colspan="2" style="padding:13px 0 6px;color:#22384b;font-size:12px;font-weight:700">All listed statuses <span style="color:#66788a;font-weight:400">(${priorTotalListed} → ${totalListed}; ${diffTotalStr})</span></td></tr><tr><td width="54" style="padding:4px 8px 4px 0;color:#718177;font-size:10px">Prior</td><td><table width="100%" cellpadding="0" cellspacing="0"><tr><td width="${prioTotW}%" height="15" bgcolor="#b6c4d4"></td><td width="${(100-prioTotW).toFixed(1)}%" height="15" bgcolor="#e5ebf1"></td></tr></table></td></tr><tr><td width="54" style="padding:4px 8px 4px 0;color:#426fc3;font-size:10px">Current</td><td><table width="100%" cellpadding="0" cellspacing="0"><tr><td width="${curTotW}%" height="15" bgcolor="#426fc3"></td><td width="${(100-curTotW).toFixed(1)}%" height="15" bgcolor="#e5ebf1"></td></tr></table></td></tr><tr><td colspan="2" style="padding:13px 0 6px;color:#22384b;font-size:12px;font-weight:700;border-top:1px solid #e3e9ef;">Open + In Progress <span style="color:#66788a;font-weight:400">(${priorActive} → ${currActive}; ${diffStr})</span></td></tr><tr><td width="54" style="padding:4px 8px 4px 0;color:#718177;font-size:10px">Prior</td><td><table width="100%" cellpadding="0" cellspacing="0"><tr><td width="${prioW}%" height="15" bgcolor="#b6c4d4"></td><td width="${(100-prioW).toFixed(1)}%" height="15" bgcolor="#e5ebf1"></td></tr></table></td></tr><tr><td width="54" style="padding:4px 8px 4px 0;color:#426fc3;font-size:10px">Current</td><td><table width="100%" cellpadding="0" cellspacing="0"><tr><td width="${curW}%" height="15" bgcolor="#426fc3"></td><td width="${(100-curW).toFixed(1)}%" height="15" bgcolor="#e5ebf1"></td></tr></table></td></tr></table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Status breakdown</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Service ticket distribution</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${totalListed} tickets across all listed statuses</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%">${statRows}</table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Active-work share</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Open or In Progress versus other statuses</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${currActive} of ${totalListed} (${openProgressPct}%) are in Open or In Progress</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${openProgressPct}%" height="34" bgcolor="#426fc3"></td><td width="${(100-openProgressPct).toFixed(1)}%" height="34" bgcolor="#b7c9e9"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#426fc3;font-size:16px;">■</span> Open + In Progress<br><strong style="color:#203b31;font-size:12px">${currActive}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#b7c9e9;font-size:16px;">■</span> Other listed statuses<br><strong style="color:#203b31;font-size:12px">${totalListed - currActive}</strong></td></tr></table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Active-work composition</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Open versus In Progress</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${openProgTotal} tickets in these two statuses</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${openOnlyPct}%" height="34" bgcolor="#426fc3"></td><td width="${(100-openOnlyPct).toFixed(1)}%" height="34" bgcolor="#93afe0"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#426fc3;font-size:16px;">■</span> Open<br><strong style="color:#203b31;font-size:12px">${openOnly}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#93afe0;font-size:16px;">■</span> In Progress<br><strong style="color:#203b31;font-size:12px">${inProgOnly}</strong></td></tr></table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px">${signatureHtml}</td></tr>
+            ${footerHtml}
+            </table></td></tr></table></body></html>`;
+        }
+        // ==========================================
+        // SUPPORT REPORT
+        // ==========================================
+        else if (dept === 'Support') {
+            const now = new Date();
+            const sevenAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+            let actC = 0, l7T = 0, l7A = 0, l7C = 0, l7S = 0;
+            let sC = { 'Pending': 0, 'Open': 0, 'Review': 0, 'Awaiting Response': 0, 'In Progress': 0, 'Working on it': 0 };
+            let pC = { 'Medium': 0, 'High': 0, 'Low': 0, 'Urgent': 0, 'Unassigned': 0 };
+            let aB = [0,0,0,0]; let secList = [];
+
+            baseData.forEach(t => {
+                const isC = (t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp');
+                const cD = new Date(t.createdTime); const clD = t.closedTime ? new Date(t.closedTime) : null;
+                const stat = t.status || 'Open'; const prio = t.priority || 'Unassigned';
+                const isSec = (t.module || '').toLowerCase().includes('security');
+
+                if (cD >= sevenAgo) { l7T++; if (!isC) l7A++; if (isSec && !isC) l7S++; }
+                if (isC && clD && clD >= sevenAgo) l7C++;
+
+                if (!isC) {
+                    actC++;
+                    let mS = Object.keys(sC).find(k => stat.toLowerCase().includes(k.toLowerCase())); if (mS) sC[mS]++;
+                    let mP = Object.keys(pC).find(k => prio.toLowerCase().includes(k.toLowerCase())); if (mP) pC[mP]++; else pC['Unassigned']++;
+                    if (isSec) {
+                        const aD = Math.floor((now - cD) / (1000 * 60 * 60 * 24));
+                        if (aD <= 30) aB[0]++; else if (aD <= 90) aB[1]++; else if (aD <= 365) aB[2]++; else aB[3]++;
+                        secList.push({ id: t.ticketNumber || t.id, age: aD });
+                    }
+                }
+            });
+
+            const gp = (v) => actC > 0 ? ((v / actC) * 100).toFixed(1) : 0;
+            let statRows = '';
+            Object.entries(sC).forEach(([k,v]) => {
+                if(v > 0) statRows += `<tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">${k}</td><td style="padding:10px 8px"><table cellpadding="0" cellspacing="0" width="100%"><tr><td width="${gp(v)}%" height="20" bgcolor="#0e8c7c"></td><td width="${(100-gp(v)).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${v} <span style="color:#6d8090;font-size:10px;font-weight:400">${gp(v)}%</span></td></tr>`;
+            });
+
+            secList.sort((a, b) => b.age - a.age);
+            let oldest = secList.length > 0 ? secList[0].age : 1;
+            let secRows = '';
+            secList.slice(0, 7).forEach(s => {
+                let wp = ((s.age / oldest) * 100).toFixed(1);
+                secRows += `<tr><td width="138" style="padding:10px 8px 10px 0;color:#24394b;font-size:11px;font-weight:700">#${s.id}</td><td style="padding:10px 8px"><table cellpadding="0" cellspacing="0" width="100%"><tr><td width="${wp}%" height="18" bgcolor="#9f6848"></td><td width="${(100-wp).toFixed(1)}%" height="18" bgcolor="#e5ebf1"></td></tr></table></td><td width="60" align="right" style="padding:10px 0;color:#172d40;font-size:11px;font-weight:700;">${s.age}d</td></tr>`;
+            });
+
+            const openPend = sC['Open'] + sC['Pending'];
+            const secTotal = aB[0]+aB[1]+aB[2]+aB[3];
+            const gsp = (v) => secTotal > 0 ? ((v / secTotal) * 100).toFixed(1) : 0;
+
+            htmlTemplate = `
+            <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Weekly Zoho Desk Support Metrics</title></head>
+            <body style="margin:0;padding:0;background-color:#edf1f5;color:#1c2b3a;font-family:Arial,Helvetica,sans-serif;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#edf1f5"><tr><td align="center" style="padding:24px 12px">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="width:100%;max-width:640px;background-color:#ffffff;border:1px solid #d8e1e9">
+            ${headerHtml}
+            <tr><td height="7" bgcolor="#0e8c7c"></td></tr>
+            <tr><td style="padding:34px 34px 32px;background-color:#183149"><div style="color:#b9d4e7;font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase">Support desk · ${REPORT_DATE}</div><h1 style="margin:14px 0 12px;color:#ffffff;font-size:34px;letter-spacing:-1.1px">Weekly Zoho Desk Support Metrics</h1><p style="margin:0;color:#d0e0ed;font-size:13px;line-height:1.6">The support snapshot covering current active ticket distribution and seven-day activity.</p><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:24px;"><tr><td width="140" valign="bottom" style="color:#ffffff;font-size:64px;font-weight:700;line-height:1">${actC}</td><td valign="bottom" style="padding:0 0 6px 14px;border-left:4px solid #0e8c7c;color:#d3e2ed;font-size:12px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:.4px">All-time active Zoho Desk tickets</td></tr></table></td></tr>
+            <tr><td style="padding:26px 34px 4px;color:#657788;font-size:10px;font-weight:700;letter-spacing:1.5px">DATA-RICH WEEKLY BRIEF · ${REPORT_DATE.toUpperCase()}</td></tr>
+            <tr><td style="padding:0 34px 25px;"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Seven-day activity</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="50%" valign="top" style="padding:18px 18px;background-color:#e8f7f2;border-right:10px solid #ffffff;"><div style="color:#0e8c7c;font-size:33px;font-weight:700;line-height:1.05">${l7T}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Reported last-7-days</div></td><td width="50%" valign="top" style="padding:18px 18px;background-color:#e8f7f2;"><div style="color:#0e8c7c;font-size:33px;font-weight:700;line-height:1.05">${l7A}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Active figure</div></td></tr><tr><td width="50%" valign="top" style="padding:18px 18px;background-color:#e8f7f2;border-right:10px solid #ffffff;border-top:10px solid #ffffff;"><div style="color:#0e8c7c;font-size:33px;font-weight:700;line-height:1.05">${l7C}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Closed figure</div></td><td width="50%" valign="top" style="padding:18px 18px;background-color:#e8f7f2;border-top:10px solid #ffffff;"><div style="color:#0e8c7c;font-size:33px;font-weight:700;line-height:1.05">${l7S}</div><div style="padding-top:7px;color:#4a5c69;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;">Active security tickets</div></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Active ticket status</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Status distribution</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${actC} active tickets; bars show share of the active total</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%">${statRows}</table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Queue concentration</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Open + Pending versus other statuses</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${openPend} of ${actC} active tickets (${gp(openPend)}%) are Open or Pending</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${gp(openPend)}%" height="34" bgcolor="#0e8c7c"></td><td width="${(100-gp(openPend)).toFixed(1)}%" height="34" bgcolor="#bddfd4"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#0e8c7c;font-size:16px;">■</span> Open + Pending<br><strong style="color:#203b31;font-size:12px">${openPend}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#bddfd4;font-size:16px;">■</span> Other active statuses<br><strong style="color:#203b31;font-size:12px">${actC - openPend}</strong></td></tr></table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Active ticket priority</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Priority composition</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="${gp(pC['Medium'])}%" height="34" bgcolor="#0e8c7c"></td><td width="${gp(pC['High'])}%" height="34" bgcolor="#64b9a2"></td><td width="${gp(pC['Low'])}%" height="34" bgcolor="#9ed6bf"></td><td width="${gp(pC['Urgent'])}%" height="34" bgcolor="#c6e5d7"></td><td width="${gp(pC['Unassigned'])}%" height="34" bgcolor="#e4f1e9"></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#0e8c7c;font-size:16px;">■</span> Medium<br><strong style="color:#203b31;font-size:12px">${pC['Medium']}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#64b9a2;font-size:16px;">■</span> High<br><strong style="color:#203b31;font-size:12px">${pC['High']}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#9ed6bf;font-size:16px;">■</span> Low<br><strong style="color:#203b31;font-size:12px">${pC['Low']}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#c6e5d7;font-size:16px;">■</span> Urgent<br><strong style="color:#203b31;font-size:12px">${pC['Urgent']}</strong></td><td valign="top" style="padding:11px 9px 0 0;color:#536a5d;font-size:10px;"><span style="color:#e4f1e9;font-size:16px;">■</span> Unassigned<br><strong style="color:#203b31;font-size:12px">${pC['Unassigned']}</strong></td></tr></table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Security watchlist age</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Ticket age bands</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">${secTotal} active security tickets</div></td></tr><tr><td style="padding:19px 20px 22px"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">0–30 days</td><td style="padding:10px 8px"><table width="100%"><tr><td width="${gsp(aB[0])}%" height="20" bgcolor="#9f6848"></td><td width="${(100-gsp(aB[0])).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${aB[0]} <span style="color:#6d8090;font-size:10px;font-weight:400">${gsp(aB[0])}%</span></td></tr><tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">31–90 days</td><td style="padding:10px 8px"><table width="100%"><tr><td width="${gsp(aB[1])}%" height="20" bgcolor="#9f6848"></td><td width="${(100-gsp(aB[1])).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${aB[1]} <span style="color:#6d8090;font-size:10px;font-weight:400">${gsp(aB[1])}%</span></td></tr><tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">91–365 days</td><td style="padding:10px 8px"><table width="100%"><tr><td width="${gsp(aB[2])}%" height="20" bgcolor="#9f6848"></td><td width="${(100-gsp(aB[2])).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${aB[2]} <span style="color:#6d8090;font-size:10px;font-weight:400">${gsp(aB[2])}%</span></td></tr><tr><td width="135" style="padding:10px 9px 10px 0;color:#24394b;font-size:12px;font-weight:700;">Over 365 days</td><td style="padding:10px 8px"><table width="100%"><tr><td width="${gsp(aB[3])}%" height="20" bgcolor="#9f6848"></td><td width="${(100-gsp(aB[3])).toFixed(1)}%" height="20" bgcolor="#e5ebf1"></td></tr></table></td><td width="72" align="right" style="padding:10px 0;color:#172d40;font-size:12px;font-weight:700;">${aB[3]} <span style="color:#6d8090;font-size:10px;font-weight:400">${gsp(aB[3])}%</span></td></tr></table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px"><h2 style="margin:0 0 12px;color:#14283b;font-size:19px;line-height:1.3;letter-spacing:-.3px;">Security ticket detail</h2><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #d5e0e9;"><tr><td style="padding:15px 20px;background-color:#183149"><div style="color:#ffffff;font-size:16px;font-weight:700;">Age by ticket ID</div><div style="padding:4px 0 0;color:#c9d8e5;font-size:11px;">Active security tickets ordered from oldest to newest</div></td></tr><tr><td style="padding:19px 20px 22px"><table width="100%">${secRows}</table></td></tr></table></td></tr>
+            <tr><td style="padding:0 34px 25px">${signatureHtml}</td></tr>
+            ${footerHtml}
+            </table></td></tr></table></body></html>`;
+        }
+
+        window.currentEmailPayload = htmlTemplate;
+        document.getElementById('emailPreviewTitle').innerText = `${dept} Report Preview`;
+        document.getElementById('emailPreviewContent').innerHTML = htmlTemplate;
+        
+        const savedEmail = document.getElementById('emailInput')?.value || pendingEmail || "";
+        if(savedEmail) document.getElementById('emailSendTo').value = savedEmail;
+        document.getElementById('emailPreviewModal').style.display = 'flex';
+    }
+
+    async function sendDeptEmail() {
+        const btn = document.getElementById('btnSendEmail');
+        const emailAddress = document.getElementById('emailSendTo').value.trim();
+        
+        if (!emailAddress || !emailAddress.includes('@')) { alert("Please enter a valid email."); return; }
+        btn.innerText = "Sending..."; btn.disabled = true;
+
+        try {
+            const res = await fetch(PROXY_URL, { 
+                method: 'POST', credentials: 'omit', 
+                body: JSON.stringify({ 
+                    action: 'sendReportEmail', 
+                    emailTo: emailAddress, 
+                    subject: 'Weekly ' + window.currentEmailDept + ' Metrics', 
+                    htmlBody: window.currentEmailPayload 
+                }) 
+            });
+            const result = await res.json();
+            if (result.error) throw new Error(result.error);
+            btn.innerText = "✅ Sent!"; btn.style.background = "#10b981";
+        } catch (err) { alert("Failed to send email: " + err.message); btn.innerText = "Failed"; btn.style.background = "#ef4444"; }
+
+        setTimeout(() => { btn.innerText = "Send Email"; btn.style.background = "#10b981"; btn.disabled = false; }, 3000);
+    }
+    
     // ==========================================
     // KEYBOARD SHORTCUTS
     // ==========================================
