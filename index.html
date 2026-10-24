@@ -16,75 +16,86 @@
   <script src="https://accounts.google.com/gsi/client?onload=renderGoogleButton" async defer></script>
 
 <style>
-    /* APPLE DESIGN SYSTEM UPDATES */
+/* APPLE DESIGN SYSTEM UPDATES */
     :root {
       --bg-gradient: radial-gradient(circle at 50% 0%, #1e293b, #0f172a, #020617);
-      --glass-bg: rgba(30, 41, 59, 0.45);
+      --glass-bg: rgba(30, 41, 59, 0.6);
       --glass-border: rgba(255, 255, 255, 0.08);
-      --glass-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+      --glass-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
       --dropdown-bg: rgba(15, 23, 42, 0.85); 
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --accent: #0ea5e9;
-      --accent-hover: #38bdf8;
+      --accent: #0A84FF; /* Apple Blue */
+      --accent-hover: #409CFF;
       --input-bg: rgba(15, 23, 42, 0.5);
       --row-hover: rgba(255, 255, 255, 0.05);
       --th-bg: rgba(15, 23, 42, 0.4);
       --scrollbar-thumb: rgba(255, 255, 255, 0.15);
-      --radius-lg: 20px;
-      --radius-md: 12px;
-      --chart-color-1: #38bdf8; /* Light Blue */
-      --chart-color-2: #a78bfa; /* Purple */
-      --chart-color-3: #fbbf24; /* Amber */
-      --chart-color-4: #34d399; /* Emerald */
+      --radius-lg: 24px;
+      --radius-md: 16px;
     }
 
     body.light-mode {
-      --bg-gradient: radial-gradient(circle at 50% 0%, #f1f5f9, #e2e8f0, #cbd5e1);
-      --glass-bg: rgba(255, 255, 255, 0.65);
-      --glass-border: rgba(255, 255, 255, 0.4);
-      --glass-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
-      --dropdown-bg: rgba(255, 255, 255, 0.85); 
-      --text-main: #0f172a;
-      --text-muted: #475569;
-      --input-bg: rgba(255, 255, 255, 0.5);
-      --row-hover: rgba(0, 0, 0, 0.03);
-      --th-bg: rgba(255, 255, 255, 0.4);
+      --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #eef2f6 100%);
+      --glass-bg: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(255, 255, 255, 1);
+      --glass-shadow: 0 10px 30px -10px rgba(0,0,0,0.08);
+      --dropdown-bg: rgba(255, 255, 255, 0.95); 
+      --text-main: #1d1d1f;
+      --text-muted: #86868b;
+      --input-bg: rgba(255, 255, 255, 0.6);
+      --row-hover: rgba(0, 0, 0, 0.02);
+      --th-bg: rgba(0, 0, 0, 0.03);
       --scrollbar-thumb: rgba(0, 0, 0, 0.15);
     }
 
-    /* SF Pro / Apple Native Font Stack */
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; 
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      letter-spacing: -0.015em;
-      background: var(--bg-gradient); color: var(--text-main); margin: 0; padding: 2rem; min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; transition: background 0.5s ease, color 0.5s ease; 
-    }
-
-    .page-view { display: none !important; width: 100%; }
-    .page-view.active { display: block !important; animation: fadeInScale 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-    #view-login.page-view.active { display: flex !important; justify-content: center; align-items: center; flex: 1; min-height: 80vh; }
-
-    @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-    .animate-in { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-    @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .delay-1 { animation-delay: 0.1s; } .delay-2 { animation-delay: 0.2s; } .delay-3 { animation-delay: 0.3s; }
-
     /* Premium Glass Panels */
-    .glass-panel { background: var(--glass-bg); backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: var(--radius-lg); }
-
-    /* Skeleton Loader Animations */
-    .skeleton-wrapper { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
-    .skeleton-card { height: 120px; border-radius: var(--radius-md); background: var(--input-bg); position: relative; overflow: hidden; }
-    .skeleton-card::after {
-      content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-      transform: translateX(-100%);
-      background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.05) 20%, rgba(255,255,255,0.1) 60%, rgba(255,255,255,0));
-      animation: shimmer 2s infinite;
+    .glass-panel { 
+      background: var(--glass-bg); 
+      backdrop-filter: blur(24px) saturate(180%); 
+      -webkit-backdrop-filter: blur(24px) saturate(180%); 
+      border: 1px solid var(--glass-border); 
+      box-shadow: var(--glass-shadow); 
+      border-radius: var(--radius-lg); 
     }
-    body.light-mode .skeleton-card::after { background-image: linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0.02) 20%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0)); }
-    @keyframes shimmer { 100% { transform: translateX(100%); } }
+
+    /* Redesigned Apple-Style Metric Cards */
+    .metric-card { 
+      padding: 24px 28px; 
+      text-align: left; 
+      border-radius: var(--radius-md); 
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+      border: 1px solid var(--glass-border); 
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .metric-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
+    .metric-card:hover::before { opacity: 1; }
+    
+    .metric-card h3 { 
+      font-size: 0.85rem; 
+      font-weight: 600; 
+      text-transform: uppercase; 
+      letter-spacing: 0.06em; 
+      color: var(--text-muted); 
+      margin: 0 0 12px 0;
+    }
+    .metric-card p { 
+      font-size: 3.2rem; 
+      font-weight: 700; 
+      margin: 0; 
+      letter-spacing: -0.04em; 
+      line-height: 1;
+    }
 
     /* Chart Containers */
     .chart-container { position: relative; height: 350px; width: 100%; padding: 20px; box-sizing: border-box; }
@@ -993,12 +1004,12 @@
         if (!window.allGlobalTickets || window.allGlobalTickets.length === 0) return;
 
         const dept = document.getElementById('newDashDept').value;
-        const trend = document.getElementById('newDashTime').value; // Weekly, Monthly, Yearly
+        const trend = document.getElementById('newDashTime').value; 
 
         let data = window.allGlobalTickets;
         if (dept !== 'All') data = data.filter(t => (t.department ? t.department.name : 'General') === dept);
 
-        // 1. TOP METRICS
+        // 1. TOP METRICS (Apple Colors)
         const openCnt = data.filter(t => !((t.status || '').toLowerCase().includes('clos'))).length;
         const closedCnt = data.length - openCnt;
         
@@ -1008,24 +1019,28 @@
             if(p.includes('critical')) pCounts.Critical++; else if(p.includes('high')||p.includes('urgent')) pCounts.High++; else if(p.includes('low')) pCounts.Low++; else pCounts.Medium++;
         });
 
+        // Left-aligned, sleeker cards
         document.getElementById('newDashMetricsTop').innerHTML = `
-            <div class="metric-card glass-panel"><h3>Total Open</h3><p style="color:var(--chart-color-1)">${openCnt}</p></div>
-            <div class="metric-card glass-panel"><h3>Total Closed</h3><p style="color:var(--text-muted)">${closedCnt}</p></div>
-            <div class="metric-card glass-panel"><h3>Critical Priority</h3><p style="color:#ef4444">${pCounts.Critical}</p></div>
-            <div class="metric-card glass-panel"><h3>High Priority</h3><p style="color:#f97316">${pCounts.High}</p></div>
+            <div class="metric-card glass-panel"><h3>Total Open</h3><p style="color:#007AFF">${openCnt}</p></div>
+            <div class="metric-card glass-panel"><h3>Total Closed</h3><p style="color:var(--text-main)">${closedCnt}</p></div>
+            <div class="metric-card glass-panel"><h3>Critical Priority</h3><p style="color:#FF3B30">${pCounts.Critical}</p></div>
+            <div class="metric-card glass-panel"><h3>High Priority</h3><p style="color:#FF9500">${pCounts.High}</p></div>
         `;
 
         // Configure Chart.js Global defaults for Apple aesthetics
-        Chart.defaults.color = document.body.classList.contains('light-mode') ? '#475569' : '#94a3b8';
-        Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        Chart.defaults.scale.grid.color = document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+        const isLight = document.body.classList.contains('light-mode');
+        Chart.defaults.color = isLight ? '#86868b' : '#94a3b8';
+        Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif';
+        Chart.defaults.font.weight = '500';
+        
+        const gridColor = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)';
+        const cardBgColor = isLight ? '#ffffff' : '#1e293b'; // Used for borders on charts
 
         // 2. TREND GRAPH LOGIC
         let labels = []; let openData = []; let closedData = [];
         const now = new Date();
         
         if (trend === 'Weekly') {
-            // Last 7 days, grouped by day
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(now); d.setDate(d.getDate() - i);
                 labels.push(d.toLocaleDateString('en-US', {weekday:'short'}));
@@ -1034,7 +1049,6 @@
                 closedData.push(data.filter(t => { const cd = t.closedTime?new Date(t.closedTime):null; return cd && cd>=start && cd<=end; }).length);
             }
         } else if (trend === 'Monthly') {
-            // Last 4 weeks, grouped by week
             for (let i = 3; i >= 0; i--) {
                 labels.push(`Week ${4-i}`);
                 const start = new Date(now.getTime() - ((i+1)*7*24*60*60*1000));
@@ -1043,7 +1057,6 @@
                 closedData.push(data.filter(t => { const cd = t.closedTime?new Date(t.closedTime):null; return cd && cd>=start && cd<=end; }).length);
             }
         } else if (trend === 'Yearly') {
-            // Last 6 months, grouped by month
             for (let i = 5; i >= 0; i--) {
                 const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
                 labels.push(d.toLocaleDateString('en-US', {month:'short'}));
@@ -1052,27 +1065,62 @@
             }
         }
 
+        // Create Gradients for Line Chart
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        const gradBlue = trendCtx.createLinearGradient(0, 0, 0, 350);
+        gradBlue.addColorStop(0, 'rgba(0, 122, 255, 0.5)'); // Apple Blue
+        gradBlue.addColorStop(1, 'rgba(0, 122, 255, 0.0)');
+        
+        const gradIndigo = trendCtx.createLinearGradient(0, 0, 0, 350);
+        gradIndigo.addColorStop(0, 'rgba(88, 86, 214, 0.5)'); // Apple Indigo
+        gradIndigo.addColorStop(1, 'rgba(88, 86, 214, 0.0)');
+
         drawChart('trend', 'trendChart', 'line', {
             labels: labels,
             datasets: [
-                { label: 'New Tickets', data: openData, borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', fill: true, tension: 0.4 },
-                { label: 'Closed Tickets', data: closedData, borderColor: '#a78bfa', backgroundColor: 'rgba(167, 139, 250, 0.1)', fill: true, tension: 0.4 }
+                { label: 'New Tickets', data: openData, borderColor: '#007AFF', backgroundColor: gradBlue, fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 6 },
+                { label: 'Closed Tickets', data: closedData, borderColor: '#5856D6', backgroundColor: gradIndigo, fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 6 }
             ]
-        }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } });
+        }, { 
+            responsive: true, maintainAspectRatio: false, 
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } } },
+            scales: {
+                x: { grid: { display: false }, border: { display: false } },
+                y: { grid: { color: gridColor, drawBorder: false }, border: { display: false }, beginAtZero: true }
+            }
+        });
 
-        // 3. PRIORITY DOUGHNUT
+        // 3. PRIORITY DOUGHNUT (Separated segments)
         drawChart('priority', 'priorityChart', 'doughnut', {
             labels: ['Critical', 'High', 'Medium', 'Low'],
-            datasets: [{ data: [pCounts.Critical, pCounts.High, pCounts.Medium, pCounts.Low], backgroundColor: ['#ef4444', '#f97316', '#fbbf24', '#34d399'], borderWidth: 0 }]
-        }, { responsive: true, maintainAspectRatio: false, cutout: '70%' });
+            datasets: [{ 
+                data: [pCounts.Critical, pCounts.High, pCounts.Medium, pCounts.Low], 
+                backgroundColor: ['#FF3B30', '#FF9500', '#FFCC00', '#34C759'], 
+                borderWidth: 4, 
+                borderColor: cardBgColor,
+                hoverOffset: 10,
+                borderRadius: 5
+            }]
+        }, { 
+            responsive: true, maintainAspectRatio: false, cutout: '75%',
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } }
+        });
 
-        // 4. STATUS DISTRIBUTION
+        // 4. STATUS DISTRIBUTION (Rounded Bars)
         let sCounts = {};
         data.filter(t => !((t.status||'').toLowerCase().includes('clos'))).forEach(t => { sCounts[t.status||'Open'] = (sCounts[t.status||'Open']||0)+1; });
         drawChart('status', 'statusChart', 'bar', {
             labels: Object.keys(sCounts),
-            datasets: [{ label: 'Tickets', data: Object.values(sCounts), backgroundColor: '#a78bfa', borderRadius: 6 }]
-        }, { responsive: true, maintainAspectRatio: false, scales: { x:{grid:{display:false}}, y:{beginAtZero:true} }});
+            datasets: [{ label: 'Tickets', data: Object.values(sCounts), backgroundColor: '#5856D6', borderRadius: 8, barPercentage: 0.6 }]
+        }, { 
+            responsive: true, maintainAspectRatio: false, 
+            plugins: { legend: { display: false } },
+            scales: { 
+                x: { grid: { display: false }, border: { display: false } }, 
+                y: { grid: { color: gridColor }, border: { display: false }, beginAtZero: true } 
+            }
+        });
 
         // 5. TOP PERFORMERS (RESOLVED TICKETS)
         let aCounts = {};
@@ -1082,9 +1130,16 @@
         });
         const topAgents = Object.entries(aCounts).sort((a,b)=>b[1]-a[1]).slice(0, 5);
         drawChart('agent', 'agentChart', 'bar', {
-            labels: topAgents.map(a => a[0].split(' ')[0]), // First name only for space
-            datasets: [{ label: 'Resolved', data: topAgents.map(a => a[1]), backgroundColor: '#38bdf8', borderRadius: 6 }]
-        }, { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x:{beginAtZero:true}, y:{grid:{display:false}} }});
+            labels: topAgents.map(a => a[0].split(' ')[0]),
+            datasets: [{ label: 'Resolved', data: topAgents.map(a => a[1]), backgroundColor: '#34C759', borderRadius: 8, barPercentage: 0.6 }]
+        }, { 
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false, 
+            plugins: { legend: { display: false } },
+            scales: { 
+                x: { grid: { color: gridColor }, border: { display: false }, beginAtZero: true }, 
+                y: { grid: { display: false }, border: { display: false } } 
+            }
+        });
     }
 
     // Helper to safely destroy and recreate charts
@@ -1094,11 +1149,6 @@
         chartsObj[refName] = new Chart(ctx, { type: type, data: data, options: options });
     }
 
-    // Modify your existing renderMainDashboard() to inject into the new classic container wrapper
-    // IMPORTANT: In your existing `renderMainDashboard` function, change the first line from:
-    // `const container = document.getElementById('dashboardContainer');`
-    // to:
-    // `const container = document.getElementById('dashboardClassicContainer');`
 
 
     // ==========================================
