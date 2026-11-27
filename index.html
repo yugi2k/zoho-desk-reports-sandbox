@@ -306,9 +306,15 @@
     .sla-count-badge { font-size: 0.95rem; font-weight: 800; padding: 6px 14px; border-radius: 10px; min-width: 90px; text-align: center; }
     .sla-chevron { width: 32px; height: 32px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); color: var(--text-main); font-size: 0.85rem; }
     .sla-accordion.expanded .sla-chevron { transform: rotate(180deg); background: var(--accent); color: #fff; border-color: var(--accent); }
-    .sla-accordion-body { display: none; border-top: 1px solid var(--glass-border); max-height: 55vh; overflow-y: auto; overflow-x: auto; }
+    .sla-accordion-body { display: none; border-top: 1px solid var(--glass-border); }
     .sla-accordion.expanded .sla-accordion-body { display: block; animation: fadeInScale 0.25s ease; }
-    .sla-accordion-body thead th { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(16px); }
+    .sla-section-toolbar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; padding: 14px 20px; background: var(--th-bg); border-bottom: 1px solid var(--glass-border); }
+    .sla-section-toolbar .filter-group { gap: 5px; }
+    .sla-section-toolbar .filter-group label { font-size: 0.7rem; }
+    .sla-section-toolbar .filter-input, .sla-section-toolbar .select-btn, .sla-section-toolbar .btn-action { height: 36px; font-size: 0.8rem; }
+    .sla-table-scroll { max-height: 55vh; overflow-y: auto; overflow-x: auto; }
+    .sla-table-scroll thead th { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(16px); }
+
     .sla-delay-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
     .sla-summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
     .sla-kpi-mini { padding: 16px 20px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.25s ease; }
@@ -1053,18 +1059,18 @@
     <div id="view-sla" class="app-subview" style="display:none;">
       <div class="controls-panel glass-panel animate-in" style="margin-bottom: 18px;">
         <div class="filter-group">
-          <label>Search</label>
+          <label>Global Search</label>
           <input type="text" id="slaSearchText" class="filter-input" placeholder="Ticket #, Subject, Client..." onkeyup="applySlaFilters()" style="width: 190px;">
         </div>
         <div class="filter-group">
-          <label>Assignee</label>
+          <label>Global Assignee</label>
           <div class="custom-select" style="width: 190px;">
             <div class="select-btn filter-input" onclick="toggleDropdown('slaAssigneeDropdown')"><span id="slaAssigneeLabel">All Assignees</span> ▼</div>
             <div class="select-dropdown" id="slaAssigneeDropdown"></div>
           </div>
         </div>
         <div class="filter-group">
-          <label>Priority</label>
+          <label>Global Priority</label>
           <div class="custom-select" style="width: 170px;">
             <div class="select-btn filter-input" onclick="toggleDropdown('slaPriorityDropdown')"><span id="slaPriorityLabel">All Priorities</span> ▼</div>
             <div class="select-dropdown" id="slaPriorityDropdown"></div>
@@ -1076,8 +1082,8 @@
             Total Breaches: <span id="slaTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 800;">0</span>
           </div>
           <button class="btn-action" id="btnToggleAllSla" onclick="toggleAllSlaSections()" style="background-color: var(--accent);">Expand All</button>
-          <button class="btn-action btn-clear" onclick="clearSlaFilters()">Clear</button>
-          <button class="btn-action btn-export" onclick="exportSlaToCSV()">Export CSV</button>
+          <button class="btn-action btn-clear" onclick="clearSlaFilters()">Clear All</button>
+          <button class="btn-action btn-export" onclick="exportSlaToCSV()">Export All CSV</button>
         </div>
       </div>
 
@@ -1111,11 +1117,11 @@
         </div>
       </div>
 
-      <!-- SECTION 1: COLLAPSIBLE ACCORDION (Minimized by default) -->
+      <!-- SEC1: COLLAPSIBLE ACCORDION (Minimized by default) -->
       <div class="glass-panel sla-accordion animate-in delay-1" id="slaAccordion_sec1">
         <div class="sla-accordion-header" onclick="toggleSlaSection('sec1')">
           <div class="sla-acc-left">
-            <span class="sla-acc-dot" style="background: #FF3B30; box-shadow: 0 0 10px rgba(255,59,48,0.6);"></span>
+            <span class="sla-acc-dot" style="background: #FF3B30; box-shadow: 0 0 10px #FF3B3099;"></span>
             <div>
               <h3 class="sla-acc-title">Section 1: New Tickets — No First Response (&gt; 2 Hours)</h3>
               <p class="sla-acc-desc">Arrived over 2 clock hours ago (24/7) with zero agent reply sent to client</p>
@@ -1128,31 +1134,57 @@
           </div>
         </div>
         <div class="sla-accordion-body">
-          <table>
-            <thead>
-              <tr>
-                <th>Ticket #</th>
-                <th>Subject</th>
-                <th>Client Name</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Assignee</th>
-                <th>Created Date</th>
-                <th>Customer Responded Time</th>
-                <th>Agent Responded Time</th>
-                <th>Unresponded For</th>
-              </tr>
-            </thead>
-            <tbody id="slaBody_sec1"></tbody>
-          </table>
+          <div class="sla-section-toolbar" onclick="event.stopPropagation()">
+            <div class="filter-group">
+              <label>Search</label>
+              <input type="text" id="slaSearch_sec1" class="filter-input" placeholder="Ticket #, Subject, Client..." onkeyup="applySlaSectionFilters('sec1')" style="width: 185px;">
+            </div>
+            <div class="filter-group">
+              <label>Assignee</label>
+              <div class="custom-select" style="width: 185px;">
+                <div class="select-btn filter-input" onclick="toggleDropdown('slaAssigneeDropdown_sec1')"><span id="slaAssigneeLabel_sec1">All Assignees</span> ▼</div>
+                <div class="select-dropdown" id="slaAssigneeDropdown_sec1"></div>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>Priority</label>
+              <div class="custom-select" style="width: 165px;">
+                <div class="select-btn filter-input" onclick="toggleDropdown('slaPriorityDropdown_sec1')"><span id="slaPriorityLabel_sec1">All Priorities</span> ▼</div>
+                <div class="select-dropdown" id="slaPriorityDropdown_sec1"></div>
+              </div>
+            </div>
+            <div class="btn-group" style="margin-left: auto; align-items: center;">
+              <button class="btn-action btn-clear" onclick="clearSlaSectionFilters('sec1')">Clear</button>
+              <button class="btn-action btn-export" onclick="exportSlaSectionToCSV('sec1')">Export CSV</button>
+            </div>
+          </div>
+          <div class="sla-table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticket #</th>
+                  <th>Subject</th>
+                  <th>Client Name</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Assignee</th>
+                  <th>Created Date</th>
+                  <th>Customer Responded Time</th>
+                  <th>Agent Responded Time</th>
+                  <th>Unresponded For</th>
+                </tr>
+              </thead>
+              <tbody id="slaBody_sec1"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- SECTION 2: COLLAPSIBLE ACCORDION (Minimized by default) -->
+      <!-- SEC2: COLLAPSIBLE ACCORDION (Minimized by default) -->
       <div class="glass-panel sla-accordion animate-in delay-2" id="slaAccordion_sec2">
         <div class="sla-accordion-header" onclick="toggleSlaSection('sec2')">
           <div class="sla-acc-left">
-            <span class="sla-acc-dot" style="background: #FF9500; box-shadow: 0 0 10px rgba(255,149,0,0.6);"></span>
+            <span class="sla-acc-dot" style="background: #FF9500; box-shadow: 0 0 10px #FF950099;"></span>
             <div>
               <h3 class="sla-acc-title">Section 2: Ongoing Tickets — Customer Replied, No Agent Follow-Up (&gt; 2 Hours)</h3>
               <p class="sla-acc-desc">Client sent a newer response than the last agent reply and has waited over 2 clock hours (24/7)</p>
@@ -1165,31 +1197,57 @@
           </div>
         </div>
         <div class="sla-accordion-body">
-          <table>
-            <thead>
-              <tr>
-                <th>Ticket #</th>
-                <th>Subject</th>
-                <th>Client Name</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Assignee</th>
-                <th>Created Date</th>
-                <th>Customer Responded Time</th>
-                <th>Agent Responded Time</th>
-                <th>Client Waiting</th>
-              </tr>
-            </thead>
-            <tbody id="slaBody_sec2"></tbody>
-          </table>
+          <div class="sla-section-toolbar" onclick="event.stopPropagation()">
+            <div class="filter-group">
+              <label>Search</label>
+              <input type="text" id="slaSearch_sec2" class="filter-input" placeholder="Ticket #, Subject, Client..." onkeyup="applySlaSectionFilters('sec2')" style="width: 185px;">
+            </div>
+            <div class="filter-group">
+              <label>Assignee</label>
+              <div class="custom-select" style="width: 185px;">
+                <div class="select-btn filter-input" onclick="toggleDropdown('slaAssigneeDropdown_sec2')"><span id="slaAssigneeLabel_sec2">All Assignees</span> ▼</div>
+                <div class="select-dropdown" id="slaAssigneeDropdown_sec2"></div>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>Priority</label>
+              <div class="custom-select" style="width: 165px;">
+                <div class="select-btn filter-input" onclick="toggleDropdown('slaPriorityDropdown_sec2')"><span id="slaPriorityLabel_sec2">All Priorities</span> ▼</div>
+                <div class="select-dropdown" id="slaPriorityDropdown_sec2"></div>
+              </div>
+            </div>
+            <div class="btn-group" style="margin-left: auto; align-items: center;">
+              <button class="btn-action btn-clear" onclick="clearSlaSectionFilters('sec2')">Clear</button>
+              <button class="btn-action btn-export" onclick="exportSlaSectionToCSV('sec2')">Export CSV</button>
+            </div>
+          </div>
+          <div class="sla-table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticket #</th>
+                  <th>Subject</th>
+                  <th>Client Name</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Assignee</th>
+                  <th>Created Date</th>
+                  <th>Customer Responded Time</th>
+                  <th>Agent Responded Time</th>
+                  <th>Client Waiting</th>
+                </tr>
+              </thead>
+              <tbody id="slaBody_sec2"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- SECTION 3: COLLAPSIBLE ACCORDION (Minimized by default) -->
+      <!-- SEC3: COLLAPSIBLE ACCORDION (Minimized by default) -->
       <div class="glass-panel sla-accordion animate-in delay-3" id="slaAccordion_sec3">
         <div class="sla-accordion-header" onclick="toggleSlaSection('sec3')">
           <div class="sla-acc-left">
-            <span class="sla-acc-dot" style="background: #AF52DE; box-shadow: 0 0 10px rgba(175,82,222,0.6);"></span>
+            <span class="sla-acc-dot" style="background: #AF52DE; box-shadow: 0 0 10px #AF52DE99;"></span>
             <div>
               <h3 class="sla-acc-title">Section 3: Stale Tickets — No Agent Response (&gt; 2 Weeks)</h3>
               <p class="sla-acc-desc">No new agent response sent for over 14 days (24/7), including On Hold &amp; Awaiting Response</p>
@@ -1202,23 +1260,49 @@
           </div>
         </div>
         <div class="sla-accordion-body">
-          <table>
-            <thead>
-              <tr>
-                <th>Ticket #</th>
-                <th>Subject</th>
-                <th>Client Name</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Assignee</th>
-                <th>Created Date</th>
-                <th>Customer Responded Time</th>
-                <th>Agent Responded Time</th>
-                <th>Silence Duration</th>
-              </tr>
-            </thead>
-            <tbody id="slaBody_sec3"></tbody>
-          </table>
+          <div class="sla-section-toolbar" onclick="event.stopPropagation()">
+            <div class="filter-group">
+              <label>Search</label>
+              <input type="text" id="slaSearch_sec3" class="filter-input" placeholder="Ticket #, Subject, Client..." onkeyup="applySlaSectionFilters('sec3')" style="width: 185px;">
+            </div>
+            <div class="filter-group">
+              <label>Assignee</label>
+              <div class="custom-select" style="width: 185px;">
+                <div class="select-btn filter-input" onclick="toggleDropdown('slaAssigneeDropdown_sec3')"><span id="slaAssigneeLabel_sec3">All Assignees</span> ▼</div>
+                <div class="select-dropdown" id="slaAssigneeDropdown_sec3"></div>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>Priority</label>
+              <div class="custom-select" style="width: 165px;">
+                <div class="select-btn filter-input" onclick="toggleDropdown('slaPriorityDropdown_sec3')"><span id="slaPriorityLabel_sec3">All Priorities</span> ▼</div>
+                <div class="select-dropdown" id="slaPriorityDropdown_sec3"></div>
+              </div>
+            </div>
+            <div class="btn-group" style="margin-left: auto; align-items: center;">
+              <button class="btn-action btn-clear" onclick="clearSlaSectionFilters('sec3')">Clear</button>
+              <button class="btn-action btn-export" onclick="exportSlaSectionToCSV('sec3')">Export CSV</button>
+            </div>
+          </div>
+          <div class="sla-table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticket #</th>
+                  <th>Subject</th>
+                  <th>Client Name</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Assignee</th>
+                  <th>Created Date</th>
+                  <th>Customer Responded Time</th>
+                  <th>Agent Responded Time</th>
+                  <th>Silence Duration</th>
+                </tr>
+              </thead>
+              <tbody id="slaBody_sec3"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1438,7 +1522,7 @@
       ai: { data: [], selectedCols: [] },
       anomaly: { data: [], currentFiltered: [], filterType: 'All' },
       executive: { currentDept: 'All', payloadArray: [], roleFilter: 'All' },
-      sla: { baseSupport: [], sec1: [], sec2: [], sec3: [], expanded: { sec1: false, sec2: false, sec3: false } }
+      sla: { baseSupport: [], sec1: [], sec2: [], sec3: [], filteredSec1: [], filteredSec2: [], filteredSec3: [], expanded: { sec1: false, sec2: false, sec3: false } }
     };
 
     const ALL_COLS = {
@@ -1544,7 +1628,7 @@
     function renderColData(c, t) {
       let val = '-';
       switch(c) {
-        case 'col_id': val = `<a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a>`; break;
+        case 'col_id': val = `<a href="https://helpdesk.mindmatrix.net/agent/mindmatrixinc/all/tickets/details/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a>`; break;
         case 'col_subject': val = `<strong>${t.subject}</strong>`; break;
         case 'col_client': val = t.clientName; break;
         case 'col_dept': val = `<span class="dept-badge">${t.department ? (t.department.name || t.department) : 'General'}</span>`; break;
@@ -2753,7 +2837,7 @@
           let icon = a.level === 'critical' ? '🚩' : (a.level === 'high' ? '⏫' : '⚠️');
           
           let actionLink = t.id !== 'N/A' 
-              ? `<a href="https://helpdesk.mindmatrix.net/support/mindmatrixinc/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">[ VIEW IN ZOHO ]</a>`
+              ? `<a href="https://helpdesk.mindmatrix.net/agent/mindmatrixinc/all/tickets/details/${t.id}" target="_blank" class="ticket-link">[ VIEW IN ZOHO ]</a>`
               : `<span style="color:var(--text-muted)">[ SYSTEM ALERT ]</span>`;
           
           const tr = document.createElement('tr');
@@ -2983,7 +3067,7 @@
               let timeStr = `${hrs}h ${mins.toString().padStart(2, '0')}m`;
               let dtStr = dtFmt.format(u.mod);
               payload.push(["#"+u.id, dtStr, timeStr, ""]);
-              unrespHtml += `<tr><td><a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${u.id}" target="_blank" class="ticket-link">#${u.id}</a></td><td>${dtStr}</td><td><strong>${timeStr}</strong></td></tr>`;
+              unrespHtml += `<tr><td><a href="https://helpdesk.mindmatrix.net/agent/mindmatrixinc/all/tickets/details/${u.id}" target="_blank" class="ticket-link">#${u.id}</a></td><td>${dtStr}</td><td><strong>${timeStr}</strong></td></tr>`;
           });
           if(unrespHtml === "") unrespHtml = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">No tickets neglected over 24 hours.</td></tr>`;
 
@@ -3167,14 +3251,14 @@
       let assigneesHTML = topAssigneesArray.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No active assignments in timeframe</td></tr>` : topAssigneesArray.map(a => `<tr><td>${a[0]}</td><td><strong>${a[1]}</strong></td></tr>`).join('');
       const modArray = Object.entries(moduleCounts).map(([m, c]) => ({ mod: m, count: c })).sort((a,b)=>b.count - a.count).slice(0, 5);
       let modHTML = modArray.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No module activity</td></tr>` : modArray.map(m => `<tr><td>${m.mod}</td><td><strong>${m.count}</strong></td></tr>`).join('');
-      let critHTML = critTickets.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets in timeframe</td></tr>` : critTickets.map(t => `<tr><td><a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber || t.id}</a></td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
+      let critHTML = critTickets.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No critical tickets in timeframe</td></tr>` : critTickets.map(t => `<tr><td><a href="https://helpdesk.mindmatrix.net/agent/mindmatrixinc/all/tickets/details/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber || t.id}</a></td><td><strong>${customResolvedTimes[t.id] || '-'}</strong></td></tr>`).join('');
       const statArr = Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]);
       let statHTML = statArr.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No status data</td></tr>` : statArr.map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
       const prioArr = Object.entries(priorityCounts).sort((a,b)=>b[1]-a[1]);
       let priorityHTML = prioArr.length === 0 ? `<tr><td colspan="2" style="text-align:center; color:var(--text-muted);">No priority data</td></tr>` : prioArr.map(([k,v]) => `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`).join('');
       let secHTML = secTickets.length === 0 ? `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No active security tickets</td></tr>` : secTickets.map(t => {
          const ageDays = Math.floor((new Date() - new Date(t.createdTime)) / (1000 * 60 * 60 * 24));
-         return `<tr><td><a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber || t.id}</a></td><td><strong>${t.subject}</strong></td><td><span class="priority-badge" style="background:#ef4444;">${ageDays} days</span></td><td>${t.clientName}</td></tr>`;
+         return `<tr><td><a href="https://helpdesk.mindmatrix.net/agent/mindmatrixinc/all/tickets/details/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber || t.id}</a></td><td><strong>${t.subject}</strong></td><td><span class="priority-badge" style="background:#ef4444;">${ageDays} days</span></td><td>${t.clientName}</td></tr>`;
       }).join('');
 
       let payload = [];
@@ -3324,6 +3408,42 @@
       return `<span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span>`;
     }
 
+    function populateSlaDropdownPair(agDropdownId, prDropdownId, items, onchangeFnCall) {
+      const prevAssignees = Array.from(document.querySelectorAll(`#${agDropdownId} input:checked`)).map(c => c.value);
+      const prevPrios = Array.from(document.querySelectorAll(`#${prDropdownId} input:checked`)).map(c => c.value);
+
+      const agSet = new Set();
+      const prSet = new Set();
+      items.forEach(item => {
+        const t = item.ticket ? item.ticket : item;
+        agSet.add(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned');
+        prSet.add(t.priority || 'None');
+      });
+
+      const agEl = document.getElementById(agDropdownId);
+      if (agEl) {
+        agEl.innerHTML = '';
+        Array.from(agSet).sort().forEach(v => {
+          const chk = prevAssignees.includes(v) ? 'checked' : '';
+          agEl.innerHTML += `<label><input type="checkbox" value="${v}" ${chk} onchange="${onchangeFnCall}"> ${v}</label>`;
+        });
+      }
+
+      const prioOrder = ['Critical', 'Urgent', 'High', 'Medium', 'Low', 'None'];
+      const prEl = document.getElementById(prDropdownId);
+      if (prEl) {
+        prEl.innerHTML = '';
+        Array.from(prSet).sort((a, b) => {
+          const ia = prioOrder.findIndex(x => a.toLowerCase().includes(x.toLowerCase()));
+          const ib = prioOrder.findIndex(x => b.toLowerCase().includes(x.toLowerCase()));
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        }).forEach(v => {
+          const chk = prevPrios.includes(v) ? 'checked' : '';
+          prEl.innerHTML += `<label><input type="checkbox" value="${v}" ${chk} onchange="${onchangeFnCall}"> ${v}</label>`;
+        });
+      }
+    }
+
     function initSlaView() {
       // Base: All open/non-closed Support tickets (includes Open, In Progress, Pending, Review, On Hold, Awaiting Response, etc.)
       const supportOpen = (window.allGlobalTickets || []).filter(t => {
@@ -3334,36 +3454,7 @@
       });
 
       state.sla.baseSupport = supportOpen;
-
-      // Populate Assignee & Priority multi-select dropdowns while preserving any active checks if possible
-      const prevAssignees = Array.from(document.querySelectorAll('#slaAssigneeDropdown input:checked')).map(c => c.value);
-      const prevPrios = Array.from(document.querySelectorAll('#slaPriorityDropdown input:checked')).map(c => c.value);
-
-      const agSet = new Set();
-      const prSet = new Set();
-      supportOpen.forEach(t => {
-        agSet.add(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned');
-        prSet.add(t.priority || 'None');
-      });
-
-      const agEl = document.getElementById('slaAssigneeDropdown');
-      agEl.innerHTML = '';
-      Array.from(agSet).sort().forEach(v => {
-        const chk = prevAssignees.includes(v) ? 'checked' : '';
-        agEl.innerHTML += `<label><input type="checkbox" value="${v}" ${chk} onchange="applySlaFilters()"> ${v}</label>`;
-      });
-
-      const prioOrder = ['Critical', 'Urgent', 'High', 'Medium', 'Low', 'None'];
-      const prEl = document.getElementById('slaPriorityDropdown');
-      prEl.innerHTML = '';
-      Array.from(prSet).sort((a, b) => {
-        const ia = prioOrder.findIndex(x => a.toLowerCase().includes(x.toLowerCase()));
-        const ib = prioOrder.findIndex(x => b.toLowerCase().includes(x.toLowerCase()));
-        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-      }).forEach(v => {
-        const chk = prevPrios.includes(v) ? 'checked' : '';
-        prEl.innerHTML += `<label><input type="checkbox" value="${v}" ${chk} onchange="applySlaFilters()"> ${v}</label>`;
-      });
+      populateSlaDropdownPair('slaAssigneeDropdown', 'slaPriorityDropdown', supportOpen, 'applySlaFilters()');
 
       syncSlaAccordionDOM();
       applySlaFilters();
@@ -3409,10 +3500,6 @@
         const custMs = t.customerResponseTime ? new Date(t.customerResponseTime).getTime() : null;
         const statLower = (t.status || '').toLowerCase().trim();
 
-        // Determine if this is genuinely a brand-new ticket with zero agent response:
-        // - Must have no agentRespondedTime
-        // - If threadCount is available, threadCount <= 1 (or all threads are inbound with no prior agent activity)
-        // - Customer hasn't sent subsequent follow-up threads on an already-active status (Pending, Awaiting Response, On Hold, In Progress, Review)
         const isOngoingStatus = ['pending', 'awaiting response', 'on hold', 'in progress', 'review', 'working on it', 'releasepending'].some(s => statLower.includes(s));
         const hasFollowupCustReply = (custMs && createdMs && (custMs - createdMs > 5 * 60 * 1000));
 
@@ -3423,14 +3510,12 @@
         );
 
         if (isTrulyUnrespondedNew) {
-          // Section 1 ONLY: New ticket arrived, zero agent response sent, > 2 clock hours elapsed
           if (createdMs && (now - createdMs > TWO_HOURS_MS)) {
             sec1.push({ ticket: t, delayMs: now - createdMs });
           }
-          return; // Do NOT duplicate unresponded new tickets into Section 2 or Section 3
+          return;
         }
 
-        // For ongoing / responded tickets, use exact agentRespondedTime (or fallback to modifiedTime ONLY if backend hasn't synced yet)
         const effectiveAgentMs = agentMs || (!anyAgentTimePresent && t.modifiedTime ? new Date(t.modifiedTime).getTime() : null);
 
         // Section 2: Ongoing communication between Customer and Agent where Customer responded AFTER last Agent response, and > 2h have passed
@@ -3445,7 +3530,6 @@
         }
       });
 
-      // Sort each section with longest breach at the top
       sec1.sort((a, b) => b.delayMs - a.delayMs);
       sec2.sort((a, b) => b.delayMs - a.delayMs);
       sec3.sort((a, b) => b.delayMs - a.delayMs);
@@ -3454,22 +3538,102 @@
       state.sla.sec2 = sec2;
       state.sla.sec3 = sec3;
 
-      // Update total unique breached tickets badge
-      const uniqueIds = new Set([...sec1.map(x => x.ticket.id), ...sec2.map(x => x.ticket.id), ...sec3.map(x => x.ticket.id)]);
+      // Populate per-section Assignee & Priority dropdowns from each section's items
+      populateSlaDropdownPair('slaAssigneeDropdown_sec1', 'slaPriorityDropdown_sec1', sec1, "applySlaSectionFilters('sec1')");
+      populateSlaDropdownPair('slaAssigneeDropdown_sec2', 'slaPriorityDropdown_sec2', sec2, "applySlaSectionFilters('sec2')");
+      populateSlaDropdownPair('slaAssigneeDropdown_sec3', 'slaPriorityDropdown_sec3', sec3, "applySlaSectionFilters('sec3')");
+
+      applySlaSectionFilters('sec1');
+      applySlaSectionFilters('sec2');
+      applySlaSectionFilters('sec3');
+    }
+
+    function applySlaSectionFilters(secKey) {
+      const baseItems = state.sla[secKey] || [];
+      const sA = Array.from(document.querySelectorAll(`#slaAssigneeDropdown_${secKey} input:checked`)).map(c => c.value);
+      const sP = Array.from(document.querySelectorAll(`#slaPriorityDropdown_${secKey} input:checked`)).map(c => c.value);
+      const q = (document.getElementById(`slaSearch_${secKey}`).value || '').toLowerCase().trim();
+
+      document.getElementById(`slaAssigneeLabel_${secKey}`).innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
+      document.getElementById(`slaPriorityLabel_${secKey}`).innerText = sP.length ? `${sP.length} Selected` : 'All Priorities';
+
+      const filteredItems = baseItems.filter(({ ticket: t }) => {
+        const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
+        const prio = t.priority || 'None';
+        const subj = (t.subject || '').toLowerCase();
+        const tNum = String(t.ticketNumber || '').toLowerCase();
+        const clName = (t.clientName || '').toLowerCase();
+
+        const matchSearch = !q || subj.includes(q) || tNum.includes(q) || clName.includes(q);
+        const matchAsn = sA.length === 0 || sA.includes(asn);
+        const matchPrio = sP.length === 0 || sP.includes(prio);
+        return matchSearch && matchAsn && matchPrio;
+      });
+
+      const filteredKey = 'filtered' + secKey.charAt(0).toUpperCase() + secKey.slice(1);
+      state.sla[filteredKey] = filteredItems;
+
+      const accentMap = { sec1: '#FF3B30', sec2: '#FF9500', sec3: '#AF52DE' };
+      renderSlaSection(secKey, filteredItems, accentMap[secKey]);
+      updateSlaSummaryCounters();
+    }
+
+    function updateSlaSummaryCounters() {
+      const f1 = state.sla.filteredSec1 || [];
+      const f2 = state.sla.filteredSec2 || [];
+      const f3 = state.sla.filteredSec3 || [];
+
+      const uniqueIds = new Set([...f1.map(x => x.ticket.id), ...f2.map(x => x.ticket.id), ...f3.map(x => x.ticket.id)]);
       document.getElementById('slaTotalCount').innerText = uniqueIds.size;
 
-      // Update compact KPI strip
-      document.getElementById('slaKpiCount1').innerText = sec1.length;
-      document.getElementById('slaKpiCount2').innerText = sec2.length;
-      document.getElementById('slaKpiCount3').innerText = sec3.length;
+      document.getElementById('slaKpiCount1').innerText = f1.length;
+      document.getElementById('slaKpiCount2').innerText = f2.length;
+      document.getElementById('slaKpiCount3').innerText = f3.length;
 
-      document.getElementById('slaKpiSub1').innerText = sec1.length ? `Oldest: ${formatDuration24x7(sec1[0].delayMs)}` : '0 breaches';
-      document.getElementById('slaKpiSub2').innerText = sec2.length ? `Longest wait: ${formatDuration24x7(sec2[0].delayMs)}` : '0 breaches';
-      document.getElementById('slaKpiSub3').innerText = sec3.length ? `Oldest silence: ${formatDuration24x7(sec3[0].delayMs)}` : '0 breaches';
+      document.getElementById('slaKpiSub1').innerText = f1.length ? `Oldest: ${formatDuration24x7(f1[0].delayMs)}` : '0 breaches';
+      document.getElementById('slaKpiSub2').innerText = f2.length ? `Longest wait: ${formatDuration24x7(f2[0].delayMs)}` : '0 breaches';
+      document.getElementById('slaKpiSub3').innerText = f3.length ? `Oldest silence: ${formatDuration24x7(f3[0].delayMs)}` : '0 breaches';
+    }
 
-      renderSlaSection('sec1', sec1, '#FF3B30');
-      renderSlaSection('sec2', sec2, '#FF9500');
-      renderSlaSection('sec3', sec3, '#AF52DE');
+    function clearSlaSectionFilters(secKey) {
+      document.getElementById(`slaSearch_${secKey}`).value = '';
+      document.querySelectorAll(`#slaAssigneeDropdown_${secKey} input, #slaPriorityDropdown_${secKey} input`).forEach(c => c.checked = false);
+      applySlaSectionFilters(secKey);
+    }
+
+    function exportSlaSectionToCSV(secKey) {
+      const filteredKey = 'filtered' + secKey.charAt(0).toUpperCase() + secKey.slice(1);
+      const items = state.sla[filteredKey] || [];
+      const meta = {
+        sec1: { label: 'Section 1: New Ticket > 2h No Reply', file: 'SLA_Section1_New_No_Response' },
+        sec2: { label: 'Section 2: Ongoing Client Waiting > 2h', file: 'SLA_Section2_Client_Waiting' },
+        sec3: { label: 'Section 3: Stale > 2 Weeks No Agent Reply', file: 'SLA_Section3_Stale_2Weeks' }
+      }[secKey];
+
+      if (items.length === 0) { alert('No breached tickets match current filters in this section.'); return; }
+
+      let csv = "\uFEFFBreach Category,Ticket #,Ticket URL,Subject,Client Name,Priority,Status,Assignee,Created Date,Customer Responded Time,Agent Responded Time,Breach Duration\n";
+      items.forEach(({ ticket: t, delayMs, displayAgentTime }) => {
+        const tUrl = `https://helpdesk.mindmatrix.net/agent/mindmatrixinc/all/tickets/details/${t.id}`;
+        const subj = `"${(t.subject || '').replace(/"/g, '""')}"`;
+        const cl = `"${(t.clientName || 'Unknown').replace(/"/g, '""')}"`;
+        const asn = `"${(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned').replace(/"/g, '""')}"`;
+        const cDate = t.createdTime ? `"${tableDateFmt.format(new Date(t.createdTime))}"` : '-';
+        const custDate = t.customerResponseTime ? `"${tableDateFmt.format(new Date(t.customerResponseTime))}"` : '-';
+        const resolvedAgentStamp = t.agentRespondedTime || displayAgentTime || null;
+        const agDate = resolvedAgentStamp ? `"${tableDateFmt.format(new Date(resolvedAgentStamp))}"` : (secKey === 'sec1' ? 'Never Responded' : '-');
+        csv += `"${meta.label}",${t.ticketNumber || ''},"${tUrl}",${subj},${cl},${t.priority || 'None'},"${t.status || '-'}",${asn},${cDate},${custDate},${agDate},"${formatDuration24x7(delayMs)}"\n`;
+      });
+
+      const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const u = URL.createObjectURL(b);
+      const l = document.createElement('a');
+      l.href = u;
+      l.download = `${meta.file}_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`;
+      document.body.appendChild(l);
+      l.click();
+      document.body.removeChild(l);
+      URL.revokeObjectURL(u);
     }
 
     function renderSlaSection(secKey, items, accentHex) {
@@ -3521,7 +3685,7 @@
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td>
+          <td><a href="https://helpdesk.mindmatrix.net/agent/mindmatrixinc/all/tickets/details/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td>
           <td><strong>${t.subject || '-'}</strong></td>
           <td>${t.clientName || 'Unknown'}</td>
           <td>${renderPriorityBadgeHtml(t.priority)}</td>
@@ -3574,19 +3738,25 @@
     function clearSlaFilters() {
       document.getElementById('slaSearchText').value = '';
       document.querySelectorAll('#slaAssigneeDropdown input, #slaPriorityDropdown input').forEach(c => c.checked = false);
+      ['sec1', 'sec2', 'sec3'].forEach(k => {
+        const sEl = document.getElementById(`slaSearch_${k}`);
+        if (sEl) sEl.value = '';
+        document.querySelectorAll(`#slaAssigneeDropdown_${k} input, #slaPriorityDropdown_${k} input`).forEach(c => c.checked = false);
+      });
       applySlaFilters();
     }
 
     function exportSlaToCSV() {
       const allRows = [
-        ...state.sla.sec1.map(x => ({ ...x, category: 'Section 1: New Ticket > 2h No Reply' })),
-        ...state.sla.sec2.map(x => ({ ...x, category: 'Section 2: Ongoing Client Waiting > 2h' })),
-        ...state.sla.sec3.map(x => ({ ...x, category: 'Section 3: Stale > 2 Weeks No Agent Reply' }))
+        ...(state.sla.filteredSec1 || []).map(x => ({ ...x, category: 'Section 1: New Ticket > 2h No Reply' })),
+        ...(state.sla.filteredSec2 || []).map(x => ({ ...x, category: 'Section 2: Ongoing Client Waiting > 2h' })),
+        ...(state.sla.filteredSec3 || []).map(x => ({ ...x, category: 'Section 3: Stale > 2 Weeks No Agent Reply' }))
       ];
       if (allRows.length === 0) { alert('No SLA breaches match current filters.'); return; }
 
-      let csv = "\uFEFFBreach Category,Ticket #,Subject,Client Name,Priority,Status,Assignee,Created Date,Customer Responded Time,Agent Responded Time,Breach Duration\n";
+      let csv = "\uFEFFBreach Category,Ticket #,Ticket URL,Subject,Client Name,Priority,Status,Assignee,Created Date,Customer Responded Time,Agent Responded Time,Breach Duration\n";
       allRows.forEach(({ category, ticket: t, delayMs, displayAgentTime }) => {
+        const tUrl = `https://helpdesk.mindmatrix.net/agent/mindmatrixinc/all/tickets/details/${t.id}`;
         const subj = `"${(t.subject || '').replace(/"/g, '""')}"`;
         const cl = `"${(t.clientName || 'Unknown').replace(/"/g, '""')}"`;
         const asn = `"${(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned').replace(/"/g, '""')}"`;
@@ -3594,7 +3764,7 @@
         const custDate = t.customerResponseTime ? `"${tableDateFmt.format(new Date(t.customerResponseTime))}"` : '-';
         const resolvedAgentStamp = t.agentRespondedTime || displayAgentTime || null;
         const agDate = resolvedAgentStamp ? `"${tableDateFmt.format(new Date(resolvedAgentStamp))}"` : (category.startsWith('Section 1') ? 'Never Responded' : '-');
-        csv += `"${category}",${t.ticketNumber || ''},${subj},${cl},${t.priority || 'None'},"${t.status || '-'}",${asn},${cDate},${custDate},${agDate},"${formatDuration24x7(delayMs)}"\n`;
+        csv += `"${category}",${t.ticketNumber || ''},"${tUrl}",${subj},${cl},${t.priority || 'None'},"${t.status || '-'}",${asn},${cDate},${custDate},${agDate},"${formatDuration24x7(delayMs)}"\n`;
       });
 
       const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
