@@ -1081,6 +1081,11 @@
         </div>
       </div>
 
+      <!-- Sync Notice Banner if Apps Script hasn't been updated & refreshed yet -->
+      <div id="slaSyncWarning" class="glass-panel" style="display:none; padding: 12px 20px; margin-bottom: 16px; border-left: 4px solid #FF9500; background: rgba(255, 149, 0, 0.12); font-size: 0.88rem; color: var(--text-main);">
+        ⚠️ <strong>Backend Sync Required:</strong> Zoho's list API omits <code>Agent Responded Time</code> unless the updated <code>code.gs</code> is deployed. Deploy the updated <code>code.gs</code> and press <strong>Alt + R</strong> (Admin PIN) once to populate exact Zoho Agent Responded timestamps.
+      </div>
+
       <!-- Compact Summary KPI Strip (clicking jumps & expands that section) -->
       <div class="sla-summary-strip animate-in delay-1">
         <div class="glass-panel sla-kpi-mini" style="border-left: 4px solid #FF3B30;" onclick="focusSlaSection('sec1')">
@@ -1411,7 +1416,7 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
-    const CACHE_VER = '_v11'; 
+    const CACHE_VER = '_v12'; 
     
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
@@ -1779,14 +1784,17 @@
 
               let fullName = t.assignee ? (`${t.assignee.firstName || ''} ${t.assignee.lastName || ''}`).trim() : 'Unassigned';
 
+              var rawAgentTime = t.agentRespondedTime || t.agentResponseTime || (t.lastThread && t.lastThread.direction === 'out' ? t.lastThread.createdTime : null) || null;
               return {
                 id: t.id, ticketNumber: t.ticketNumber, subject: t.subject, description: t.description || '', 
                 status: t.status, priority: t.priority,
                 department: t.department ? { name: t.department.name } : null,
                 assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, fullName: fullName } : null,
                 createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
-                agentRespondedTime: t.agentRespondedTime || null,
-                customerResponseTime: t.customerResponseTime || null, 
+                agentRespondedTime: rawAgentTime,
+                customerResponseTime: t.customerResponseTime || null,
+                lastThreadDirection: (t.lastThread && t.lastThread.direction) ? t.lastThread.direction : null,
+                threadCount: t.threadCount !== undefined ? parseInt(t.threadCount, 10) : null,
                 clientName: cName, classification: clsName, module: modName 
               };
             });
@@ -3386,31 +3394,54 @@
       const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
       const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
-      const sec1 = []; // New tickets: no agent response ever, created > 2h ago (24/7)
-      const sec2 = []; // Ongoing tickets: customer responded after last agent response, and > 2h ago (24/7)
-      const sec3 = []; // Stale tickets: agent has responded before (or ticket > 2w old), no agent response in > 14 days (includes On Hold & Awaiting Response)
+      // Detect whether backend cache has populated agentRespondedTime / thread metadata yet
+      const anyAgentTimePresent = state.sla.baseSupport.some(t => Boolean(t.agentRespondedTime) || t.threadCount !== null);
+      const warnEl = document.getElementById('slaSyncWarning');
+      if (warnEl) warnEl.style.display = (state.sla.baseSupport.length > 0 && !anyAgentTimePresent) ? 'block' : 'none';
+
+      const sec1 = []; // Section 1: Truly NEW tickets where Agent has NEVER responded (> 2h)
+      const sec2 = []; // Section 2: Ongoing conversation where Customer replied last and Agent hasn't replied (> 2h)
+      const sec3 = []; // Section 3: Agent has responded, and even if Agent replied last, > 14 days since last Agent response
 
       filteredSupport.forEach(t => {
         const createdMs = t.createdTime ? new Date(t.createdTime).getTime() : null;
         const agentMs = t.agentRespondedTime ? new Date(t.agentRespondedTime).getTime() : null;
         const custMs = t.customerResponseTime ? new Date(t.customerResponseTime).getTime() : null;
+        const statLower = (t.status || '').toLowerCase().trim();
 
-        // Section 1: Brand new / unresponded ticket where no agent reply has been sent and > 2 clock hours elapsed since creation
-        if (!agentMs && createdMs && (now - createdMs > TWO_HOURS_MS)) {
-          sec1.push({ ticket: t, delayMs: now - createdMs });
+        // Determine if this is genuinely a brand-new ticket with zero agent response:
+        // - Must have no agentRespondedTime
+        // - If threadCount is available, threadCount <= 1 (or all threads are inbound with no prior agent activity)
+        // - Customer hasn't sent subsequent follow-up threads on an already-active status (Pending, Awaiting Response, On Hold, In Progress, Review)
+        const isOngoingStatus = ['pending', 'awaiting response', 'on hold', 'in progress', 'review', 'working on it', 'releasepending'].some(s => statLower.includes(s));
+        const hasFollowupCustReply = (custMs && createdMs && (custMs - createdMs > 5 * 60 * 1000));
+
+        const isTrulyUnrespondedNew = !agentMs && (
+          anyAgentTimePresent
+            ? (t.threadCount === null || t.threadCount <= 1 || (!isOngoingStatus && !hasFollowupCustReply))
+            : (!isOngoingStatus && !hasFollowupCustReply)
+        );
+
+        if (isTrulyUnrespondedNew) {
+          // Section 1 ONLY: New ticket arrived, zero agent response sent, > 2 clock hours elapsed
+          if (createdMs && (now - createdMs > TWO_HOURS_MS)) {
+            sec1.push({ ticket: t, delayMs: now - createdMs });
+          }
+          return; // Do NOT duplicate unresponded new tickets into Section 2 or Section 3
         }
 
-        // Section 2: Ongoing ticket (agent has replied at least once) where customer sent a newer reply than agent, and client has waited > 2 clock hours
-        if (agentMs && custMs && custMs > agentMs && (now - custMs > TWO_HOURS_MS)) {
-          sec2.push({ ticket: t, delayMs: now - custMs });
+        // For ongoing / responded tickets, use exact agentRespondedTime (or fallback to modifiedTime ONLY if backend hasn't synced yet)
+        const effectiveAgentMs = agentMs || (!anyAgentTimePresent && t.modifiedTime ? new Date(t.modifiedTime).getTime() : null);
+
+        // Section 2: Ongoing communication between Customer and Agent where Customer responded AFTER last Agent response, and > 2h have passed
+        const customerRepliedLast = (t.lastThreadDirection === 'in') || (custMs && effectiveAgentMs && custMs > effectiveAgentMs);
+        if (effectiveAgentMs && custMs && customerRepliedLast && custMs > effectiveAgentMs && (now - custMs > TWO_HOURS_MS)) {
+          sec2.push({ ticket: t, delayMs: now - custMs, displayAgentTime: t.agentRespondedTime || (!anyAgentTimePresent ? t.modifiedTime : null) });
         }
 
-        // Section 3: No new agent response for > 2 weeks (14 days, 24/7), including On Hold & Awaiting Response
-        if (agentMs && (now - agentMs > TWO_WEEKS_MS)) {
-          sec3.push({ ticket: t, delayMs: now - agentMs });
-        } else if (!agentMs && createdMs && (now - createdMs > TWO_WEEKS_MS)) {
-          // Also catch tickets older than 2 weeks that never received an agent reply at all
-          sec3.push({ ticket: t, delayMs: now - createdMs });
+        // Section 3: Even when last response was sent by Agent (includes On Hold & Awaiting Response), > 14 days since Agent sent any response
+        if (effectiveAgentMs && (now - effectiveAgentMs > TWO_WEEKS_MS)) {
+          sec3.push({ ticket: t, delayMs: now - effectiveAgentMs, displayAgentTime: t.agentRespondedTime || (!anyAgentTimePresent ? t.modifiedTime : null) });
         }
       });
 
@@ -3476,11 +3507,17 @@
         return;
       }
 
-      items.forEach(({ ticket: t, delayMs }) => {
+      items.forEach(({ ticket: t, delayMs, displayAgentTime }) => {
         const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
         const createdStr = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
         const custStr = t.customerResponseTime ? tableDateFmt.format(new Date(t.customerResponseTime)) : '-';
-        const agentStr = t.agentRespondedTime ? tableDateFmt.format(new Date(t.agentRespondedTime)) : '<span style="color:#FF3B30; font-weight:600;">Never Responded</span>';
+        const resolvedAgentStamp = t.agentRespondedTime || displayAgentTime || null;
+        let agentStr = '-';
+        if (secKey === 'sec1' && !resolvedAgentStamp) {
+          agentStr = '<span style="color:#FF3B30; font-weight:600;">Never Responded</span>';
+        } else if (resolvedAgentStamp) {
+          agentStr = tableDateFmt.format(new Date(resolvedAgentStamp));
+        }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -3549,13 +3586,14 @@
       if (allRows.length === 0) { alert('No SLA breaches match current filters.'); return; }
 
       let csv = "\uFEFFBreach Category,Ticket #,Subject,Client Name,Priority,Status,Assignee,Created Date,Customer Responded Time,Agent Responded Time,Breach Duration\n";
-      allRows.forEach(({ category, ticket: t, delayMs }) => {
+      allRows.forEach(({ category, ticket: t, delayMs, displayAgentTime }) => {
         const subj = `"${(t.subject || '').replace(/"/g, '""')}"`;
         const cl = `"${(t.clientName || 'Unknown').replace(/"/g, '""')}"`;
         const asn = `"${(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned').replace(/"/g, '""')}"`;
         const cDate = t.createdTime ? `"${tableDateFmt.format(new Date(t.createdTime))}"` : '-';
         const custDate = t.customerResponseTime ? `"${tableDateFmt.format(new Date(t.customerResponseTime))}"` : '-';
-        const agDate = t.agentRespondedTime ? `"${tableDateFmt.format(new Date(t.agentRespondedTime))}"` : 'Never Responded';
+        const resolvedAgentStamp = t.agentRespondedTime || displayAgentTime || null;
+        const agDate = resolvedAgentStamp ? `"${tableDateFmt.format(new Date(resolvedAgentStamp))}"` : (category.startsWith('Section 1') ? 'Never Responded' : '-');
         csv += `"${category}",${t.ticketNumber || ''},${subj},${cl},${t.priority || 'None'},"${t.status || '-'}",${asn},${cDate},${custDate},${agDate},"${formatDuration24x7(delayMs)}"\n`;
       });
 
