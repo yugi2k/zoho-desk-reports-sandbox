@@ -291,6 +291,30 @@
     .exec-table-panel td { padding: 12px 20px; }
 
     footer { text-align: center; padding: 30px 0 10px 0; color: var(--text-muted); font-size: 0.8rem; margin-top: auto; }
+
+    /* SLA Monitor Collapsible Accordion Styles */
+    .sla-accordion { margin-bottom: 18px; overflow: hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .sla-accordion-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; cursor: pointer; user-select: none; transition: background 0.25s ease; gap: 15px; flex-wrap: wrap; }
+    .sla-accordion-header:hover { background: var(--row-hover); }
+    .sla-acc-left { display: flex; align-items: center; gap: 14px; }
+    .sla-acc-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .sla-acc-title { font-size: 1.02rem; font-weight: 700; color: var(--text-main); margin: 0; }
+    .sla-acc-desc { font-size: 0.82rem; color: var(--text-muted); margin: 3px 0 0 0; font-weight: 500; }
+    .sla-acc-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .sla-prio-pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .sla-prio-pill { font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .sla-count-badge { font-size: 0.95rem; font-weight: 800; padding: 6px 14px; border-radius: 10px; min-width: 90px; text-align: center; }
+    .sla-chevron { width: 32px; height: 32px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); color: var(--text-main); font-size: 0.85rem; }
+    .sla-accordion.expanded .sla-chevron { transform: rotate(180deg); background: var(--accent); color: #fff; border-color: var(--accent); }
+    .sla-accordion-body { display: none; border-top: 1px solid var(--glass-border); max-height: 55vh; overflow-y: auto; overflow-x: auto; }
+    .sla-accordion.expanded .sla-accordion-body { display: block; animation: fadeInScale 0.25s ease; }
+    .sla-accordion-body thead th { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(16px); }
+    .sla-delay-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+    .sla-summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .sla-kpi-mini { padding: 16px 20px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.25s ease; }
+    .sla-kpi-mini:hover { transform: translateY(-2px); }
+    .sla-kpi-mini h4 { margin: 0 0 4px 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
+    .sla-kpi-mini span.kpi-num { font-size: 2rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
 </style>
 </head>
 <body>
@@ -425,6 +449,7 @@
       <div class="title-group">
         <button class="btn-back" id="globalBackBtn" style="display:none;" onclick="navigateTo('dashboard')">← Dashboard</button>
         <button class="btn-back" id="backToAgentsBtn" style="display:none;" onclick="showAgentsList()">← All Agents</button>
+        <button class="btn-back" id="backToSupportBtn" style="display:none;" onclick="navigateTo('tickets', 'department', 'Support')">← Support Tickets</button>
         
         <div style="display: flex; flex-direction: column; justify-content: center;">
           <h1 id="globalPageTitle" style="display: flex; align-items: center; gap: 10px; margin: 0;">
@@ -757,6 +782,7 @@
           <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(10, 132, 255, 0.1); border: 1px solid rgba(10, 132, 255, 0.2); border-radius: 8px; color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-right: 10px;">
             Total Tickets: <span id="ticketsTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 700;">0</span>
           </div>
+          <button class="btn-action btn-danger" id="btnSupportSla" onclick="navigateTo('sla')" style="display: none;" data-tooltip="Monitor Support SLA Breaches">SLA</button>
           <button class="btn-action" id="btnDeptEmailPreview" onclick="openEmailPreview()" style="background-color: #5856D6; display: none;">Preview & Email Report</button>
           <button class="btn-action btn-clear" onclick="clearTicketsFilters()" data-tooltip="Reset all filters">Clear</button>
           <button class="btn-action btn-export" onclick="exportTicketsToCSV()" data-tooltip="Download current view">Export</button>
@@ -1022,6 +1048,177 @@
        </div>
     </div>
 
+
+    <!-- 10. SUPPORT SLA MONITORING VIEW -->
+    <div id="view-sla" class="app-subview" style="display:none;">
+      <div class="controls-panel glass-panel animate-in" style="margin-bottom: 18px;">
+        <div class="filter-group">
+          <label>Search</label>
+          <input type="text" id="slaSearchText" class="filter-input" placeholder="Ticket #, Subject, Client..." onkeyup="applySlaFilters()" style="width: 190px;">
+        </div>
+        <div class="filter-group">
+          <label>Assignee</label>
+          <div class="custom-select" style="width: 190px;">
+            <div class="select-btn filter-input" onclick="toggleDropdown('slaAssigneeDropdown')"><span id="slaAssigneeLabel">All Assignees</span> ▼</div>
+            <div class="select-dropdown" id="slaAssigneeDropdown"></div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Priority</label>
+          <div class="custom-select" style="width: 170px;">
+            <div class="select-btn filter-input" onclick="toggleDropdown('slaPriorityDropdown')"><span id="slaPriorityLabel">All Priorities</span> ▼</div>
+            <div class="select-dropdown" id="slaPriorityDropdown"></div>
+          </div>
+        </div>
+
+        <div class="btn-group" style="margin-left: auto; align-items: center; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; padding: 0 16px; height: 40px; background: rgba(255, 59, 48, 0.12); border: 1px solid rgba(255, 59, 48, 0.3); border-radius: 8px; color: #FF3B30; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">
+            Total Breaches: <span id="slaTotalCount" style="margin-left: 8px; font-size: 1.2rem; font-weight: 800;">0</span>
+          </div>
+          <button class="btn-action" id="btnToggleAllSla" onclick="toggleAllSlaSections()" style="background-color: var(--accent);">Expand All</button>
+          <button class="btn-action btn-clear" onclick="clearSlaFilters()">Clear</button>
+          <button class="btn-action btn-export" onclick="exportSlaToCSV()">Export CSV</button>
+        </div>
+      </div>
+
+      <!-- Compact Summary KPI Strip (clicking jumps & expands that section) -->
+      <div class="sla-summary-strip animate-in delay-1">
+        <div class="glass-panel sla-kpi-mini" style="border-left: 4px solid #FF3B30;" onclick="focusSlaSection('sec1')">
+          <div>
+            <h4>New • No First Reply &gt; 2h</h4>
+            <div style="font-size: 0.78rem; color: var(--text-muted);" id="slaKpiSub1">Click to expand</div>
+          </div>
+          <span class="kpi-num" style="color: #FF3B30;" id="slaKpiCount1">0</span>
+        </div>
+        <div class="glass-panel sla-kpi-mini" style="border-left: 4px solid #FF9500;" onclick="focusSlaSection('sec2')">
+          <div>
+            <h4>Ongoing • Client Waiting &gt; 2h</h4>
+            <div style="font-size: 0.78rem; color: var(--text-muted);" id="slaKpiSub2">Click to expand</div>
+          </div>
+          <span class="kpi-num" style="color: #FF9500;" id="slaKpiCount2">0</span>
+        </div>
+        <div class="glass-panel sla-kpi-mini" style="border-left: 4px solid #AF52DE;" onclick="focusSlaSection('sec3')">
+          <div>
+            <h4>Stale • No Agent Reply &gt; 2w</h4>
+            <div style="font-size: 0.78rem; color: var(--text-muted);" id="slaKpiSub3">Click to expand</div>
+          </div>
+          <span class="kpi-num" style="color: #AF52DE;" id="slaKpiCount3">0</span>
+        </div>
+      </div>
+
+      <!-- SECTION 1: COLLAPSIBLE ACCORDION (Minimized by default) -->
+      <div class="glass-panel sla-accordion animate-in delay-1" id="slaAccordion_sec1">
+        <div class="sla-accordion-header" onclick="toggleSlaSection('sec1')">
+          <div class="sla-acc-left">
+            <span class="sla-acc-dot" style="background: #FF3B30; box-shadow: 0 0 10px rgba(255,59,48,0.6);"></span>
+            <div>
+              <h3 class="sla-acc-title">Section 1: New Tickets — No First Response (&gt; 2 Hours)</h3>
+              <p class="sla-acc-desc">Arrived over 2 clock hours ago (24/7) with zero agent reply sent to client</p>
+            </div>
+          </div>
+          <div class="sla-acc-right">
+            <div class="sla-prio-pills" id="slaPills_sec1"></div>
+            <span class="sla-count-badge" style="background: rgba(255, 59, 48, 0.15); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 0.3);" id="slaBadge_sec1">0 Tickets</span>
+            <div class="sla-chevron" title="Expand / Minimize">▼</div>
+          </div>
+        </div>
+        <div class="sla-accordion-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket #</th>
+                <th>Subject</th>
+                <th>Client Name</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Assignee</th>
+                <th>Created Date</th>
+                <th>Customer Responded Time</th>
+                <th>Agent Responded Time</th>
+                <th>Unresponded For</th>
+              </tr>
+            </thead>
+            <tbody id="slaBody_sec1"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION 2: COLLAPSIBLE ACCORDION (Minimized by default) -->
+      <div class="glass-panel sla-accordion animate-in delay-2" id="slaAccordion_sec2">
+        <div class="sla-accordion-header" onclick="toggleSlaSection('sec2')">
+          <div class="sla-acc-left">
+            <span class="sla-acc-dot" style="background: #FF9500; box-shadow: 0 0 10px rgba(255,149,0,0.6);"></span>
+            <div>
+              <h3 class="sla-acc-title">Section 2: Ongoing Tickets — Customer Replied, No Agent Follow-Up (&gt; 2 Hours)</h3>
+              <p class="sla-acc-desc">Client sent a newer response than the last agent reply and has waited over 2 clock hours (24/7)</p>
+            </div>
+          </div>
+          <div class="sla-acc-right">
+            <div class="sla-prio-pills" id="slaPills_sec2"></div>
+            <span class="sla-count-badge" style="background: rgba(255, 149, 0, 0.15); color: #FF9500; border: 1px solid rgba(255, 149, 0, 0.3);" id="slaBadge_sec2">0 Tickets</span>
+            <div class="sla-chevron" title="Expand / Minimize">▼</div>
+          </div>
+        </div>
+        <div class="sla-accordion-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket #</th>
+                <th>Subject</th>
+                <th>Client Name</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Assignee</th>
+                <th>Created Date</th>
+                <th>Customer Responded Time</th>
+                <th>Agent Responded Time</th>
+                <th>Client Waiting</th>
+              </tr>
+            </thead>
+            <tbody id="slaBody_sec2"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION 3: COLLAPSIBLE ACCORDION (Minimized by default) -->
+      <div class="glass-panel sla-accordion animate-in delay-3" id="slaAccordion_sec3">
+        <div class="sla-accordion-header" onclick="toggleSlaSection('sec3')">
+          <div class="sla-acc-left">
+            <span class="sla-acc-dot" style="background: #AF52DE; box-shadow: 0 0 10px rgba(175,82,222,0.6);"></span>
+            <div>
+              <h3 class="sla-acc-title">Section 3: Stale Tickets — No Agent Response (&gt; 2 Weeks)</h3>
+              <p class="sla-acc-desc">No new agent response sent for over 14 days (24/7), including On Hold &amp; Awaiting Response</p>
+            </div>
+          </div>
+          <div class="sla-acc-right">
+            <div class="sla-prio-pills" id="slaPills_sec3"></div>
+            <span class="sla-count-badge" style="background: rgba(175, 82, 222, 0.15); color: #AF52DE; border: 1px solid rgba(175, 82, 222, 0.3);" id="slaBadge_sec3">0 Tickets</span>
+            <div class="sla-chevron" title="Expand / Minimize">▼</div>
+          </div>
+        </div>
+        <div class="sla-accordion-body">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket #</th>
+                <th>Subject</th>
+                <th>Client Name</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Assignee</th>
+                <th>Created Date</th>
+                <th>Customer Responded Time</th>
+                <th>Agent Responded Time</th>
+                <th>Silence Duration</th>
+              </tr>
+            </thead>
+            <tbody id="slaBody_sec3"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
   </div> <!-- END SECURE APP WRAPPER -->
 
   <footer>Powered by Lumera AI | &copy; 2026 Mindmatrix | v2.2.0</footer>
@@ -1214,7 +1411,7 @@
     // ==========================================
     const PROXY_URL = 'https://script.google.com/macros/s/AKfycbxQM4srD1CF0Zj63_CTwBraMp31MyWC1j9RRHoIe9d_RiVmROrYwI-9dO7NNgfa1fe5/exec';
     const SHEET_ID = '1deeBJssfGAT46PbP7HQTe3wQefj-roBfPboOEATy1Kk';
-    const CACHE_VER = '_v10'; 
+    const CACHE_VER = '_v11'; 
     
     const ALLOWED_EMAILS = [
       'yugesh.kurakula@mindmatrix.net',
@@ -1235,7 +1432,8 @@
       critical: { baseData: [], filteredData: [], selectedCols: [] },
       ai: { data: [], selectedCols: [] },
       anomaly: { data: [], currentFiltered: [], filterType: 'All' },
-      executive: { currentDept: 'All', payloadArray: [], roleFilter: 'All' }
+      executive: { currentDept: 'All', payloadArray: [], roleFilter: 'All' },
+      sla: { baseSupport: [], sec1: [], sec2: [], sec3: [], expanded: { sec1: false, sec2: false, sec3: false } }
     };
 
     const ALL_COLS = {
@@ -1250,7 +1448,8 @@
         col_created: 'Created Date',
         col_updated: 'Last Updated',
         col_closed: 'Closed Date',
-        col_responded: 'Agent Responded',
+        col_cust_responded: 'Customer Responded Time',
+        col_responded: 'Agent Responded Time',
         col_resolution: 'Resolution (Hrs)',
         col_resolved: 'Issue Resolved Time',
         col_module: 'Module'
@@ -1353,8 +1552,10 @@
         case 'col_created': val = t.createdTime?tableDateFmt.format(new Date(t.createdTime)):'-'; break;
         case 'col_updated': val = t.modifiedTime?tableDateFmt.format(new Date(t.modifiedTime)):'-'; break;
         case 'col_closed': val = t.closedTime?tableDateFmt.format(new Date(t.closedTime)):'-'; break;
+        case 'col_cust_responded':
+             val = t.customerResponseTime ? tableDateFmt.format(new Date(t.customerResponseTime)) : '-'; break;
         case 'col_responded': 
-             val = t.modifiedTime ? tableDateFmt.format(new Date(t.modifiedTime)) : '-'; break;
+             val = t.agentRespondedTime ? tableDateFmt.format(new Date(t.agentRespondedTime)) : '-'; break;
         case 'col_resolution': val = `<strong>${t.resolutionTime||'-'}</strong>`; break;
         case 'col_classification': val = t.classification||'-'; break;
         case 'col_resolved': 
@@ -1378,7 +1579,8 @@
         case 'col_created': return t.createdTime?csvDateFmt.format(new Date(t.createdTime)):'-';
         case 'col_updated': return t.modifiedTime?csvDateFmt.format(new Date(t.modifiedTime)):'-';
         case 'col_closed': return t.closedTime?csvDateFmt.format(new Date(t.closedTime)):'-';
-        case 'col_responded': return t.modifiedTime ? `"${csvDateFmt.format(new Date(t.modifiedTime))}"` : '-';
+        case 'col_cust_responded': return t.customerResponseTime ? `"${csvDateFmt.format(new Date(t.customerResponseTime))}"` : '-';
+        case 'col_responded': return t.agentRespondedTime ? `"${csvDateFmt.format(new Date(t.agentRespondedTime))}"` : '-';
         case 'col_resolution': return t.resolutionTime || '-';
         case 'col_classification': return `"${(t.classification||"").replace(/"/g,'""')}"`;
         case 'col_resolved': 
@@ -1487,7 +1689,7 @@
       document.getElementById('view-secure-app').classList.add('active');
       
       let initialView = window.location.hash.replace('#', '');
-      if (!['reports', 'agents', 'tickets', 'critical', 'admin', 'ai-search', 'anomaly', 'executive'].includes(initialView)) {
+      if (!['reports', 'agents', 'tickets', 'critical', 'admin', 'ai-search', 'anomaly', 'executive', 'sla'].includes(initialView)) {
           initialView = sessionStorage.getItem('sandbox_current_view') || 'dashboard';
       }
       
@@ -1514,6 +1716,7 @@
       
       document.getElementById('globalBackBtn').style.display = viewName === 'dashboard' ? 'none' : 'inline-flex';
       document.getElementById('backToAgentsBtn').style.display = 'none';
+      document.getElementById('backToSupportBtn').style.display = viewName === 'sla' ? 'inline-flex' : 'none';
       document.getElementById('lastUpdatedText').style.display = viewName === 'dashboard' ? 'block' : 'none';
       document.getElementById('agentHeaderInfo').style.display = 'none';
       
@@ -1527,6 +1730,7 @@
       if(viewName === 'ai-search') { titleEl.textContent = 'AI Search'; document.getElementById('aiSearchInput').focus(); }
       if(viewName === 'anomaly') { titleEl.textContent = 'Anomaly Engine'; initAnomalyView(); } 
       if(viewName === 'executive') { titleEl.textContent = 'Executive Reports'; initExecutiveView(); }
+      if(viewName === 'sla') { titleEl.textContent = 'Support SLA Monitor'; initSlaView(); }
     }
 
    async function fetchGlobalData(forceLive = false, pin = '') {
@@ -1581,7 +1785,7 @@
                 department: t.department ? { name: t.department.name } : null,
                 assignee: t.assignee ? { id: t.assignee.id, firstName: t.assignee.firstName, lastName: t.assignee.lastName, fullName: fullName } : null,
                 createdTime: t.createdTime, closedTime: t.closedTime, modifiedTime: t.modifiedTime, 
-                agentRespondedTime: t.agentRespondedTime || t.modifiedTime || t.createdTime,
+                agentRespondedTime: t.agentRespondedTime || null,
                 customerResponseTime: t.customerResponseTime || null, 
                 clientName: cName, classification: clsName, module: modName 
               };
@@ -1622,6 +1826,7 @@
         else if (currentView === 'admin') renderAdminView();
         else if (currentView === 'anomaly') initAnomalyView();
         else if (currentView === 'executive') initExecutiveView();
+        else if (currentView === 'sla') initSlaView();
         
       } catch (err) {
         if(forceLive) { alert(err.message); return; }
@@ -1978,7 +2183,16 @@
     }
 
     function initTicketsView(filterType, filterValue) {
+      if (!filterType && sessionStorage.getItem('sandbox_tickets_ftype')) {
+          filterType = sessionStorage.getItem('sandbox_tickets_ftype');
+          filterValue = sessionStorage.getItem('sandbox_tickets_fval');
+      } else if (filterType) {
+          sessionStorage.setItem('sandbox_tickets_ftype', filterType);
+          sessionStorage.setItem('sandbox_tickets_fval', filterValue || '');
+      }
       document.getElementById('btnDeptEmailPreview').style.display = 'none';
+      document.getElementById('btnSupportSla').style.display = 'none';
+      document.getElementById('ticketsRoleToggleGroup').style.display = 'none';
       document.getElementById('headerTitleText').textContent = 'Loading Tickets...';
       state.tickets.filterType = filterType; state.tickets.filterValue = filterValue;
       
@@ -2009,6 +2223,9 @@
               window.currentEmailDept = val;
           } else {
               document.getElementById('btnDeptEmailPreview').style.display = 'none';
+          }
+          if (val === 'Support') {
+              document.getElementById('btnSupportSla').style.display = 'inline-flex';
           }
           
           // Show Role toggle only for Development
@@ -3070,6 +3287,400 @@
          btn.style.backgroundColor = "#0A84FF";
          btn.disabled = false;
       }, 3000);
+    }
+
+
+    // ==========================================
+    // SUPPORT SLA MONITOR ENGINE
+    // ==========================================
+    function formatDuration24x7(ms) {
+      if (!ms || ms < 0) return '-';
+      const totalMins = Math.floor(ms / 60000);
+      const days = Math.floor(totalMins / 1440);
+      const hrs = Math.floor((totalMins % 1440) / 60);
+      const mins = totalMins % 60;
+      if (days > 0) return `${days}d ${hrs}h`;
+      if (hrs > 0) return `${hrs}h ${mins}m`;
+      return `${mins}m`;
+    }
+
+    function renderPriorityBadgeHtml(pRaw) {
+      const p = pRaw || 'None';
+      const pl = p.toLowerCase();
+      let bg = '#94a3b8'; let tc = '#fff';
+      if (pl.includes('low')) { bg = '#34C759'; tc = '#1d1d1f'; }
+      else if (pl.includes('medium')) { bg = '#FFCC00'; tc = '#1d1d1f'; }
+      else if (pl.includes('high')) { bg = '#FF9500'; tc = '#fff'; }
+      else if (pl.includes('urgent')) { bg = '#FF3B30'; tc = '#fff'; }
+      else if (pl.includes('critical')) { bg = '#FF3B30'; tc = '#fff'; }
+      return `<span class="priority-badge" style="background-color:${bg};color:${tc}">${p}</span>`;
+    }
+
+    function initSlaView() {
+      // Base: All open/non-closed Support tickets (includes Open, In Progress, Pending, Review, On Hold, Awaiting Response, etc.)
+      const supportOpen = (window.allGlobalTickets || []).filter(t => {
+        const deptName = t.department ? (t.department.name || '') : '';
+        const stat = (t.status || '').toLowerCase();
+        const isClosed = stat.includes('clos') && !stat.includes('temp');
+        return deptName === 'Support' && !isClosed;
+      });
+
+      state.sla.baseSupport = supportOpen;
+
+      // Populate Assignee & Priority multi-select dropdowns while preserving any active checks if possible
+      const prevAssignees = Array.from(document.querySelectorAll('#slaAssigneeDropdown input:checked')).map(c => c.value);
+      const prevPrios = Array.from(document.querySelectorAll('#slaPriorityDropdown input:checked')).map(c => c.value);
+
+      const agSet = new Set();
+      const prSet = new Set();
+      supportOpen.forEach(t => {
+        agSet.add(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned');
+        prSet.add(t.priority || 'None');
+      });
+
+      const agEl = document.getElementById('slaAssigneeDropdown');
+      agEl.innerHTML = '';
+      Array.from(agSet).sort().forEach(v => {
+        const chk = prevAssignees.includes(v) ? 'checked' : '';
+        agEl.innerHTML += `<label><input type="checkbox" value="${v}" ${chk} onchange="applySlaFilters()"> ${v}</label>`;
+      });
+
+      const prioOrder = ['Critical', 'Urgent', 'High', 'Medium', 'Low', 'None'];
+      const prEl = document.getElementById('slaPriorityDropdown');
+      prEl.innerHTML = '';
+      Array.from(prSet).sort((a, b) => {
+        const ia = prioOrder.findIndex(x => a.toLowerCase().includes(x.toLowerCase()));
+        const ib = prioOrder.findIndex(x => b.toLowerCase().includes(x.toLowerCase()));
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      }).forEach(v => {
+        const chk = prevPrios.includes(v) ? 'checked' : '';
+        prEl.innerHTML += `<label><input type="checkbox" value="${v}" ${chk} onchange="applySlaFilters()"> ${v}</label>`;
+      });
+
+      syncSlaAccordionDOM();
+      applySlaFilters();
+    }
+
+    function applySlaFilters() {
+      const sA = Array.from(document.querySelectorAll('#slaAssigneeDropdown input:checked')).map(c => c.value);
+      const sP = Array.from(document.querySelectorAll('#slaPriorityDropdown input:checked')).map(c => c.value);
+      const q = (document.getElementById('slaSearchText').value || '').toLowerCase().trim();
+
+      document.getElementById('slaAssigneeLabel').innerText = sA.length ? `${sA.length} Selected` : 'All Assignees';
+      document.getElementById('slaPriorityLabel').innerText = sP.length ? `${sP.length} Selected` : 'All Priorities';
+
+      const filteredSupport = state.sla.baseSupport.filter(t => {
+        const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
+        const prio = t.priority || 'None';
+        const subj = (t.subject || '').toLowerCase();
+        const tNum = String(t.ticketNumber || '').toLowerCase();
+        const clName = (t.clientName || '').toLowerCase();
+
+        const matchSearch = !q || subj.includes(q) || tNum.includes(q) || clName.includes(q);
+        const matchAsn = sA.length === 0 || sA.includes(asn);
+        const matchPrio = sP.length === 0 || sP.includes(prio);
+        return matchSearch && matchAsn && matchPrio;
+      });
+
+      const now = Date.now();
+      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+      const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
+
+      const sec1 = []; // New tickets: no agent response ever, created > 2h ago (24/7)
+      const sec2 = []; // Ongoing tickets: customer responded after last agent response, and > 2h ago (24/7)
+      const sec3 = []; // Stale tickets: agent has responded before (or ticket > 2w old), no agent response in > 14 days (includes On Hold & Awaiting Response)
+
+      filteredSupport.forEach(t => {
+        const createdMs = t.createdTime ? new Date(t.createdTime).getTime() : null;
+        const agentMs = t.agentRespondedTime ? new Date(t.agentRespondedTime).getTime() : null;
+        const custMs = t.customerResponseTime ? new Date(t.customerResponseTime).getTime() : null;
+
+        // Section 1: Brand new / unresponded ticket where no agent reply has been sent and > 2 clock hours elapsed since creation
+        if (!agentMs && createdMs && (now - createdMs > TWO_HOURS_MS)) {
+          sec1.push({ ticket: t, delayMs: now - createdMs });
+        }
+
+        // Section 2: Ongoing ticket (agent has replied at least once) where customer sent a newer reply than agent, and client has waited > 2 clock hours
+        if (agentMs && custMs && custMs > agentMs && (now - custMs > TWO_HOURS_MS)) {
+          sec2.push({ ticket: t, delayMs: now - custMs });
+        }
+
+        // Section 3: No new agent response for > 2 weeks (14 days, 24/7), including On Hold & Awaiting Response
+        if (agentMs && (now - agentMs > TWO_WEEKS_MS)) {
+          sec3.push({ ticket: t, delayMs: now - agentMs });
+        } else if (!agentMs && createdMs && (now - createdMs > TWO_WEEKS_MS)) {
+          // Also catch tickets older than 2 weeks that never received an agent reply at all
+          sec3.push({ ticket: t, delayMs: now - createdMs });
+        }
+      });
+
+      // Sort each section with longest breach at the top
+      sec1.sort((a, b) => b.delayMs - a.delayMs);
+      sec2.sort((a, b) => b.delayMs - a.delayMs);
+      sec3.sort((a, b) => b.delayMs - a.delayMs);
+
+      state.sla.sec1 = sec1;
+      state.sla.sec2 = sec2;
+      state.sla.sec3 = sec3;
+
+      // Update total unique breached tickets badge
+      const uniqueIds = new Set([...sec1.map(x => x.ticket.id), ...sec2.map(x => x.ticket.id), ...sec3.map(x => x.ticket.id)]);
+      document.getElementById('slaTotalCount').innerText = uniqueIds.size;
+
+      // Update compact KPI strip
+      document.getElementById('slaKpiCount1').innerText = sec1.length;
+      document.getElementById('slaKpiCount2').innerText = sec2.length;
+      document.getElementById('slaKpiCount3').innerText = sec3.length;
+
+      document.getElementById('slaKpiSub1').innerText = sec1.length ? `Oldest: ${formatDuration24x7(sec1[0].delayMs)}` : '0 breaches';
+      document.getElementById('slaKpiSub2').innerText = sec2.length ? `Longest wait: ${formatDuration24x7(sec2[0].delayMs)}` : '0 breaches';
+      document.getElementById('slaKpiSub3').innerText = sec3.length ? `Oldest silence: ${formatDuration24x7(sec3[0].delayMs)}` : '0 breaches';
+
+      renderSlaSection('sec1', sec1, '#FF3B30');
+      renderSlaSection('sec2', sec2, '#FF9500');
+      renderSlaSection('sec3', sec3, '#AF52DE');
+    }
+
+    function renderSlaSection(secKey, items, accentHex) {
+      document.getElementById(`slaBadge_${secKey}`).innerText = `${items.length} ${items.length === 1 ? 'Ticket' : 'Tickets'}`;
+
+      // Priority breakdown pills visible even when section is minimized!
+      const pCounts = { Critical: 0, Urgent: 0, High: 0, Medium: 0, Low: 0 };
+      items.forEach(({ ticket }) => {
+        const pl = (ticket.priority || '').toLowerCase();
+        if (pl.includes('critical')) pCounts.Critical++;
+        else if (pl.includes('urgent')) pCounts.Urgent++;
+        else if (pl.includes('high')) pCounts.High++;
+        else if (pl.includes('medium')) pCounts.Medium++;
+        else if (pl.includes('low')) pCounts.Low++;
+      });
+
+      const pillColors = {
+        Critical: 'background:rgba(255,59,48,0.18); color:#FF3B30; border:1px solid rgba(255,59,48,0.35);',
+        Urgent: 'background:rgba(255,59,48,0.18); color:#FF3B30; border:1px solid rgba(255,59,48,0.35);',
+        High: 'background:rgba(255,149,0,0.18); color:#FF9500; border:1px solid rgba(255,149,0,0.35);',
+        Medium: 'background:rgba(255,204,0,0.2); color:#d97706; border:1px solid rgba(255,204,0,0.4);',
+        Low: 'background:rgba(52,199,89,0.18); color:#34C759; border:1px solid rgba(52,199,89,0.35);'
+      };
+
+      let pillsHtml = '';
+      Object.entries(pCounts).forEach(([k, v]) => {
+        if (v > 0) pillsHtml += `<span class="sla-prio-pill" style="${pillColors[k]}">${k}: ${v}</span>`;
+      });
+      document.getElementById(`slaPills_${secKey}`).innerHTML = pillsHtml;
+
+      const tbody = document.getElementById(`slaBody_${secKey}`);
+      tbody.innerHTML = '';
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 35px; color: #34C759; font-weight: 600;">✅ No breached tickets in this category.</td></tr>`;
+        return;
+      }
+
+      items.forEach(({ ticket: t, delayMs }) => {
+        const asn = t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned';
+        const createdStr = t.createdTime ? tableDateFmt.format(new Date(t.createdTime)) : '-';
+        const custStr = t.customerResponseTime ? tableDateFmt.format(new Date(t.customerResponseTime)) : '-';
+        const agentStr = t.agentRespondedTime ? tableDateFmt.format(new Date(t.agentRespondedTime)) : '<span style="color:#FF3B30; font-weight:600;">Never Responded</span>';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><a href="https://desk.zoho.com/support/mindmatrix/ShowHomePage.do#Cases/dv/${t.id}" target="_blank" class="ticket-link">#${t.ticketNumber}</a></td>
+          <td><strong>${t.subject || '-'}</strong></td>
+          <td>${t.clientName || 'Unknown'}</td>
+          <td>${renderPriorityBadgeHtml(t.priority)}</td>
+          <td>${t.status || '-'}</td>
+          <td>${asn}</td>
+          <td>${createdStr}</td>
+          <td>${custStr}</td>
+          <td>${agentStr}</td>
+          <td><span class="sla-delay-badge" style="background:${accentHex}22; color:${accentHex}; border:1px solid ${accentHex}55;">⏱ ${formatDuration24x7(delayMs)}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleSlaSection(secKey) {
+      state.sla.expanded[secKey] = !state.sla.expanded[secKey];
+      syncSlaAccordionDOM();
+    }
+
+    function focusSlaSection(secKey) {
+      state.sla.expanded[secKey] = !state.sla.expanded[secKey];
+      syncSlaAccordionDOM();
+      const el = document.getElementById(`slaAccordion_${secKey}`);
+      if (el && state.sla.expanded[secKey]) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function toggleAllSlaSections() {
+      const anyClosed = !state.sla.expanded.sec1 || !state.sla.expanded.sec2 || !state.sla.expanded.sec3;
+      state.sla.expanded.sec1 = anyClosed;
+      state.sla.expanded.sec2 = anyClosed;
+      state.sla.expanded.sec3 = anyClosed;
+      syncSlaAccordionDOM();
+    }
+
+    function syncSlaAccordionDOM() {
+      ['sec1', 'sec2', 'sec3'].forEach(k => {
+        const el = document.getElementById(`slaAccordion_${k}`);
+        if (el) {
+          if (state.sla.expanded[k]) el.classList.add('expanded');
+          else el.classList.remove('expanded');
+        }
+      });
+      const allOpen = state.sla.expanded.sec1 && state.sla.expanded.sec2 && state.sla.expanded.sec3;
+      const btn = document.getElementById('btnToggleAllSla');
+      if (btn) btn.innerText = allOpen ? 'Minimize All' : 'Expand All';
+    }
+
+    function clearSlaFilters() {
+      document.getElementById('slaSearchText').value = '';
+      document.querySelectorAll('#slaAssigneeDropdown input, #slaPriorityDropdown input').forEach(c => c.checked = false);
+      applySlaFilters();
+    }
+
+    function exportSlaToCSV() {
+      const allRows = [
+        ...state.sla.sec1.map(x => ({ ...x, category: 'Section 1: New Ticket > 2h No Reply' })),
+        ...state.sla.sec2.map(x => ({ ...x, category: 'Section 2: Ongoing Client Waiting > 2h' })),
+        ...state.sla.sec3.map(x => ({ ...x, category: 'Section 3: Stale > 2 Weeks No Agent Reply' }))
+      ];
+      if (allRows.length === 0) { alert('No SLA breaches match current filters.'); return; }
+
+      let csv = "\uFEFFBreach Category,Ticket #,Subject,Client Name,Priority,Status,Assignee,Created Date,Customer Responded Time,Agent Responded Time,Breach Duration\n";
+      allRows.forEach(({ category, ticket: t, delayMs }) => {
+        const subj = `"${(t.subject || '').replace(/"/g, '""')}"`;
+        const cl = `"${(t.clientName || 'Unknown').replace(/"/g, '""')}"`;
+        const asn = `"${(t.assignee ? (t.assignee.fullName || 'Unassigned') : 'Unassigned').replace(/"/g, '""')}"`;
+        const cDate = t.createdTime ? `"${tableDateFmt.format(new Date(t.createdTime))}"` : '-';
+        const custDate = t.customerResponseTime ? `"${tableDateFmt.format(new Date(t.customerResponseTime))}"` : '-';
+        const agDate = t.agentRespondedTime ? `"${tableDateFmt.format(new Date(t.agentRespondedTime))}"` : 'Never Responded';
+        csv += `"${category}",${t.ticketNumber || ''},${subj},${cl},${t.priority || 'None'},"${t.status || '-'}",${asn},${cDate},${custDate},${agDate},"${formatDuration24x7(delayMs)}"\n`;
+      });
+
+      const b = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const u = URL.createObjectURL(b);
+      const l = document.createElement('a');
+      l.href = u;
+      l.download = `Support_SLA_Breaches_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`;
+      document.body.appendChild(l);
+      l.click();
+      document.body.removeChild(l);
+      URL.revokeObjectURL(u);
+    }
+
+    // ==========================================
+    // MODULE WISE REPORT & DEPT EMAIL PREVIEW
+    // ==========================================
+    function generateModuleReport() {
+      const deptFilter = state.executive.currentDept || 'All';
+      let data = (window.allGlobalTickets || []).filter(t => {
+        const isClosed = (t.status || '').toLowerCase().includes('clos') && !(t.status || '').toLowerCase().includes('temp');
+        if (isClosed) return false;
+        if (deptFilter !== 'All' && (t.department ? t.department.name : 'General') !== deptFilter) return false;
+        return true;
+      });
+
+      const modMap = {};
+      data.forEach(t => {
+        let m = (t.module && t.module.trim() !== '' && t.module !== 'N/A' && t.module !== 'General') ? t.module : 'No Module Selected';
+        if (!modMap[m]) modMap[m] = { count: 0, criticalHigh: 0 };
+        modMap[m].count++;
+        const pl = (t.priority || '').toLowerCase();
+        if (pl.includes('critical') || pl.includes('urgent') || pl.includes('high')) modMap[m].criticalHigh++;
+      });
+
+      const sorted = Object.entries(modMap).sort((a, b) => b[1].count - a[1].count);
+      const total = data.length;
+
+      document.getElementById('moduleReportSubtitle').innerText = `${deptFilter === 'All' ? 'All Departments' : deptFilter} • ${total} Active Tickets • ${new Date().toLocaleDateString()}`;
+
+      let sheetRows = [['Module Wise Report', deptFilter, new Date().toLocaleDateString(), ''], ['', '', '', ''], ['Module', 'Active Tickets', 'Critical/High', 'Share %']];
+      let htmlRows = '';
+      sorted.forEach(([mod, info]) => {
+        const pct = total > 0 ? ((info.count / total) * 100).toFixed(1) + '%' : '0%';
+        sheetRows.push([mod, info.count, info.criticalHigh, pct]);
+        htmlRows += `<tr><td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; color:#1d1d1f;"><strong>${mod}</strong></td><td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; color:#1d1d1f;">${info.count}</td><td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; color:#FF3B30; font-weight:600;">${info.criticalHigh}</td><td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; color:#64748b;">${pct}</td></tr>`;
+      });
+      state.executive.modulePayloadArray = sheetRows;
+
+      document.getElementById('moduleReportContent').innerHTML = `
+        <table style="width:100%; border-collapse:collapse;">
+          <thead><tr style="background:#f1f5f9;"><th style="padding:10px 14px; color:#475569;">Module</th><th style="padding:10px 14px; color:#475569;">Active Tickets</th><th style="padding:10px 14px; color:#475569;">Critical / High</th><th style="padding:10px 14px; color:#475569;">Share</th></tr></thead>
+          <tbody>${htmlRows || '<tr><td colspan="4" style="text-align:center; padding:20px;">No active tickets</td></tr>'}</tbody>
+        </table>`;
+      document.getElementById('moduleReportModal').style.display = 'flex';
+    }
+
+    function openEmailPreview() {
+      const dept = window.currentEmailDept || 'Department';
+      const list = state.tickets.currentFiltered || [];
+      document.getElementById('emailPreviewTitle').innerText = `${dept} Ticket Summary Preview`;
+
+      const pCounts = { Critical: 0, Urgent: 0, High: 0, Medium: 0, Low: 0, Other: 0 };
+      list.forEach(t => {
+        const pl = (t.priority || '').toLowerCase();
+        if (pl.includes('critical')) pCounts.Critical++;
+        else if (pl.includes('urgent')) pCounts.Urgent++;
+        else if (pl.includes('high')) pCounts.High++;
+        else if (pl.includes('medium')) pCounts.Medium++;
+        else if (pl.includes('low')) pCounts.Low++;
+        else pCounts.Other++;
+      });
+
+      const sampleRows = list.slice(0, 25).map(t => `
+        <tr>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">#${t.ticketNumber}</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">${t.subject || '-'}</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">${t.clientName || '-'}</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">${t.priority || '-'}</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">${t.status || '-'}</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e2e8f0;">${t.assignee ? t.assignee.fullName : 'Unassigned'}</td>
+        </tr>`).join('');
+
+      const emailHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color:#1e293b;">
+          <h3 style="margin:0 0 8px 0; color:#0A84FF;">${dept} Open Backlog Report (${list.length} Tickets)</h3>
+          <p style="margin:0 0 16px 0; font-size:0.85rem; color:#64748b;">Generated on ${new Date().toLocaleString()}</p>
+          <p style="margin:0 0 16px 0; font-size:0.9rem;"><strong>Priority Breakdown:</strong> Critical: ${pCounts.Critical} | Urgent: ${pCounts.Urgent} | High: ${pCounts.High} | Medium: ${pCounts.Medium} | Low: ${pCounts.Low}</p>
+          <table style="width:100%; border-collapse:collapse; background:#fff; font-size:0.85rem;">
+            <thead><tr style="background:#e2e8f0; text-align:left;"><th style="padding:8px 12px;">Ticket #</th><th style="padding:8px 12px;">Subject</th><th style="padding:8px 12px;">Client</th><th style="padding:8px 12px;">Priority</th><th style="padding:8px 12px;">Status</th><th style="padding:8px 12px;">Assignee</th></tr></thead>
+            <tbody>${sampleRows}</tbody>
+          </table>
+          ${list.length > 25 ? `<p style="font-size:0.8rem; color:#64748b; margin-top:10px;">Showing top 25 of ${list.length} tickets.</p>` : ''}
+        </div>`;
+
+      window.currentEmailHtmlPayload = emailHtml;
+      document.getElementById('emailPreviewContent').innerHTML = emailHtml;
+      document.getElementById('emailPreviewModal').style.display = 'flex';
+    }
+
+    async function sendDeptEmail() {
+      const emailTo = (document.getElementById('emailSendTo').value || '').trim();
+      if (!emailTo || !emailTo.includes('@')) { alert('Please enter a valid recipient email address.'); return; }
+      const btn = document.getElementById('btnSendEmail');
+      btn.innerText = 'Sending...';
+      btn.disabled = true;
+      try {
+        const dept = window.currentEmailDept || 'Department';
+        const res = await fetch(PROXY_URL, {
+          method: 'POST', credentials: 'omit',
+          body: JSON.stringify({ action: 'sendReportEmail', emailTo: emailTo, subject: `${dept} Open Tickets Report - ${new Date().toLocaleDateString()}`, htmlBody: window.currentEmailHtmlPayload || '' })
+        });
+        const result = await res.json();
+        if (result.error) throw new Error(result.error);
+        btn.innerText = 'Sent!';
+        setTimeout(() => {
+          btn.innerText = 'Send Email';
+          btn.disabled = false;
+          document.getElementById('emailPreviewModal').style.display = 'none';
+        }, 1500);
+      } catch (err) {
+        alert('Failed to send email: ' + err.message);
+        btn.innerText = 'Send Email';
+        btn.disabled = false;
+      }
     }
 
     function showPinModal(action) { 
